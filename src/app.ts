@@ -123,6 +123,9 @@ export class VedApp {
   async start(): Promise<void> {
     await this.init();
 
+    // Auto-commit any dirty vault files before indexing
+    this.autoCommitVault();
+
     // Index all existing vault files into RAG before entering event loop
     await this.indexVaultOnStartup();
 
@@ -193,6 +196,53 @@ export class VedApp {
     return { healthy, modules: results };
   }
 
+  // ── Stats ──
+
+  /**
+   * Get comprehensive system stats for `ved stats` CLI.
+   */
+  getStats(): {
+    rag: IndexStats;
+    vault: { fileCount: number; tagCount: number; typeCount: number; gitClean: boolean; gitDirtyCount: number };
+    audit: { chainLength: number; chainHead: string };
+    sessions: { active: number; total: number };
+  } {
+    if (!this.initialized) {
+      throw new Error('VedApp not initialized — call init() first');
+    }
+
+    // RAG stats
+    const rag = this.rag.stats();
+
+    // Vault stats
+    const vaultIndex = this.memory.vault.getIndex();
+    const vault = {
+      fileCount: vaultIndex.files.size,
+      tagCount: vaultIndex.tags.size,
+      typeCount: vaultIndex.types.size,
+      gitClean: this.memory.vault.git.isClean(),
+      gitDirtyCount: this.memory.vault.git.dirtyCount,
+    };
+
+    // Audit stats
+    const chainHead = this.eventLoop.audit.getChainHead();
+    const audit = {
+      chainLength: chainHead.count,
+      chainHead: chainHead.hash.slice(0, 12),
+    };
+
+    // Session stats
+    const activeSessions = (this.db!.prepare(
+      "SELECT COUNT(*) as cnt FROM sessions WHERE status IN ('active', 'idle')"
+    ).get() as { cnt: number }).cnt;
+    const totalSessions = (this.db!.prepare(
+      'SELECT COUNT(*) as cnt FROM sessions'
+    ).get() as { cnt: number }).cnt;
+    const sessions = { active: activeSessions, total: totalSessions };
+
+    return { rag, vault, audit, sessions };
+  }
+
   // ── Vault Indexing ──
 
   /**
@@ -219,19 +269,12 @@ export class VedApp {
   }
 
   /**
-   * Index all existing vault files into RAG on startup.
-   * Skips if the index already has files (incremental updates via watcher).
+   * Index vault files into RAG on startup.
+   * - If index is empty → full reindex.
+   * - If index is populated → incremental (only files modified since last indexed_at).
    */
   private async indexVaultOnStartup(): Promise<void> {
     const existingStats = this.rag.stats();
-
-    if (existingStats.filesIndexed > 0) {
-      log.info('RAG index already populated, skipping startup indexing', {
-        filesIndexed: existingStats.filesIndexed,
-        chunksStored: existingStats.chunksStored,
-      });
-      return;
-    }
 
     const files = this.readAllVaultFiles();
     if (files.length === 0) {
@@ -239,17 +282,78 @@ export class VedApp {
       return;
     }
 
-    log.info('Indexing vault files into RAG on startup...', { fileCount: files.length });
+    if (existingStats.filesIndexed === 0) {
+      // Empty index → full reindex
+      log.info('RAG index empty, performing full startup indexing...', { fileCount: files.length });
+      const startTime = Date.now();
+      const stats = await this.rag.fullReindex(files);
+      const elapsed = Date.now() - startTime;
+
+      log.info('Full startup indexing complete', {
+        filesIndexed: stats.filesIndexed,
+        chunksStored: stats.chunksStored,
+        graphEdges: stats.graphEdges,
+        elapsedMs: elapsed,
+      });
+      return;
+    }
+
+    // Populated index → incremental: only re-index files modified since their last indexed_at
+    const staleFiles = this.findStaleFiles(files);
+
+    if (staleFiles.length === 0) {
+      log.info('All vault files up-to-date in RAG index', {
+        filesIndexed: existingStats.filesIndexed,
+      });
+      return;
+    }
+
+    log.info('Incremental startup indexing...', {
+      staleFiles: staleFiles.length,
+      totalFiles: files.length,
+    });
+
     const startTime = Date.now();
-    const stats = await this.rag.fullReindex(files);
+    for (const file of staleFiles) {
+      await this.rag.indexFile(file);
+    }
     const elapsed = Date.now() - startTime;
 
-    log.info('Startup vault indexing complete', {
-      filesIndexed: stats.filesIndexed,
-      chunksStored: stats.chunksStored,
-      graphEdges: stats.graphEdges,
+    log.info('Incremental startup indexing complete', {
+      reindexed: staleFiles.length,
       elapsedMs: elapsed,
     });
+  }
+
+  /**
+   * Find vault files that have been modified since they were last indexed.
+   * Also returns files not yet in the index.
+   */
+  private findStaleFiles(files: VaultFile[]): VaultFile[] {
+    const stale: VaultFile[] = [];
+
+    for (const file of files) {
+      const fileMtime = file.stats.modified.getTime();
+      const indexedAt = this.getFileIndexedAt(file.path);
+
+      if (indexedAt === null || fileMtime > indexedAt) {
+        stale.push(file);
+      }
+    }
+
+    return stale;
+  }
+
+  /**
+   * Get the indexed_at timestamp for a file from the RAG chunks table.
+   * Returns null if file is not indexed.
+   */
+  private getFileIndexedAt(filePath: string): number | null {
+    if (!this.db) return null;
+    const row = this.db.prepare(
+      'SELECT MAX(indexed_at) as indexed_at FROM chunks WHERE file_path = ?'
+    ).get(filePath) as { indexed_at: number | null } | undefined;
+    return row?.indexed_at ?? null;
   }
 
   /**
@@ -276,6 +380,33 @@ export class VedApp {
     });
 
     return stats;
+  }
+
+  // ── Vault Git ──
+
+  /**
+   * Auto-commit any untracked/modified vault files on startup.
+   * Ensures git state is clean before indexing begins.
+   */
+  private autoCommitVault(): void {
+    const git = this.memory.vault.git;
+    if (!git.isRepo) return;
+
+    if (git.isClean()) {
+      log.debug('Vault git is clean, no auto-commit needed');
+      return;
+    }
+
+    // Stage all untracked/modified files and commit
+    try {
+      git.stage(['.']);
+      git.commit('ved: startup auto-commit — uncommitted changes found');
+      log.info('Auto-committed dirty vault files on startup');
+    } catch (err) {
+      log.warn('Vault auto-commit failed', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 
   // ── Vault Watcher ──

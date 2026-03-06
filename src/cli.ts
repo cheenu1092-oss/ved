@@ -33,6 +33,8 @@ async function main(): Promise<void> {
       return;
     case 'status':
       return status();
+    case 'stats':
+      return stats();
     case 'reindex':
       return reindex();
     case 'start':
@@ -40,7 +42,7 @@ async function main(): Promise<void> {
       return start();
     default:
       console.error(`Unknown command: ${command}`);
-      console.log('Usage: ved [init|start|status|reindex|version]');
+      console.log('Usage: ved [init|start|status|stats|reindex|version]');
       process.exit(1);
   }
 }
@@ -153,6 +155,47 @@ async function status(): Promise<void> {
       const icon = mod.healthy ? '✅' : '❌';
       console.log(`  ${icon} ${mod.module}: ${mod.details ?? 'ok'}`);
     }
+    console.log('');
+
+    await app.stop();
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Show comprehensive system stats.
+ */
+async function stats(): Promise<void> {
+  try {
+    const app = createApp();
+    await app.init();
+    const s = app.getStats();
+
+    console.log(`\nVed v${VERSION} — Stats\n`);
+
+    console.log('  📚 Vault');
+    console.log(`     Files:       ${s.vault.fileCount}`);
+    console.log(`     Tags:        ${s.vault.tagCount}`);
+    console.log(`     Types:       ${s.vault.typeCount}`);
+    console.log(`     Git:         ${s.vault.gitClean ? '✅ clean' : `⚠️  ${s.vault.gitDirtyCount} dirty`}`);
+
+    console.log('  🔍 RAG Index');
+    console.log(`     Files:       ${s.rag.filesIndexed}`);
+    console.log(`     Chunks:      ${s.rag.chunksStored}`);
+    console.log(`     FTS entries: ${s.rag.ftsEntries}`);
+    console.log(`     Graph edges: ${s.rag.graphEdges}`);
+    console.log(`     Queue:       ${s.rag.queueDepth}`);
+
+    console.log('  🔗 Audit');
+    console.log(`     Chain:       ${s.audit.chainLength} entries`);
+    console.log(`     Head:        ${s.audit.chainHead}…`);
+
+    console.log('  💬 Sessions');
+    console.log(`     Active:      ${s.sessions.active}`);
+    console.log(`     Total:       ${s.sessions.total}`);
+
     console.log('');
 
     await app.stop();
