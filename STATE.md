@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 52
-- **Current Phase:** CYCLE (CLI commands + startup improvements)
+- **Session Number:** 53
+- **Current Phase:** CYCLE (CLI commands + config management)
 - **Last Run:** 2026-03-06
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 53 — Discord channel polish, `ved search` CLI (RAG query from CLI), or config validation improvements
+- **Next Session:** 54 — Discord channel polish, `ved export` (vault→JSON), or push to GitHub
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -88,6 +88,7 @@
 - **Session 50:** CYCLE — **CI workflow uploaded + vault watcher→RAG integration.** Uploaded `.github/workflows/ci.yml` via GitHub web UI (browser automation — `gh` CLI lacks `workflow` scope). All 4 CI jobs passed on first run (Node 20/22, Docker, lint+typecheck). Built vault watcher integration: file changes in Obsidian vault now automatically trigger RAG re-indexing via `enqueueReindex()`/`removeFile()` + 10s drain loop. **10 new tests. 961/961 pass (host + Docker parity). 0 type errors.**
 - **Session 51:** CYCLE — **`ved reindex` CLI command + startup vault indexing.** New `ved reindex` CLI command force-rebuilds the entire RAG index (reads all vault .md files → fullReindex). Startup indexing: `ved start` now auto-indexes all vault files into RAG before entering event loop (skips if index already populated). Startup sequence: init → index vault → start channels → start watcher → event loop. Pushed to GitHub (aff5e11). **16 new tests. 977/977 pass (host + Docker parity). 0 type errors.**
 - **Session 52:** CYCLE — **`ved stats` CLI + incremental startup indexing + vault git auto-commit.** New `ved stats` command shows vault/RAG/audit/session metrics. Startup indexing enhanced: populated indexes now do incremental re-index (compare file mtime vs indexed_at) instead of skipping entirely. Vault git auto-commit: commits dirty files before indexing on startup. **19 new tests. 996/996 pass (host + Docker parity). 0 type errors.**
+- **Session 53:** CYCLE — **`ved search` CLI + `ved config` CLI.** New `ved search` command queries RAG pipeline from CLI (FTS + vector + graph fusion, -n limit, --verbose, --fts-only flags). New `ved config` with subcommands: validate (checks config errors), show (prints resolved config with secrets redacted), path (prints config dir). CLI now has 8 commands. **30 new tests. 1026/1026 pass (host + Docker parity). 0 type errors.**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -115,7 +116,8 @@
 | 50 | ✅ CYCLE | CI workflow upload (browser) + vault watcher→RAG integration (10 tests) |
 | 51 | ✅ CYCLE | `ved reindex` CLI + startup vault indexing (16 tests) |
 | 52 | ✅ CYCLE | `ved stats` CLI + incremental indexing + git auto-commit (19 tests) |
-| 53+ | CYCLE | Discord polish, `ved search` CLI, config validation |
+| 53 | ✅ CYCLE | `ved search` CLI + `ved config` CLI (30 tests) |
+| 54+ | CYCLE | Discord polish, `ved export`, GitHub push |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -150,4 +152,5 @@
 | vault-watcher S50 | ✅ Complete | ~60 | 10 |
 | reindex+startup S51 | ✅ Complete | ~100 | 16 |
 | stats+incr+autocommit S52 | ✅ Complete | ~150 | 19 |
-| **Total** | **ALL COMPLETE** | **~18,502** | **996** |
+| search+config S53 | ✅ Complete | ~250 | 30 |
+| **Total** | **ALL COMPLETE** | **~18,752** | **1026** |

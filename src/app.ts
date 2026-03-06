@@ -19,7 +19,8 @@ import { VaultManager } from './memory/vault.js';
 import { RagPipeline } from './rag/pipeline.js';
 import { ChannelManager } from './channel/manager.js';
 import type { VedConfig, ModuleHealth, VaultFile } from './types/index.js';
-import type { IndexStats } from './rag/types.js';
+import type { IndexStats, RetrieveOptions, RetrievalContext } from './rag/types.js';
+import type { VaultExport, VaultExportFile, ExportOptions, ImportResult } from './export-types.js';
 
 const log = createLogger('app');
 
@@ -243,14 +244,140 @@ export class VedApp {
     return { rag, vault, audit, sessions };
   }
 
+  /**
+   * Search the vault via RAG pipeline (vector + FTS + graph fusion).
+   * Used by `ved search` CLI command.
+   */
+  async search(query: string, options?: RetrieveOptions): Promise<RetrievalContext> {
+    if (!this.initialized) {
+      throw new Error('VedApp not initialized — call init() first');
+    }
+    return this.rag.retrieve(query, options);
+  }
+
+  // ── Export / Import ──
+
+  /**
+   * Export the vault to a portable JSON object.
+   * Used by `ved export` CLI command.
+   */
+  async exportVault(options?: ExportOptions): Promise<VaultExport> {
+    if (!this.initialized) {
+      throw new Error('VedApp not initialized — call init() first');
+    }
+
+    const files = this.readAllVaultFiles(options?.folder);
+    const exportFiles: VaultExportFile[] = files.map(f => ({
+      path: f.path,
+      frontmatter: f.frontmatter,
+      body: f.body,
+      links: f.links,
+    }));
+
+    const result: VaultExport = {
+      vedVersion: '0.1.0',
+      exportedAt: new Date().toISOString(),
+      vaultPath: this.config.memory.vaultPath,
+      fileCount: exportFiles.length,
+      files: exportFiles,
+    };
+
+    if (options?.includeAudit) {
+      const chainHead = this.eventLoop.audit.getChainHead();
+      result.audit = {
+        chainLength: chainHead.count,
+        chainHead: chainHead.hash,
+        entries: chainHead.count,
+      };
+    }
+
+    if (options?.includeStats) {
+      const s = this.getStats();
+      result.stats = {
+        rag: {
+          filesIndexed: s.rag.filesIndexed,
+          chunksStored: s.rag.chunksStored,
+          ftsEntries: s.rag.ftsEntries,
+          graphEdges: s.rag.graphEdges,
+        },
+        vault: {
+          fileCount: s.vault.fileCount,
+          tagCount: s.vault.tagCount,
+          typeCount: s.vault.typeCount,
+        },
+        sessions: {
+          active: s.sessions.active,
+          total: s.sessions.total,
+        },
+      };
+    }
+
+    return result;
+  }
+
+  /**
+   * Import vault files from a JSON export.
+   * Used by `ved import` CLI command.
+   */
+  async importVault(data: VaultExport, mode: 'merge' | 'overwrite' | 'fail' = 'fail'): Promise<ImportResult> {
+    if (!this.initialized) {
+      throw new Error('VedApp not initialized — call init() first');
+    }
+
+    const result: ImportResult = { created: 0, overwritten: 0, skipped: 0, errors: 0, errorPaths: [] };
+    const vault = this.memory.vault;
+
+    for (const f of data.files) {
+      try {
+        // Validate path containment BEFORE any filesystem operations
+        vault.assertPathSafe(f.path);
+
+        const exists = vault.exists(f.path);
+
+        if (exists) {
+          if (mode === 'merge') {
+            result.skipped++;
+            continue;
+          } else if (mode === 'overwrite') {
+            vault.updateFile(f.path, { frontmatter: f.frontmatter, body: f.body });
+            result.overwritten++;
+          } else {
+            // mode === 'fail'
+            result.skipped++;
+            continue;
+          }
+        } else {
+          vault.createFile(f.path, f.frontmatter, f.body);
+          result.created++;
+        }
+      } catch (err) {
+        result.errors++;
+        result.errorPaths.push(f.path);
+        log.warn('Failed to import vault file', {
+          path: f.path,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Check if a vault file exists. Used by dry-run import.
+   */
+  vaultFileExists(path: string): boolean {
+    return this.memory.vault.exists(path);
+  }
+
   // ── Vault Indexing ──
 
   /**
    * Read all vault files and return them as VaultFile objects.
    */
-  private readAllVaultFiles(): VaultFile[] {
+  private readAllVaultFiles(folder?: string): VaultFile[] {
     const vault = this.memory.vault;
-    const allPaths = vault.listFiles();
+    const allPaths = vault.listFiles(folder);
     const files: VaultFile[] = [];
 
     for (const relPath of allPaths) {

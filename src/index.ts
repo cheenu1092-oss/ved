@@ -51,5 +51,8 @@ export type {
 
 export { VedError } from './types/errors.js';
 
+// Export/Import
+export type { VaultExport, VaultExportFile, ExportOptions, ImportResult } from './export-types.js';
+
 // App
 export { VedApp, createApp } from './app.js';

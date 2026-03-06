@@ -10,11 +10,13 @@
  *   ved version    — Show version
  */
 
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp } from './app.js';
-import { getConfigDir } from './core/config.js';
+import { getConfigDir, loadConfig, validateConfig } from './core/config.js';
 import { createLogger } from './core/log.js';
+import type { MergedResult } from './rag/types.js';
+import type { VaultExport } from './export-types.js';
 
 const log = createLogger('cli');
 const VERSION = '0.1.0';
@@ -37,12 +39,20 @@ async function main(): Promise<void> {
       return stats();
     case 'reindex':
       return reindex();
+    case 'search':
+      return search(args.slice(1));
+    case 'config':
+      return config(args.slice(1));
+    case 'export':
+      return exportVault(args.slice(1));
+    case 'import':
+      return importVault(args.slice(1));
     case 'start':
     case 'run':
       return start();
     default:
       console.error(`Unknown command: ${command}`);
-      console.log('Usage: ved [init|start|status|stats|reindex|version]');
+      console.log('Usage: ved [init|start|status|stats|search|reindex|config|export|import|version]');
       process.exit(1);
   }
 }
@@ -255,6 +265,364 @@ async function start(): Promise<void> {
       error: err instanceof Error ? err.message : String(err),
     });
     console.error(`\nFailed to start: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Search the vault via RAG pipeline (vector + FTS + graph fusion).
+ *
+ * Usage: ved search <query> [-n <limit>] [--fts-only] [--verbose]
+ */
+async function search(args: string[]): Promise<void> {
+  // Parse flags
+  let topK = 5;
+  let verbose = false;
+  let ftsOnly = false;
+  const queryParts: string[] = [];
+
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === '-n' || args[i] === '--limit') && args[i + 1]) {
+      topK = parseInt(args[i + 1], 10);
+      if (isNaN(topK) || topK <= 0) {
+        console.error('Error: -n must be a positive integer');
+        process.exit(1);
+      }
+      i++; // skip next
+    } else if (args[i] === '--verbose' || args[i] === '-v') {
+      verbose = true;
+    } else if (args[i] === '--fts-only' || args[i] === '--fts') {
+      ftsOnly = true;
+    } else {
+      queryParts.push(args[i]);
+    }
+  }
+
+  const query = queryParts.join(' ').trim();
+  if (!query) {
+    console.error('Usage: ved search <query> [-n <limit>] [--fts-only] [--verbose]');
+    process.exit(1);
+  }
+
+  try {
+    const app = createApp();
+    await app.init();
+
+    const startTime = Date.now();
+    const context = await app.search(query, {
+      vectorTopK: topK,
+      ftsTopK: topK,
+      sources: ftsOnly ? ['fts'] : undefined,
+    });
+    const elapsed = Date.now() - startTime;
+
+    console.log(`\nVed v${VERSION} — Search\n`);
+    console.log(`  Query:   "${query}"`);
+    console.log(`  Results: ${context.results.length} (${elapsed}ms)`);
+
+    if (verbose) {
+      const m = context.metrics;
+      console.log(`  Sources: vector=${m.vectorResultCount} fts=${m.ftsResultCount} graph=${m.graphResultCount}`);
+      console.log(`  Timing:  vector=${m.vectorSearchMs}ms fts=${m.ftsSearchMs}ms graph=${m.graphWalkMs}ms fusion=${m.fusionMs}ms`);
+      console.log(`  Tokens:  ${context.tokenCount}`);
+    }
+
+    if (context.results.length === 0) {
+      console.log('\n  No results found.\n');
+      await app.stop();
+      return;
+    }
+
+    console.log('');
+
+    for (let i = 0; i < context.results.length; i++) {
+      const r: MergedResult = context.results[i];
+      const heading = r.heading ? ` § ${r.heading}` : '';
+      const sources = r.sources.join('+');
+      const score = r.rrfScore.toFixed(4);
+
+      console.log(`  ${i + 1}. ${r.filePath}${heading}`);
+      console.log(`     Score: ${score} [${sources}]`);
+
+      // Show content preview (first 200 chars)
+      const preview = r.content.replace(/\n/g, ' ').slice(0, 200);
+      console.log(`     ${preview}${r.content.length > 200 ? '…' : ''}`);
+      console.log('');
+    }
+
+    await app.stop();
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Config subcommands: validate, show, path.
+ *
+ * Usage:
+ *   ved config validate  — Check config for errors/warnings
+ *   ved config show      — Print resolved config (redacted secrets)
+ *   ved config path      — Print config directory path
+ */
+async function config(args: string[]): Promise<void> {
+  const sub = args[0] ?? 'validate';
+
+  switch (sub) {
+    case 'validate': {
+      try {
+        const cfg = loadConfig();
+        const errors = validateConfig(cfg);
+
+        console.log(`\nVed v${VERSION} — Config Validation\n`);
+
+        if (errors.length === 0) {
+          console.log('  ✅ Configuration is valid.\n');
+          return;
+        }
+
+        for (const e of errors) {
+          const icon = e.code === 'REQUIRED' ? '❌' : '⚠️';
+          console.log(`  ${icon} ${e.path}: ${e.message} (${e.code})`);
+        }
+        console.log(`\n  ${errors.length} issue(s) found.\n`);
+        process.exit(1);
+      } catch (err) {
+        console.error(`Config load failed: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+      }
+      break;
+    }
+
+    case 'show': {
+      try {
+        const cfg = loadConfig();
+        // Redact secrets
+        const redacted = JSON.parse(JSON.stringify(cfg));
+        if (redacted.llm?.apiKey) redacted.llm.apiKey = '***REDACTED***';
+        if (redacted.channels) {
+          for (const ch of redacted.channels) {
+            if (ch.token) ch.token = '***REDACTED***';
+          }
+        }
+        console.log(`\nVed v${VERSION} — Resolved Config\n`);
+        console.log(JSON.stringify(redacted, null, 2));
+        console.log('');
+      } catch (err) {
+        console.error(`Config load failed: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+      }
+      break;
+    }
+
+    case 'path':
+      console.log(getConfigDir());
+      break;
+
+    default:
+      console.error(`Unknown config subcommand: ${sub}`);
+      console.log('Usage: ved config [validate|show|path]');
+      process.exit(1);
+  }
+}
+
+/**
+ * Export vault to portable JSON.
+ *
+ * Usage:
+ *   ved export                       — Print JSON to stdout
+ *   ved export -o vault-export.json  — Write to file
+ *   ved export --pretty              — Pretty-print JSON
+ *   ved export --include-audit       — Include audit chain entries
+ *   ved export --include-stats       — Include RAG/vault/session stats
+ *   ved export --folder entities     — Export only one folder
+ */
+async function exportVault(args: string[]): Promise<void> {
+  let outputPath: string | null = null;
+  let pretty = false;
+  let includeAudit = false;
+  let includeStats = false;
+  let folder: string | undefined;
+
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === '-o' || args[i] === '--output') && args[i + 1]) {
+      outputPath = args[i + 1];
+      i++;
+    } else if (args[i] === '--pretty' || args[i] === '-p') {
+      pretty = true;
+    } else if (args[i] === '--include-audit' || args[i] === '--audit') {
+      includeAudit = true;
+    } else if (args[i] === '--include-stats' || args[i] === '--stats') {
+      includeStats = true;
+    } else if ((args[i] === '--folder' || args[i] === '-f') && args[i + 1]) {
+      folder = args[i + 1];
+      i++;
+    } else {
+      console.error(`Unknown export flag: ${args[i]}`);
+      console.log('Usage: ved export [-o <file>] [--pretty] [--include-audit] [--include-stats] [--folder <name>]');
+      process.exit(1);
+    }
+  }
+
+  try {
+    const app = createApp();
+    await app.init();
+
+    const startTime = Date.now();
+    const result = await app.exportVault({ folder, includeAudit, includeStats });
+    const elapsed = Date.now() - startTime;
+
+    const json = pretty ? JSON.stringify(result, null, 2) : JSON.stringify(result);
+
+    if (outputPath) {
+      writeFileSync(outputPath, json);
+      console.log(`✅ Exported ${result.files.length} files to ${outputPath} (${elapsed}ms)`);
+      if (includeAudit) console.log(`   Audit entries: ${result.audit?.entries ?? 0}`);
+      if (includeStats) console.log(`   Stats included`);
+    } else {
+      process.stdout.write(json + '\n');
+    }
+
+    await app.stop();
+  } catch (err) {
+    console.error(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Import vault from JSON export.
+ *
+ * Usage:
+ *   ved import vault-export.json            — Import from file
+ *   cat export.json | ved import -           — Import from stdin
+ *   ved import vault-export.json --dry-run   — Preview without writing
+ *   ved import vault-export.json --merge     — Merge (skip existing files)
+ *   ved import vault-export.json --overwrite — Overwrite existing files
+ */
+async function importVault(args: string[]): Promise<void> {
+  let inputPath: string | null = null;
+  let dryRun = false;
+  let mode: 'merge' | 'overwrite' | 'fail' = 'fail';
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--dry-run' || args[i] === '-n') {
+      dryRun = true;
+    } else if (args[i] === '--merge') {
+      mode = 'merge';
+    } else if (args[i] === '--overwrite') {
+      mode = 'overwrite';
+    } else if (!args[i].startsWith('-')) {
+      inputPath = args[i];
+    } else {
+      console.error(`Unknown import flag: ${args[i]}`);
+      console.log('Usage: ved import <file|-|--stdin> [--dry-run] [--merge|--overwrite]');
+      process.exit(1);
+    }
+  }
+
+  if (!inputPath) {
+    console.error('Usage: ved import <file|-|--stdin> [--dry-run] [--merge|--overwrite]');
+    process.exit(1);
+  }
+
+  try {
+    // Read input
+    let raw: string;
+    if (inputPath === '-' || inputPath === '--stdin') {
+      const chunks: Buffer[] = [];
+      for await (const chunk of process.stdin) {
+        chunks.push(chunk as Buffer);
+      }
+      raw = Buffer.concat(chunks).toString('utf-8');
+    } else {
+      if (!existsSync(inputPath)) {
+        console.error(`File not found: ${inputPath}`);
+        process.exit(1);
+      }
+      raw = readFileSync(inputPath, 'utf-8');
+    }
+
+    // Parse and validate
+    let data: VaultExport;
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      console.error('Invalid JSON input');
+      process.exit(1);
+    }
+
+    if (!data.vedVersion || !Array.isArray(data.files)) {
+      console.error('Invalid Ved export format (missing vedVersion or files array)');
+      process.exit(1);
+    }
+
+    console.log(`\nVed v${VERSION} — Import\n`);
+    console.log(`  Source:    ${inputPath}`);
+    console.log(`  Version:   ${data.vedVersion}`);
+    console.log(`  Exported:  ${data.exportedAt}`);
+    console.log(`  Files:     ${data.files.length}`);
+    console.log(`  Mode:      ${dryRun ? 'DRY RUN' : mode}`);
+    console.log('');
+
+    if (dryRun) {
+      // Preview only
+      let created = 0;
+      let skipped = 0;
+      let overwritten = 0;
+
+      const app = createApp();
+      await app.init();
+
+      for (const f of data.files) {
+        const exists = app.vaultFileExists(f.path);
+        if (exists) {
+          if (mode === 'merge') {
+            skipped++;
+            console.log(`  SKIP  ${f.path}`);
+          } else if (mode === 'overwrite') {
+            overwritten++;
+            console.log(`  OVER  ${f.path}`);
+          } else {
+            console.log(`  CONFLICT  ${f.path} (use --merge or --overwrite)`);
+            skipped++;
+          }
+        } else {
+          created++;
+          console.log(`  NEW   ${f.path}`);
+        }
+      }
+
+      console.log(`\n  Would create: ${created}, overwrite: ${overwritten}, skip: ${skipped}\n`);
+      await app.stop();
+      return;
+    }
+
+    // Actual import
+    const app = createApp();
+    await app.init();
+
+    const startTime = Date.now();
+    const result = await app.importVault(data, mode);
+    const elapsed = Date.now() - startTime;
+
+    console.log(`✅ Import complete in ${elapsed}ms\n`);
+    console.log(`  Created:     ${result.created}`);
+    console.log(`  Overwritten: ${result.overwritten}`);
+    console.log(`  Skipped:     ${result.skipped}`);
+    console.log(`  Errors:      ${result.errors}`);
+
+    if (result.errorPaths.length > 0) {
+      console.log('\n  Failed files:');
+      for (const p of result.errorPaths) {
+        console.log(`    ❌ ${p}`);
+      }
+    }
+    console.log('');
+
+    await app.stop();
+  } catch (err) {
+    console.error(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }

@@ -127,6 +127,14 @@ export class VaultManager extends EventEmitter {
    *
    * @throws Error if the resolved path escapes the vault boundary.
    */
+  /**
+   * Validate that a relative path stays within the vault boundary.
+   * Public alias for path containment check (used by import).
+   */
+  assertPathSafe(relPath: string): void {
+    this.assertPathContained(relPath);
+  }
+
   private assertPathContained(relPath: string): void {
     const absPath = resolve(join(this.vaultPath, relPath));
     const vaultRoot = resolve(this.vaultPath);
