@@ -33,12 +33,14 @@ async function main(): Promise<void> {
       return;
     case 'status':
       return status();
+    case 'reindex':
+      return reindex();
     case 'start':
     case 'run':
       return start();
     default:
       console.error(`Unknown command: ${command}`);
-      console.log('Usage: ved [init|start|status|version]');
+      console.log('Usage: ved [init|start|status|reindex|version]');
       process.exit(1);
   }
 }
@@ -151,6 +153,34 @@ async function status(): Promise<void> {
       const icon = mod.healthy ? '✅' : '❌';
       console.log(`  ${icon} ${mod.module}: ${mod.details ?? 'ok'}`);
     }
+    console.log('');
+
+    await app.stop();
+  } catch (err) {
+    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * Force full RAG re-index of all vault files.
+ */
+async function reindex(): Promise<void> {
+  console.log(`\nVed v${VERSION} — Full Re-index\n`);
+
+  try {
+    const app = createApp();
+    await app.init();
+
+    const startTime = Date.now();
+    const stats = await app.reindexVault();
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+    console.log(`✅ Re-index complete in ${elapsed}s\n`);
+    console.log(`  Files indexed:  ${stats.filesIndexed}`);
+    console.log(`  Chunks stored:  ${stats.chunksStored}`);
+    console.log(`  FTS entries:    ${stats.ftsEntries}`);
+    console.log(`  Graph edges:    ${stats.graphEdges}`);
     console.log('');
 
     await app.stop();

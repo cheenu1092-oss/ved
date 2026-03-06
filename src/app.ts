@@ -18,7 +18,8 @@ import { MemoryManager } from './memory/manager.js';
 import { VaultManager } from './memory/vault.js';
 import { RagPipeline } from './rag/pipeline.js';
 import { ChannelManager } from './channel/manager.js';
-import type { VedConfig, ModuleHealth } from './types/index.js';
+import type { VedConfig, ModuleHealth, VaultFile } from './types/index.js';
+import type { IndexStats } from './rag/types.js';
 
 const log = createLogger('app');
 
@@ -122,6 +123,9 @@ export class VedApp {
   async start(): Promise<void> {
     await this.init();
 
+    // Index all existing vault files into RAG before entering event loop
+    await this.indexVaultOnStartup();
+
     // Start channel adapters (Discord, CLI, etc.)
     await this.channels.startAll();
 
@@ -187,6 +191,91 @@ export class VedApp {
 
     const healthy = results.every(r => r.healthy);
     return { healthy, modules: results };
+  }
+
+  // ── Vault Indexing ──
+
+  /**
+   * Read all vault files and return them as VaultFile objects.
+   */
+  private readAllVaultFiles(): VaultFile[] {
+    const vault = this.memory.vault;
+    const allPaths = vault.listFiles();
+    const files: VaultFile[] = [];
+
+    for (const relPath of allPaths) {
+      try {
+        const file = vault.readFile(relPath);
+        files.push(file);
+      } catch (err) {
+        log.warn('Failed to read vault file for indexing', {
+          path: relPath,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    return files;
+  }
+
+  /**
+   * Index all existing vault files into RAG on startup.
+   * Skips if the index already has files (incremental updates via watcher).
+   */
+  private async indexVaultOnStartup(): Promise<void> {
+    const existingStats = this.rag.stats();
+
+    if (existingStats.filesIndexed > 0) {
+      log.info('RAG index already populated, skipping startup indexing', {
+        filesIndexed: existingStats.filesIndexed,
+        chunksStored: existingStats.chunksStored,
+      });
+      return;
+    }
+
+    const files = this.readAllVaultFiles();
+    if (files.length === 0) {
+      log.info('No vault files found, skipping startup indexing');
+      return;
+    }
+
+    log.info('Indexing vault files into RAG on startup...', { fileCount: files.length });
+    const startTime = Date.now();
+    const stats = await this.rag.fullReindex(files);
+    const elapsed = Date.now() - startTime;
+
+    log.info('Startup vault indexing complete', {
+      filesIndexed: stats.filesIndexed,
+      chunksStored: stats.chunksStored,
+      graphEdges: stats.graphEdges,
+      elapsedMs: elapsed,
+    });
+  }
+
+  /**
+   * Force full RAG re-index of all vault files.
+   * Used by `ved reindex` CLI command.
+   */
+  async reindexVault(): Promise<IndexStats> {
+    if (!this.initialized) {
+      throw new Error('VedApp not initialized — call init() first');
+    }
+
+    const files = this.readAllVaultFiles();
+    log.info('Starting full vault re-index...', { fileCount: files.length });
+
+    const startTime = Date.now();
+    const stats = await this.rag.fullReindex(files);
+    const elapsed = Date.now() - startTime;
+
+    log.info('Full vault re-index complete', {
+      filesIndexed: stats.filesIndexed,
+      chunksStored: stats.chunksStored,
+      graphEdges: stats.graphEdges,
+      elapsedMs: elapsed,
+    });
+
+    return stats;
   }
 
   // ── Vault Watcher ──
