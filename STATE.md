@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 64
+- **Session Number:** 66
 - **Current Phase:** CYCLE (feature development)
 - **Last Run:** 2026-03-07
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 65 — Next feature (config hot-reload? notification channels? `ved user` CLI?)
+- **Next Session:** 67 — Next feature (config hot-reload? notification channels? `ved plugin` CLI polish?)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -100,6 +100,8 @@
 - **Session 62:** CYCLE — **EventBus + SSE event stream.** Built typed pub/sub EventBus (subscribe with optional type filter, error isolation, clear). Added `onAppend` hook to AuditLog — every audit event auto-emits to bus. New `GET /api/events` SSE endpoint: real-time streaming with type filtering (`?types=`), 30s keepalive, auth, cleanup on disconnect/stop. Stats now include SSE connection count. Pushed S61 to GitHub (2b5d9f2). **30 new tests. 1278/1278 pass (host + Docker parity). 0 type errors.**
 - **Session 63:** CYCLE — **Webhook delivery + web dashboard.** WebhookManager (720 lines): EventBus→HTTP POST delivery with HMAC-SHA256 signing, exponential backoff retries (3 attempts), delivery log in SQLite, event type filtering, custom headers, payload/response caps. Dashboard (894 lines): self-contained SPA with 6 panels (overview/events/search/history/vault/doctor), live SSE stream, dark theme, responsive, token auth. HTTP API: 5 new webhook endpoints + 2 dashboard routes + DELETE method. CLI: `ved webhook` with 8 subcommands (list/add/remove/enable/disable/deliveries/stats/test). DB migration v003 (webhooks + webhook_deliveries tables). **43 new tests. 1321/1321 pass (host + Docker parity). 0 type errors. CLI: 19 commands.**
 - **Session 64:** CYCLE — **`ved memory` — CLI for Obsidian knowledge graph.** 8 subcommands: list (filter by type/tag/folder), show (entity details + frontmatter + links), graph (wikilink walk with depth), timeline (recent activity by date), daily (view/create daily notes), forget (soft-delete to archive), tags (tag counts), types (type counts). Aliases: mem, ls, cat, read, links, recent, today, archive. Shell completions updated (bash/zsh/fish). Pushed to GitHub (5e59758). **37 new tests. 1358/1358 pass (host + Docker parity). 0 type errors. CLI: 20 commands.**
+- **Session 65:** CYCLE — **`ved prompt` — system prompt profile manager + system prompt enhancements.** 8 subcommands: list (profiles with active marker), show (contents or default), create (template/stdin, path traversal protection), edit ($EDITOR), use (auto-updates config.yaml), test (assembled preview with facts+RAG), reset (revert to default), diff (line-by-line, "default" pseudo-profile). Also committed: cli-chat.ts (interactive REPL), system-prompt.test.ts (26 tests), event-loop buildSystemPrompt() enhancements. Shell completions updated. Pushed to GitHub (0e1f735). **58 new tests (32 prompt + 26 system-prompt). 1512/1512 pass (host + Docker parity). 0 type errors. CLI: 21 commands.**
+- **Session 66:** CYCLE — **`ved template` — vault template manager.** 7 subcommands: list (type/vars/size), show (vault or built-in), create (from 6 built-in types or blank), edit ($EDITOR), delete, use (instantiate with `--var k=v` variable substitution, auto-routing to correct vault folder, auto-date, unreplaced detection, --force overwrite), vars (variable names with occurrence counts). 6 built-in templates (person/project/decision/concept/daily/topic). Exported `extractVariables()` + `applyVariables()` utilities. Shell completions updated. **37 new tests. 1549/1549 pass (host + Docker parity). 0 type errors. CLI: 22 commands.**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -139,7 +141,9 @@
 | 62 | ✅ CYCLE | EventBus + SSE event stream (30 tests) |
 | 63 | ✅ CYCLE | Webhook delivery + web dashboard (43 tests) |
 | 64 | ✅ CYCLE | `ved memory` CLI (8 subcommands, 37 tests) |
-| 65+ | CYCLE | New features, polish, releases |
+| 65 | ✅ CYCLE | `ved prompt` CLI + system prompt enhancements (58 tests) |
+| 66 | ✅ CYCLE | `ved template` CLI — vault template manager (37 tests) |
+| 67+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -185,4 +189,8 @@
 | event-bus+sse S62 | ✅ Complete | ~100 | 30 |
 | webhook+dashboard S63 | ✅ Complete | ~2,864 | 43 |
 | memory-cli S64 | ✅ Complete | ~942 | 37 |
-| **Total** | **ALL COMPLETE** | **~24,462** | **1358** |
+| prompt-cli S65 | ✅ Complete | ~570 | 32 |
+| system-prompt S65 | ✅ Complete | ~614 | 26 |
+| cli-chat S65 | ✅ Complete | ~470 | 0 |
+| template-cli S66 | ✅ Complete | ~701 | 37 |
+| **Total** | **ALL COMPLETE** | **~26,817** | **1549** |

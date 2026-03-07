@@ -1482,7 +1482,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'version',
     ];
     const chatFlags = ['--model', '--no-rag', '--no-tools', '--verbose', '--help'];
     const configSubs = ['validate', 'show', 'path'];
@@ -1496,6 +1496,7 @@ export class VedApp {
     const trustSubs = ['matrix', 'resolve', 'assess', 'grant', 'revoke', 'ledger', 'pending', 'history', 'show', 'config'];
     const userSubs = ['list', 'show', 'sessions', 'activity', 'stats'];
     const promptSubs = ['list', 'show', 'create', 'edit', 'use', 'test', 'reset', 'diff'];
+    const templateSubs = ['list', 'show', 'create', 'edit', 'delete', 'use', 'vars'];
 
     switch (shell) {
       case 'bash':
@@ -1550,6 +1551,10 @@ _ved_completions() {
       ;;
     prompt|prompts|sp|system-prompt)
       COMPREPLY=( $(compgen -W "${promptSubs.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    template|templates|tpl)
+      COMPREPLY=( $(compgen -W "${templateSubs.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     chat|c|talk)
@@ -1616,6 +1621,7 @@ _ved() {
     'trust:Manage trust tiers and work orders'
     'user:Manage and inspect known users'
     'prompt:Manage system prompt profiles'
+    'template:Vault template manager'
     'completions:Generate shell completions'
     'version:Show version'
   )
@@ -1656,6 +1662,9 @@ _ved() {
           ;;
         prompt|prompts|sp|system-prompt)
           _values 'subcommand' 'list[List prompt profiles]' 'show[Display prompt contents]' 'create[Create new profile]' 'edit[Open in editor]' 'use[Set as active prompt]' 'test[Preview assembled prompt]' 'reset[Revert to default]' 'diff[Compare two profiles]'
+          ;;
+        template|templates|tpl)
+          _values 'subcommand' 'list[List templates]' 'show[Display template contents]' 'create[Create a template]' 'edit[Open in editor]' 'delete[Remove a template]' 'use[Instantiate template]' 'vars[Show template variables]'
           ;;
         serve)
           _arguments \\
@@ -1746,6 +1755,9 @@ ${userSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from user' -a '$
 
 # prompt subcommands
 ${promptSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from prompt' -a '${s}'`).join('\n')}
+
+# template subcommands
+${templateSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from template' -a '${s}'`).join('\n')}
 
 # serve flags
 complete -c ved -n '__fish_seen_subcommand_from serve' -s p -l port -d 'Port'

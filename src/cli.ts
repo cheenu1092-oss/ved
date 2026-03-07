@@ -21,6 +21,7 @@ import { memoryCommand } from './cli-memory.js';
 import { trustCommand } from './cli-trust.js';
 import { handleUserCommand } from './cli-user.js';
 import { runPromptCli } from './cli-prompt.js';
+import { runTemplate } from './cli-template.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
@@ -101,6 +102,18 @@ async function main(): Promise<void> {
           config = getDefaults();
         }
         await runPromptCli(null, config, args.slice(1));
+      }
+      return;
+    }
+    case 'template':
+    case 'templates':
+    case 'tpl': {
+      const app = createApp();
+      await app.init();
+      try {
+        await runTemplate(app, args.slice(1));
+      } finally {
+        await app.stop();
       }
       return;
     }
