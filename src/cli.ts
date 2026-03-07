@@ -20,6 +20,7 @@ import type { VaultExport } from './export-types.js';
 import { memoryCommand } from './cli-memory.js';
 import { trustCommand } from './cli-trust.js';
 import { handleUserCommand } from './cli-user.js';
+import { runPromptCli } from './cli-prompt.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
@@ -69,6 +70,40 @@ async function main(): Promise<void> {
       return gc(args.slice(1));
     case 'webhook':
       return webhook(args.slice(1));
+    case 'chat':
+    case 'c':
+    case 'talk': {
+      const { runChat } = await import('./cli-chat.js');
+      const app = createApp();
+      return runChat(app, args.slice(1));
+    }
+    case 'prompt':
+    case 'prompts':
+    case 'sp':
+    case 'system-prompt': {
+      // Prompt commands don't need full app init for most subcommands
+      const promptSub = args[1];
+      if (promptSub === 'test' || promptSub === 'preview' || promptSub === 'dry-run') {
+        const app = createApp();
+        await app.init();
+        try {
+          await runPromptCli(app, app.config, args.slice(1));
+        } finally {
+          await app.stop();
+        }
+      } else {
+        // Load config without full app init
+        const { loadConfig, getDefaults } = await import('./core/config.js');
+        let config;
+        try {
+          config = loadConfig();
+        } catch {
+          config = getDefaults();
+        }
+        await runPromptCli(null, config, args.slice(1));
+      }
+      return;
+    }
     case 'memory':
     case 'mem': {
       const app = createApp();
@@ -115,7 +150,7 @@ async function main(): Promise<void> {
       return start();
     default:
       console.error(`Unknown command: ${command}`);
-      console.log('Usage: ved [init|start|serve|status|stats|search|memory|trust|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|webhook|plugin|gc|completions|version]');
+      console.log('Usage: ved [init|start|chat|serve|status|stats|search|memory|trust|prompt|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|webhook|plugin|gc|completions|version]');
       process.exit(1);
   }
 }

@@ -11,6 +11,7 @@
  *   7. MAINTAIN — compress memory, re-index, git commit, close stale sessions
  */
 
+import { readFileSync, existsSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import { ulid } from 'ulid';
 import { createLogger } from './log.js';
@@ -527,7 +528,7 @@ export class EventLoop {
 
     // Build messages array and system prompt for LLM
     const messages = session.workingMemory.messages;
-    const systemPrompt = this.buildSystemPrompt(ragContext);
+    const systemPrompt = this.buildSystemPrompt(ragContext, session.workingMemory.facts);
     const mcpTools = this.mcp ? this.mcp.tools : [];
     // Map MCP tool definitions to LLM format
     const tools = mcpTools.map(t => ({
@@ -722,6 +723,234 @@ export class EventLoop {
     this.sessions.persist(session);
 
     log.info('Message processed', { messageId: msg.id, sessionId: session.id });
+  }
+
+  // =========================================================================
+  // Direct Message Processing (for `ved chat` REPL)
+  // =========================================================================
+
+  /**
+   * Process a message through the full 7-step pipeline and return the response
+   * directly (bypassing channel adapters). Used by `ved chat` for interactive REPL.
+   *
+   * This is functionally identical to processMessageAsync() except:
+   * - Returns the VedResponse instead of sending via channel
+   * - Collects tool action info and memory ops for display
+   * - Does not require channels to be initialized
+   */
+  async processMessageDirect(msg: VedMessage): Promise<VedResponse> {
+    // ─── Step 1: RECEIVE ───
+    const trustTier = this.trust.resolveTier(msg.channel, msg.author);
+    const session = this.sessions.getOrCreate(
+      msg.channel,
+      '',
+      msg.author,
+      trustTier,
+    );
+
+    // Check for approval commands
+    const command = parseApprovalCommand(msg.content);
+    if (command) {
+      const result = executeApprovalCommand(command, msg.channel, msg.author, {
+        workOrders: this.workOrders,
+        trust: this.trust,
+        audit: this.audit,
+        onApproved: (wo) => this.executeApprovedWorkOrder(wo, msg.channel),
+      });
+
+      return {
+        id: ulid(),
+        inReplyTo: msg.id,
+        content: result.response,
+        actions: [],
+        memoryOps: [],
+        channelRef: '',
+      };
+    }
+
+    // Add user message to working memory
+    session.workingMemory.addMessage({
+      role: 'user',
+      content: msg.content,
+      timestamp: msg.timestamp,
+    });
+
+    this.audit.append({
+      eventType: 'message_received',
+      actor: msg.author,
+      sessionId: session.id,
+      detail: { messageId: msg.id, channel: msg.channel, contentLength: msg.content.length },
+    });
+
+    // ─── Step 2: ENRICH ───
+    let ragContext = '';
+    if (this.rag) {
+      try {
+        const retrieval = await this.rag.retrieve(msg.content);
+        ragContext = retrieval.text;
+      } catch (err) {
+        log.warn('RAG retrieval failed in direct mode', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    const messages = session.workingMemory.messages;
+    const systemPrompt = this.buildSystemPrompt(ragContext, session.workingMemory.facts);
+    const mcpTools = this.mcp ? this.mcp.tools : [];
+    const tools = mcpTools.map(t => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+      riskLevel: t.riskLevel,
+    }));
+
+    // ─── Step 3: DECIDE + Step 4: ACT ───
+    let responseText = '';
+    const actionLog: Array<{ tool: string; status: string; workOrderId?: string }> = [];
+
+    if (this.llm) {
+      const llmResponse = await this.llm.chat({
+        systemPrompt,
+        messages,
+        tools: tools.length > 0 ? tools : undefined,
+      });
+
+      responseText = llmResponse.decision.response ?? '';
+      let toolCalls = llmResponse.decision.toolCalls;
+
+      this.audit.append({
+        eventType: 'llm_call',
+        actor: 'ved',
+        sessionId: session.id,
+        detail: {
+          model: llmResponse.usage.model,
+          promptTokens: llmResponse.usage.promptTokens,
+          completionTokens: llmResponse.usage.completionTokens,
+          toolCallCount: toolCalls.length,
+        },
+      });
+
+      // Agentic loop
+      let loopCount = 0;
+      const maxLoops = this.config.trust.maxAgenticLoops;
+
+      while (toolCalls.length > 0 && loopCount < maxLoops) {
+        loopCount++;
+        const toolResults: ToolResult[] = [];
+
+        for (const call of toolCalls) {
+          const toolDef = this.mcp?.getTool(call.tool);
+          const riskLevel = toolDef?.riskLevel ?? 'medium';
+          const trustDecision = this.trust.getTrustDecision(trustTier, riskLevel);
+
+          if (trustDecision === 'deny') {
+            toolResults.push({
+              callId: call.id, tool: call.tool, success: false,
+              error: `Denied: insufficient trust (tier ${trustTier}) for ${riskLevel}-risk tool`,
+              durationMs: 0,
+            });
+            actionLog.push({ tool: call.tool, status: 'denied' });
+            continue;
+          }
+
+          if (trustDecision === 'approve') {
+            const workOrder = this.workOrders.create(
+              session.id, msg.id, call.tool, call.params,
+              { level: riskLevel, reasons: [`Trust tier ${trustTier}, risk ${riskLevel}`] },
+              trustTier, toolDef?.serverName ?? '',
+            );
+            toolResults.push({
+              callId: call.id, tool: call.tool, success: false,
+              error: `Awaiting approval (work order ${workOrder.id})`,
+              durationMs: 0,
+            });
+            actionLog.push({ tool: call.tool, status: 'pending_approval', workOrderId: workOrder.id });
+            continue;
+          }
+
+          // auto — execute immediately
+          this.audit.append({
+            eventType: 'tool_requested', actor: 'ved', sessionId: session.id,
+            detail: { tool: call.tool, params: call.params },
+          });
+
+          const result = await this.mcp!.executeTool(call);
+          toolResults.push(result);
+          actionLog.push({ tool: call.tool, status: result.success ? 'success' : 'error' });
+
+          this.audit.append({
+            eventType: result.success ? 'tool_executed' : 'tool_error',
+            actor: 'ved', sessionId: session.id,
+            detail: { tool: call.tool, success: result.success, durationMs: result.durationMs },
+          });
+        }
+
+        // Feed tool results back to LLM
+        const toolMessages = toolResults.map(r => ({
+          role: 'tool' as const,
+          content: r.success ? String(r.result ?? '') : `Error: ${r.error}`,
+          name: r.tool,
+          toolCallId: r.callId,
+          timestamp: Date.now(),
+        }));
+
+        const followUp = await this.llm.chat({
+          systemPrompt,
+          messages: [...messages, ...toolMessages],
+          tools: tools.length > 0 ? tools : undefined,
+          toolResults: toolResults.map(r => ({
+            callId: r.callId, tool: r.tool, success: r.success, result: r.result, error: r.error,
+          })),
+        });
+
+        responseText = followUp.decision.response ?? responseText;
+        toolCalls = followUp.decision.toolCalls;
+      }
+
+      if (loopCount >= maxLoops && toolCalls.length > 0) {
+        responseText += '\n\n⚠️ Tool call loop limit reached.';
+      }
+    } else {
+      responseText = `[No LLM configured] Received: ${msg.content}`;
+    }
+
+    // ─── Step 5: RECORD ───
+    if (responseText) {
+      session.workingMemory.addMessage({
+        role: 'assistant',
+        content: responseText,
+        timestamp: Date.now(),
+      });
+    }
+
+    this.audit.append({
+      eventType: 'message_sent',
+      actor: 'ved',
+      sessionId: session.id,
+      detail: { channel: msg.channel, contentLength: responseText.length },
+    });
+
+    // ─── Step 7: MAINTAIN ───
+    this.maintain(session);
+    this.sessions.persist(session);
+
+    log.info('Direct message processed', { messageId: msg.id, sessionId: session.id });
+
+    // Collect any pending work orders created during this message
+    const pendingActions = actionLog
+      .filter(a => a.workOrderId)
+      .map(a => this.workOrders.getById(a.workOrderId!))
+      .filter((wo): wo is WorkOrder => wo !== null && wo !== undefined);
+
+    return {
+      id: ulid(),
+      inReplyTo: msg.id,
+      content: responseText,
+      actions: pendingActions,
+      memoryOps: [],
+      channelRef: '',
+    };
   }
 
   // =========================================================================
@@ -983,30 +1212,94 @@ export class EventLoop {
   // =========================================================================
 
   /**
-   * Build the system prompt with RAG context injected.
+   * Build the system prompt with RAG context, working memory facts,
+   * and optional custom system prompt file injected.
+   *
+   * @param ragContext - RAG retrieval text to inject (may be empty)
+   * @param facts - Active working memory facts (key→value map)
    */
-  private buildSystemPrompt(ragContext: string): string {
+  private buildSystemPrompt(ragContext: string, facts?: Map<string, string>): string {
     const parts: string[] = [];
 
-    parts.push('You are Ved, a personal AI assistant. You remember everything and prove it.');
-    parts.push('');
-    parts.push('## Rules');
-    parts.push('- Be concise, accurate, and helpful.');
-    parts.push('- Use tools when they help answer the question. Do not hallucinate tool results.');
-    parts.push('- When asked to remember something, acknowledge and confirm.');
-    parts.push('- Cite your knowledge sources when relevant (e.g. "From your vault: ...")');
-    parts.push('');
+    // ─── Custom system prompt (replaces default preamble if provided) ───
+    const customPrompt = this.loadCustomSystemPrompt();
+    if (customPrompt) {
+      parts.push(customPrompt);
+      parts.push('');
+    } else {
+      parts.push('You are Ved, a personal AI assistant. You remember everything and prove it.');
+      parts.push('');
+      parts.push('## Rules');
+      parts.push('- Be concise, accurate, and helpful.');
+      parts.push('- Use tools when they help answer the question. Do not hallucinate tool results.');
+      parts.push('- When asked to remember something, acknowledge and confirm.');
+      parts.push('- Cite your knowledge sources when relevant (e.g. "From your vault: ...")');
+      parts.push('');
+    }
 
+    // ─── Working memory facts ───
+    if (facts && facts.size > 0) {
+      parts.push('## Active Facts (from this session)');
+      for (const [key, value] of facts) {
+        parts.push(`- **${key}:** ${value}`);
+      }
+      parts.push('');
+    }
+
+    // ─── RAG context ───
     if (ragContext) {
       parts.push('## Retrieved Knowledge (from your vault)');
       parts.push(ragContext);
       parts.push('');
     }
 
-    // TODO: Load custom system prompt from config.llm.systemPromptPath
-    // TODO: Inject working memory facts section
-
     return parts.join('\n');
+  }
+
+  /**
+   * Load custom system prompt from config.llm.systemPromptPath.
+   * Returns the file content trimmed, or null if not configured or not found.
+   * Cached after first successful read per EventLoop instance.
+   */
+  private _cachedCustomPrompt: string | null | undefined = undefined;
+
+  private loadCustomSystemPrompt(): string | null {
+    // Use cache after first load
+    if (this._cachedCustomPrompt !== undefined) {
+      return this._cachedCustomPrompt;
+    }
+
+    const promptPath = this.config.llm.systemPromptPath;
+    if (!promptPath) {
+      this._cachedCustomPrompt = null;
+      return null;
+    }
+
+    try {
+      if (!existsSync(promptPath)) {
+        log.warn('Custom system prompt file not found', { path: promptPath });
+        this._cachedCustomPrompt = null;
+        return null;
+      }
+
+      const content = readFileSync(promptPath, 'utf-8').trim();
+      if (!content) {
+        log.warn('Custom system prompt file is empty', { path: promptPath });
+        this._cachedCustomPrompt = null;
+        return null;
+      }
+
+      log.info('Loaded custom system prompt', { path: promptPath, length: content.length });
+      this._cachedCustomPrompt = content;
+      return content;
+    } catch (err) {
+      log.error('Failed to read custom system prompt', {
+        path: promptPath,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      this._cachedCustomPrompt = null;
+      return null;
+    }
   }
 
   // =========================================================================

@@ -22,7 +22,7 @@ import { VaultManager } from './memory/vault.js';
 import { RagPipeline } from './rag/pipeline.js';
 import { ChannelManager } from './channel/manager.js';
 import { VedError } from './types/errors.js';
-import type { VedConfig, ModuleHealth, VaultFile, AuditEntry, WorkOrder } from './types/index.js';
+import type { VedConfig, ModuleHealth, VaultFile, AuditEntry, WorkOrder, VedMessage, VedResponse } from './types/index.js';
 import type { IndexStats, RetrieveOptions, RetrievalContext } from './rag/types.js';
 import type { VaultExport, VaultExportFile, ExportOptions, ImportResult } from './export-types.js';
 import type { MCPServerConfig, MCPToolDefinition, ServerInfo } from './mcp/types.js';
@@ -322,6 +322,17 @@ export class VedApp {
     const sessions = { active: activeSessions, total: totalSessions };
 
     return { rag, vault, audit, sessions };
+  }
+
+  /**
+   * Process a message through the full 7-step pipeline and return the response.
+   * Used by `ved chat` REPL — bypasses channel adapters entirely.
+   */
+  async processMessageDirect(msg: VedMessage): Promise<VedResponse> {
+    if (!this.initialized) {
+      throw new Error('VedApp not initialized — call init() first');
+    }
+    return this.eventLoop.processMessageDirect(msg);
   }
 
   /**
@@ -1469,10 +1480,11 @@ export class VedApp {
    */
   static generateCompletions(shell: 'bash' | 'zsh' | 'fish'): string {
     const commands = [
-      'init', 'start', 'run', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'reindex',
+      'init', 'start', 'chat', 'run', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
       'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'version',
     ];
+    const chatFlags = ['--model', '--no-rag', '--no-tools', '--verbose', '--help'];
     const configSubs = ['validate', 'show', 'path'];
     const backupSubs = ['create', 'list', 'restore'];
     const cronSubs = ['list', 'add', 'remove', 'enable', 'disable', 'run', 'history'];
@@ -1483,6 +1495,7 @@ export class VedApp {
     const memorySubs = ['list', 'show', 'graph', 'timeline', 'daily', 'forget', 'tags', 'types'];
     const trustSubs = ['matrix', 'resolve', 'assess', 'grant', 'revoke', 'ledger', 'pending', 'history', 'show', 'config'];
     const userSubs = ['list', 'show', 'sessions', 'activity', 'stats'];
+    const promptSubs = ['list', 'show', 'create', 'edit', 'use', 'test', 'reset', 'diff'];
 
     switch (shell) {
       case 'bash':
@@ -1533,6 +1546,14 @@ _ved_completions() {
       ;;
     user|u|who|users)
       COMPREPLY=( $(compgen -W "${userSubs.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    prompt|prompts|sp|system-prompt)
+      COMPREPLY=( $(compgen -W "${promptSubs.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    chat|c|talk)
+      COMPREPLY=( $(compgen -W "${chatFlags.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     restore)
@@ -1594,6 +1615,7 @@ _ved() {
     'memory:Browse and manage Obsidian knowledge graph'
     'trust:Manage trust tiers and work orders'
     'user:Manage and inspect known users'
+    'prompt:Manage system prompt profiles'
     'completions:Generate shell completions'
     'version:Show version'
   )
@@ -1631,6 +1653,9 @@ _ved() {
           ;;
         user|u|who|users)
           _values 'subcommand' 'list[List known users]' 'show[User profile]' 'sessions[User sessions]' 'activity[User activity log]' 'stats[Aggregate statistics]'
+          ;;
+        prompt|prompts|sp|system-prompt)
+          _values 'subcommand' 'list[List prompt profiles]' 'show[Display prompt contents]' 'create[Create new profile]' 'edit[Open in editor]' 'use[Set as active prompt]' 'test[Preview assembled prompt]' 'reset[Revert to default]' 'diff[Compare two profiles]'
           ;;
         serve)
           _arguments \\
@@ -1719,6 +1744,9 @@ ${trustSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from trust' -a 
 # user subcommands
 ${userSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from user' -a '${s}'`).join('\n')}
 
+# prompt subcommands
+${promptSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from prompt' -a '${s}'`).join('\n')}
+
 # serve flags
 complete -c ved -n '__fish_seen_subcommand_from serve' -s p -l port -d 'Port'
 complete -c ved -n '__fish_seen_subcommand_from serve' -s h -l host -d 'Host'
@@ -1792,7 +1820,7 @@ complete -c ved -n '__fish_seen_subcommand_from backup; and __fish_seen_subcomma
    * - If index is empty → full reindex.
    * - If index is populated → incremental (only files modified since last indexed_at).
    */
-  private async indexVaultOnStartup(): Promise<void> {
+  async indexVaultOnStartup(): Promise<void> {
     const existingStats = this.rag.stats();
 
     const files = this.readAllVaultFiles();
