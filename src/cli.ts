@@ -18,6 +18,8 @@ import { createLogger } from './core/log.js';
 import type { MergedResult } from './rag/types.js';
 import type { VaultExport } from './export-types.js';
 import { memoryCommand } from './cli-memory.js';
+import { trustCommand } from './cli-trust.js';
+import { handleUserCommand } from './cli-user.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
@@ -78,6 +80,31 @@ async function main(): Promise<void> {
       }
       return;
     }
+    case 'trust':
+    case 't': {
+      const app = createApp();
+      await app.init();
+      try {
+        await trustCommand(app, args.slice(1));
+      } finally {
+        await app.stop();
+      }
+      return;
+    }
+    case 'user':
+    case 'u':
+    case 'who':
+    case 'users': {
+      const app = createApp();
+      await app.init();
+      try {
+        const output = await handleUserCommand(app, args.slice(1));
+        console.log(output);
+      } finally {
+        await app.stop();
+      }
+      return;
+    }
     case 'serve':
     case 'api':
       return serve(args.slice(1));
@@ -88,7 +115,7 @@ async function main(): Promise<void> {
       return start();
     default:
       console.error(`Unknown command: ${command}`);
-      console.log('Usage: ved [init|start|serve|status|stats|search|memory|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|webhook|plugin|gc|completions|version]');
+      console.log('Usage: ved [init|start|serve|status|stats|search|memory|trust|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|webhook|plugin|gc|completions|version]');
       process.exit(1);
   }
 }

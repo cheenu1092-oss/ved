@@ -22,7 +22,7 @@ import { VaultManager } from './memory/vault.js';
 import { RagPipeline } from './rag/pipeline.js';
 import { ChannelManager } from './channel/manager.js';
 import { VedError } from './types/errors.js';
-import type { VedConfig, ModuleHealth, VaultFile, AuditEntry } from './types/index.js';
+import type { VedConfig, ModuleHealth, VaultFile, AuditEntry, WorkOrder } from './types/index.js';
 import type { IndexStats, RetrieveOptions, RetrievalContext } from './rag/types.js';
 import type { VaultExport, VaultExportFile, ExportOptions, ImportResult } from './export-types.js';
 import type { MCPServerConfig, MCPToolDefinition, ServerInfo } from './mcp/types.js';
@@ -1400,6 +1400,68 @@ export class VedApp {
     });
   }
 
+  // ── Trust ──
+
+  /**
+   * Resolve trust tier for a user on a channel.
+   */
+  trustResolve(channel: string, userId: string): number {
+    return this.eventLoop.trust.resolveTier(channel, userId);
+  }
+
+  /**
+   * Assess risk level of a tool call.
+   */
+  trustAssess(toolName: string, params: Record<string, unknown> = {}): { level: string; reasons: string[] } {
+    return this.eventLoop.trust.assessRisk(toolName, params);
+  }
+
+  /**
+   * Grant a trust tier to a user.
+   */
+  trustGrant(channel: string, userId: string, tier: 1 | 2 | 3 | 4, grantedBy: string, reason = ''): void {
+    this.eventLoop.trust.grantTrust(channel, userId, tier, grantedBy, reason);
+  }
+
+  /**
+   * Revoke trust for a user on a channel.
+   */
+  trustRevoke(channel: string, userId: string, revokedBy: string, reason = ''): void {
+    this.eventLoop.trust.revokeTrust(channel, userId, revokedBy, reason);
+  }
+
+  /**
+   * Get pending work orders, optionally filtered by session.
+   */
+  workOrdersPending(sessionId?: string): WorkOrder[] {
+    return this.eventLoop.workOrders.getPending(sessionId);
+  }
+
+  /**
+   * Get a work order by ID.
+   */
+  workOrderGet(id: string): WorkOrder | null {
+    return this.eventLoop.workOrders.getById(id);
+  }
+
+  /**
+   * Query the database directly (for trust ledger and work order history).
+   * Returns raw rows.
+   */
+  queryDb(sql: string, params: Record<string, string | number> = {}): unknown[] {
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db.prepare(sql).all(params);
+  }
+
+  /**
+   * Get trust config.
+   */
+  get trustConfig(): { ownerIds: string[]; tribeIds: string[]; knownIds: string[]; defaultTier: number; approvalTimeoutMs?: number; maxAgenticLoops?: number } {
+    const cfg = this.config;
+    if (!cfg) throw new Error('Config not loaded');
+    return cfg.trust;
+  }
+
   // ── Completions ──
 
   /**
@@ -1407,7 +1469,7 @@ export class VedApp {
    */
   static generateCompletions(shell: 'bash' | 'zsh' | 'fish'): string {
     const commands = [
-      'init', 'start', 'run', 'serve', 'status', 'stats', 'search', 'memory', 'reindex',
+      'init', 'start', 'run', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
       'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'version',
     ];
@@ -1419,6 +1481,8 @@ export class VedApp {
     const webhookSubs = ['list', 'add', 'remove', 'enable', 'disable', 'deliveries', 'stats', 'test'];
     const gcSubs = ['run', 'status'];
     const memorySubs = ['list', 'show', 'graph', 'timeline', 'daily', 'forget', 'tags', 'types'];
+    const trustSubs = ['matrix', 'resolve', 'assess', 'grant', 'revoke', 'ledger', 'pending', 'history', 'show', 'config'];
+    const userSubs = ['list', 'show', 'sessions', 'activity', 'stats'];
 
     switch (shell) {
       case 'bash':
@@ -1461,6 +1525,14 @@ _ved_completions() {
       ;;
     memory|mem)
       COMPREPLY=( $(compgen -W "${memorySubs.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    trust|t)
+      COMPREPLY=( $(compgen -W "${trustSubs.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    user|u|who|users)
+      COMPREPLY=( $(compgen -W "${userSubs.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     restore)
@@ -1520,6 +1592,8 @@ _ved() {
     'watch:Watch vault for changes (standalone)'
     'webhook:Manage webhook event delivery'
     'memory:Browse and manage Obsidian knowledge graph'
+    'trust:Manage trust tiers and work orders'
+    'user:Manage and inspect known users'
     'completions:Generate shell completions'
     'version:Show version'
   )
@@ -1551,6 +1625,12 @@ _ved() {
           ;;
         memory|mem)
           _values 'subcommand' 'list[List entities]' 'show[Display entity details]' 'graph[Show wikilink connections]' 'timeline[Recent memory activity]' 'daily[Show/create daily note]' 'forget[Soft-delete to archive]' 'tags[List all tags]' 'types[List entity types]'
+          ;;
+        trust|t)
+          _values 'subcommand' 'matrix[Show trust×risk matrix]' 'resolve[Resolve user trust tier]' 'assess[Assess tool risk level]' 'grant[Grant trust tier]' 'revoke[Revoke trust grant]' 'ledger[Show trust ledger]' 'pending[List pending work orders]' 'history[Work order history]' 'show[Work order details]' 'config[Show trust config]'
+          ;;
+        user|u|who|users)
+          _values 'subcommand' 'list[List known users]' 'show[User profile]' 'sessions[User sessions]' 'activity[User activity log]' 'stats[Aggregate statistics]'
           ;;
         serve)
           _arguments \\
@@ -1632,6 +1712,12 @@ ${webhookSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from webhook'
 
 # memory subcommands
 ${memorySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from memory' -a '${s}'`).join('\n')}
+
+# trust subcommands
+${trustSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from trust' -a '${s}'`).join('\n')}
+
+# user subcommands
+${userSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from user' -a '${s}'`).join('\n')}
 
 # serve flags
 complete -c ved -n '__fish_seen_subcommand_from serve' -s p -l port -d 'Port'
