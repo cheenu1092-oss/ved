@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 54
-- **Current Phase:** CYCLE (export/import + CLI polish)
+- **Session Number:** 55
+- **Current Phase:** CYCLE (history + doctor CLI)
 - **Last Run:** 2026-03-06
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 55 — Discord channel polish, `ved history` (audit log viewer), or `ved doctor` (self-diagnostics)
+- **Next Session:** 56 — Discord channel polish, `ved backup` (scheduled vault snapshots), or `ved completions` (shell completions)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -89,6 +89,8 @@
 - **Session 51:** CYCLE — **`ved reindex` CLI command + startup vault indexing.** New `ved reindex` CLI command force-rebuilds the entire RAG index (reads all vault .md files → fullReindex). Startup indexing: `ved start` now auto-indexes all vault files into RAG before entering event loop (skips if index already populated). Startup sequence: init → index vault → start channels → start watcher → event loop. Pushed to GitHub (aff5e11). **16 new tests. 977/977 pass (host + Docker parity). 0 type errors.**
 - **Session 52:** CYCLE — **`ved stats` CLI + incremental startup indexing + vault git auto-commit.** New `ved stats` command shows vault/RAG/audit/session metrics. Startup indexing enhanced: populated indexes now do incremental re-index (compare file mtime vs indexed_at) instead of skipping entirely. Vault git auto-commit: commits dirty files before indexing on startup. **19 new tests. 996/996 pass (host + Docker parity). 0 type errors.**
 - **Session 53:** CYCLE — **`ved search` CLI + `ved config` CLI.** New `ved search` command queries RAG pipeline from CLI (FTS + vector + graph fusion, -n limit, --verbose, --fts-only flags). New `ved config` with subcommands: validate (checks config errors), show (prints resolved config with secrets redacted), path (prints config dir). CLI now has 8 commands. **30 new tests. 1026/1026 pass (host + Docker parity). 0 type errors.**
+- **Session 54:** CYCLE — **`ved export` + `ved import` CLI.** Export vault to portable JSON (with optional audit + stats). Import with merge/overwrite/fail modes, dry-run preview, stdin support. Path traversal protection on import. Round-trip integrity verified. CLI now has 10 commands. **23 new tests. 1030/1030 pass (host + Docker parity). 0 type errors.**
+- **Session 55:** CYCLE — **`ved history` + `ved doctor` CLI.** History: audit log viewer with type/date/limit filters, --verify chain integrity, --types listing, --json output. Doctor: 8-point self-diagnostics (config, database, vault structure, vault git, audit chain, RAG index, LLM, MCP tools). CLI now has 12 commands. **23 new tests. 1053/1053 pass (host + Docker parity). 0 type errors.**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -117,7 +119,9 @@
 | 51 | ✅ CYCLE | `ved reindex` CLI + startup vault indexing (16 tests) |
 | 52 | ✅ CYCLE | `ved stats` CLI + incremental indexing + git auto-commit (19 tests) |
 | 53 | ✅ CYCLE | `ved search` CLI + `ved config` CLI (30 tests) |
-| 54+ | CYCLE | Discord polish, `ved export`, GitHub push |
+| 54 | ✅ CYCLE | `ved export` + `ved import` CLI (23 tests) |
+| 55 | ✅ CYCLE | `ved history` + `ved doctor` CLI (23 tests) |
+| 56+ | CYCLE | Discord polish, `ved backup`, shell completions |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -153,4 +157,6 @@
 | reindex+startup S51 | ✅ Complete | ~100 | 16 |
 | stats+incr+autocommit S52 | ✅ Complete | ~150 | 19 |
 | search+config S53 | ✅ Complete | ~250 | 30 |
-| **Total** | **ALL COMPLETE** | **~18,752** | **1026** |
+| export+import S54 | ✅ Complete | ~400 | 23 |
+| history+doctor S55 | ✅ Complete | ~450 | 23 |
+| **Total** | **ALL COMPLETE** | **~19,602** | **1053** |
