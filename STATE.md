@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 60
-- **Current Phase:** CYCLE (GitHub push + maintenance)
-- **Last Run:** 2026-03-06
+- **Session Number:** 61
+- **Current Phase:** CYCLE (feature development)
+- **Last Run:** 2026-03-07
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 61 — New feature cycle (plugin marketplace? webhooks? HTTP API?)
+- **Next Session:** 62 — GitHub push (S61) + next feature (webhook events? SSE streaming? web dashboard?)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -96,6 +96,7 @@
 - **Session 58:** CYCLE — **`ved upgrade` + `ved watch` CLI.** Upgrade: 4 subcommands (status/run/verify/history) for database migration lifecycle — shows schema version, auto-backup before applying pending migrations, checksum integrity verification, migration history with applied dates. Watch: standalone vault file watcher — initializes + indexes vault, watches for changes, triggers RAG re-indexing, blocks until signal — no event loop or channels started. Shell completions updated for all 3 shells. CLI now has 17 commands. **22 new tests. 1149/1149 pass (Docker parity). 0 type errors.**
 - **Session 59:** CYCLE — **Dedup fix + GC/Plugin test coverage.** Fixed critical code duplication from S58: duplicate method definitions in app.ts (14 methods), cli.ts (4 functions), mcp/client.ts (4 methods). Removed ~646 lines of dead code. Eliminated 28 TypeScript errors (14 TS2393 duplicate + 4 property mismatch + 10 cascading). Kept properly-typed first set in app.ts, correctly-wired second set in cli.ts. Wrote 24 tests covering gcStatus (5), gcRun (6), pluginList (2), pluginTools (2), pluginAdd+Remove (3), pluginTest (1), dedup verification (5). **24 new tests. 1173/1173 pass (Docker parity). 0 type errors.**
 - **Session 60:** CYCLE — **GitHub push (S56-59) + cron test fix.** Fixed 2 timezone-sensitive cron tests (UTC→local Date constructors). Pushed 4 sessions to GitHub (fa3308b, 17 files, +4888 lines). Docker parity verified. **1173/1173 pass. 0 type errors.**
+- **Session 61:** CYCLE — **`ved serve` — HTTP API server.** Built lightweight REST API on `node:http` (zero deps). 9 endpoints: health, stats, search (RAG), history (audit + chain verify), vault files/file, doctor, approve/deny work orders. Bearer token auth (optional), CORS, path traversal protection, input validation, proper HTTP status codes. CLI: `ved serve [--port] [--host] [--token] [--cors]`. Shell completions updated (all 3 shells). **56 new tests. 1229/1229 pass (host + Docker parity). 0 type errors. CLI: 18 commands.**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -131,7 +132,8 @@
 | 58 | ✅ CYCLE | `ved upgrade` + `ved watch` CLI (22 tests) |
 | 59 | ✅ CYCLE | Dedup fix + GC/Plugin test coverage (24 tests) |
 | 60 | ✅ CYCLE | GitHub push (S56-59), cron test fix |
-| 61+ | CYCLE | New features, polish, releases |
+| 61 | ✅ CYCLE | `ved serve` — HTTP API server (56 tests) |
+| 62+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -173,4 +175,5 @@
 | cron S57 | ✅ Complete | ~420 | 51 |
 | upgrade+watch S58 | ✅ Complete | ~310 | 22 |
 | dedup+gc+plugin S59 | ✅ Complete | -646 (dedup) | 24 |
-| **Total** | **ALL COMPLETE** | **~20,186** | **1173** |
+| http-api S61 | ✅ Complete | ~370 | 56 |
+| **Total** | **ALL COMPLETE** | **~20,556** | **1229** |

@@ -17,6 +17,7 @@ import { getConfigDir, loadConfig, validateConfig } from './core/config.js';
 import { createLogger } from './core/log.js';
 import type { MergedResult } from './rag/types.js';
 import type { VaultExport } from './export-types.js';
+import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
 const VERSION = '0.1.0';
@@ -63,6 +64,9 @@ async function main(): Promise<void> {
       return plugin(args.slice(1));
     case 'gc':
       return gc(args.slice(1));
+    case 'serve':
+    case 'api':
+      return serve(args.slice(1));
     case 'completions':
       return completions(args.slice(1));
     case 'start':
@@ -70,7 +74,7 @@ async function main(): Promise<void> {
       return start();
     default:
       console.error(`Unknown command: ${command}`);
-      console.log('Usage: ved [init|start|status|stats|search|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|plugin|gc|completions|version]');
+      console.log('Usage: ved [init|start|serve|status|stats|search|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|plugin|gc|completions|version]');
       process.exit(1);
   }
 }
@@ -1915,6 +1919,91 @@ async function gc(args: string[]): Promise<void> {
       console.error(`Unknown gc subcommand: ${sub}`);
       console.log('Usage: ved gc [run|status]');
       process.exit(1);
+  }
+}
+
+/**
+ * Start the HTTP API server.
+ *
+ * Usage:
+ *   ved serve                    — Start on default port (3141)
+ *   ved serve --port 8080        — Custom port
+ *   ved serve --host 0.0.0.0     — Bind to all interfaces
+ *   ved serve --token <secret>   — Require Bearer token auth
+ *   ved serve --cors '*'         — Set CORS origin
+ */
+async function serve(args: string[]): Promise<void> {
+  let port = 3141;
+  let host = '127.0.0.1';
+  let apiToken = process.env.VED_API_TOKEN ?? '';
+  let corsOrigin = '*';
+
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === '--port' || args[i] === '-p') && args[i + 1]) {
+      port = parseInt(args[i + 1], 10);
+      if (isNaN(port) || port <= 0 || port > 65535) {
+        console.error('Error: --port must be between 1 and 65535');
+        process.exit(1);
+      }
+      i++;
+    } else if ((args[i] === '--host' || args[i] === '-h') && args[i + 1]) {
+      host = args[i + 1];
+      i++;
+    } else if ((args[i] === '--token' || args[i] === '-t') && args[i + 1]) {
+      apiToken = args[i + 1];
+      i++;
+    } else if (args[i] === '--cors' && args[i + 1]) {
+      corsOrigin = args[i + 1];
+      i++;
+    } else {
+      console.error(`Unknown serve flag: ${args[i]}`);
+      console.log('Usage: ved serve [--port <N>] [--host <addr>] [--token <secret>] [--cors <origin>]');
+      process.exit(1);
+    }
+  }
+
+  console.log(`\nVed v${VERSION} — HTTP API Server\n`);
+
+  try {
+    const app = createApp();
+    await app.init();
+
+    const httpServer = new VedHttpServer(app, { port, host, apiToken, corsOrigin });
+    const actualPort = await httpServer.start();
+
+    console.log(`  🌐 Listening on http://${host}:${actualPort}`);
+    console.log(`  Auth: ${apiToken ? '🔒 Bearer token required' : '🔓 No auth (use --token to enable)'}`);
+    console.log(`  CORS: ${corsOrigin}`);
+    console.log('');
+    console.log('  Endpoints:');
+    console.log('    GET  /api/health          Health check');
+    console.log('    GET  /api/stats           System stats');
+    console.log('    GET  /api/search?q=       RAG search');
+    console.log('    GET  /api/history         Audit history');
+    console.log('    GET  /api/vault/files     List vault files');
+    console.log('    GET  /api/vault/file?path= Read vault file');
+    console.log('    GET  /api/doctor          Run diagnostics');
+    console.log('    POST /api/approve/:id     Approve work order');
+    console.log('    POST /api/deny/:id        Deny work order');
+    console.log('');
+    console.log('  Press Ctrl+C to stop.\n');
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      console.log('\n  Stopping...');
+      await httpServer.stop();
+      await app.stop();
+      console.log('  Done.\n');
+      process.exit(0);
+    };
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+
+    // Keep process alive
+    await new Promise<void>(() => {});
+  } catch (err) {
+    console.error(`Failed to start: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
   }
 }
 

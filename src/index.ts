@@ -54,5 +54,9 @@ export { VedError } from './types/errors.js';
 // Export/Import
 export type { VaultExport, VaultExportFile, ExportOptions, ImportResult } from './export-types.js';
 
+// HTTP
+export { VedHttpServer } from './http.js';
+export type { HttpServerConfig } from './http.js';
+
 // App
 export { VedApp, createApp } from './app.js';

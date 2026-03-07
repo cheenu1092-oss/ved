@@ -1357,7 +1357,7 @@ export class VedApp {
    */
   static generateCompletions(shell: 'bash' | 'zsh' | 'fish'): string {
     const commands = [
-      'init', 'start', 'run', 'status', 'stats', 'search', 'reindex',
+      'init', 'start', 'run', 'serve', 'status', 'stats', 'search', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
       'completions', 'upgrade', 'watch', 'plugin', 'gc', 'version',
     ];
@@ -1444,6 +1444,7 @@ _ved() {
     'init:Create ~/.ved/ with default config'
     'start:Start Ved in interactive mode'
     'run:Alias for start'
+    'serve:Start HTTP API server'
     'status:Show health check'
     'stats:Show vault/RAG/audit/session metrics'
     'search:Search vault via RAG pipeline'
@@ -1482,6 +1483,16 @@ _ved() {
           ;;
         upgrade)
           _values 'subcommand' 'status[Show migration status]' 'run[Apply pending migrations]' 'verify[Check migration integrity]' 'history[Show applied migrations]'
+          ;;
+        serve)
+          _arguments \\
+            '-p[Port]:port' \\
+            '--port[Port]:port' \\
+            '-h[Host]:host' \\
+            '--host[Host]:host' \\
+            '-t[API token]:token' \\
+            '--token[API token]:token' \\
+            '--cors[CORS origin]:origin'
           ;;
         search)
           _arguments \\
@@ -1547,6 +1558,12 @@ ${cronSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from cron' -a '$
 
 # upgrade subcommands
 ${upgradeSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from upgrade' -a '${s}'`).join('\n')}
+
+# serve flags
+complete -c ved -n '__fish_seen_subcommand_from serve' -s p -l port -d 'Port'
+complete -c ved -n '__fish_seen_subcommand_from serve' -s h -l host -d 'Host'
+complete -c ved -n '__fish_seen_subcommand_from serve' -s t -l token -d 'API token'
+complete -c ved -n '__fish_seen_subcommand_from serve' -l cors -d 'CORS origin'
 
 # search flags
 complete -c ved -n '__fish_seen_subcommand_from search' -s n -l limit -d 'Max results'
