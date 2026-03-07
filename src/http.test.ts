@@ -20,6 +20,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { request } from 'node:http';
 import { VedHttpServer, type HttpServerConfig } from './http.js';
+import { EventBus } from './event-bus.js';
 
 // ── Mock VedApp ──
 
@@ -27,6 +28,7 @@ function createMockApp(overrides: Record<string, unknown> = {}): any {
   const defaultOwnerIds = ['owner-1'];
 
   return {
+    eventBus: overrides.eventBus ?? new EventBus(),
     config: {
       trust: { ownerIds: defaultOwnerIds },
       memory: { vaultPath: '/tmp/test-vault', gitEnabled: false },
@@ -663,5 +665,272 @@ describe('VedHttpServer', () => {
       expect(res.status).toBe(500);
       expect(res.body.error).toContain('No owner IDs');
     });
+  });
+});
+
+// ── SSE Event Stream Tests ──
+
+describe('SSE: GET /api/events', () => {
+  let mockApp: any;
+  let server: VedHttpServer;
+  let port: number;
+  let eventBus: EventBus;
+
+  beforeEach(async () => {
+    eventBus = new EventBus();
+    mockApp = createMockApp({ eventBus });
+    server = new VedHttpServer(mockApp, { port: 0, host: '127.0.0.1' });
+    port = await server.start();
+  });
+
+  afterEach(async () => {
+    await server.stop();
+  });
+
+  /** Helper: connect to SSE and collect events */
+  function connectSSE(
+    path: string = '/api/events',
+    options: { token?: string } = {},
+  ): Promise<{
+    events: Array<{ event: string; data: string; id: string }>;
+    raw: string;
+    close: () => void;
+    waitForEvents: (count: number, timeoutMs?: number) => Promise<void>;
+  }> {
+    return new Promise((resolve, reject) => {
+      const headers: Record<string, string> = { Accept: 'text/event-stream' };
+      if (options.token) headers['Authorization'] = `Bearer ${options.token}`;
+
+      const req = request({
+        hostname: '127.0.0.1',
+        port,
+        path,
+        method: 'GET',
+        headers,
+      }, (res) => {
+        const events: Array<{ event: string; data: string; id: string }> = [];
+        let raw = '';
+        let pendingResolve: (() => void) | null = null;
+        let targetCount = 0;
+
+        res.on('data', (chunk: Buffer) => {
+          const text = chunk.toString();
+          raw += text;
+
+          // Parse SSE events
+          const lines = text.split('\n');
+          let currentEvent = '';
+          let currentData = '';
+          let currentId = '';
+
+          for (const line of lines) {
+            if (line.startsWith('event: ')) currentEvent = line.slice(7);
+            else if (line.startsWith('data: ')) currentData = line.slice(6);
+            else if (line.startsWith('id: ')) currentId = line.slice(4);
+            else if (line === '' && currentData) {
+              events.push({ event: currentEvent, data: currentData, id: currentId });
+              currentEvent = '';
+              currentData = '';
+              currentId = '';
+              if (pendingResolve && events.length >= targetCount) {
+                pendingResolve();
+                pendingResolve = null;
+              }
+            }
+          }
+        });
+
+        const close = () => { req.destroy(); };
+
+        const waitForEvents = (count: number, timeoutMs = 2000): Promise<void> => {
+          if (events.length >= count) return Promise.resolve();
+          return new Promise((resolve, reject) => {
+            targetCount = count;
+            pendingResolve = resolve;
+            const timer = setTimeout(() => {
+              pendingResolve = null;
+              reject(new Error(`Timeout waiting for ${count} events (got ${events.length})`));
+            }, timeoutMs);
+            // Clear timer if resolved
+            const origResolve = pendingResolve;
+            pendingResolve = () => { clearTimeout(timer); resolve(); };
+          });
+        };
+
+        // Wait for initial :ok comment before resolving
+        const initTimer = setTimeout(() => resolve({ events, raw, close, waitForEvents }), 100);
+        res.once('data', () => {
+          clearTimeout(initTimer);
+          // Small delay to let initial comment arrive
+          setTimeout(() => resolve({ events, raw, close, waitForEvents }), 50);
+        });
+      });
+
+      req.on('error', reject);
+      req.end();
+    });
+  }
+
+  it('returns SSE content type', async () => {
+    const sse = await connectSSE();
+    try {
+      expect(sse.raw).toContain(':ok');
+    } finally {
+      sse.close();
+    }
+  });
+
+  it('sends initial :ok comment', async () => {
+    const sse = await connectSSE();
+    try {
+      expect(sse.raw.startsWith(':ok\n\n')).toBe(true);
+    } finally {
+      sse.close();
+    }
+  });
+
+  it('delivers events in real-time', async () => {
+    const sse = await connectSSE();
+    try {
+      // Emit an event through the bus
+      eventBus.emit({
+        id: 'test_001',
+        timestamp: Date.now(),
+        type: 'message_received',
+        actor: 'user1',
+        detail: { content: 'hello' },
+        hash: 'abc',
+      });
+
+      await sse.waitForEvents(1);
+
+      expect(sse.events).toHaveLength(1);
+      expect(sse.events[0].event).toBe('message_received');
+      expect(sse.events[0].id).toBe('test_001');
+
+      const data = JSON.parse(sse.events[0].data);
+      expect(data.type).toBe('message_received');
+      expect(data.actor).toBe('user1');
+      expect(data.detail.content).toBe('hello');
+    } finally {
+      sse.close();
+    }
+  });
+
+  it('delivers multiple events in order', async () => {
+    const sse = await connectSSE();
+    try {
+      eventBus.emit({
+        id: 'e1', timestamp: Date.now(), type: 'startup', actor: 'ved', detail: {}, hash: 'h1',
+      });
+      eventBus.emit({
+        id: 'e2', timestamp: Date.now(), type: 'llm_call', actor: 'ved', detail: {}, hash: 'h2',
+      });
+      eventBus.emit({
+        id: 'e3', timestamp: Date.now(), type: 'shutdown', actor: 'ved', detail: {}, hash: 'h3',
+      });
+
+      await sse.waitForEvents(3);
+
+      expect(sse.events.map(e => e.id)).toEqual(['e1', 'e2', 'e3']);
+      expect(sse.events.map(e => e.event)).toEqual(['startup', 'llm_call', 'shutdown']);
+    } finally {
+      sse.close();
+    }
+  });
+
+  it('filters events by type', async () => {
+    const sse = await connectSSE('/api/events?types=llm_call,llm_response');
+    try {
+      eventBus.emit({
+        id: 'e1', timestamp: Date.now(), type: 'message_received', actor: 'user', detail: {}, hash: 'h1',
+      });
+      eventBus.emit({
+        id: 'e2', timestamp: Date.now(), type: 'llm_call', actor: 'ved', detail: {}, hash: 'h2',
+      });
+      eventBus.emit({
+        id: 'e3', timestamp: Date.now(), type: 'tool_executed', actor: 'ved', detail: {}, hash: 'h3',
+      });
+      eventBus.emit({
+        id: 'e4', timestamp: Date.now(), type: 'llm_response', actor: 'ved', detail: {}, hash: 'h4',
+      });
+
+      await sse.waitForEvents(2);
+
+      expect(sse.events).toHaveLength(2);
+      expect(sse.events[0].event).toBe('llm_call');
+      expect(sse.events[1].event).toBe('llm_response');
+    } finally {
+      sse.close();
+    }
+  });
+
+  it('no filter delivers all events', async () => {
+    const sse = await connectSSE('/api/events');
+    try {
+      eventBus.emit({ id: 'e1', timestamp: Date.now(), type: 'startup', actor: 'ved', detail: {}, hash: 'h1' });
+      eventBus.emit({ id: 'e2', timestamp: Date.now(), type: 'shutdown', actor: 'ved', detail: {}, hash: 'h2' });
+
+      await sse.waitForEvents(2);
+      expect(sse.events).toHaveLength(2);
+    } finally {
+      sse.close();
+    }
+  });
+
+  it('cleans up subscription on client disconnect', async () => {
+    const sse = await connectSSE();
+    const initialCount = eventBus.subscriberCount;
+    expect(initialCount).toBeGreaterThan(0);
+
+    sse.close();
+
+    // Wait for cleanup
+    await new Promise(r => setTimeout(r, 100));
+    expect(eventBus.subscriberCount).toBe(initialCount - 1);
+  });
+
+  it('stats endpoint includes SSE connection count', async () => {
+    // Connect an SSE client
+    const sse = await connectSSE();
+    try {
+      const res = await httpGet(port, '/api/stats');
+      expect(res.status).toBe(200);
+      expect(res.body.sse).toBeDefined();
+      expect(res.body.sse.activeConnections).toBe(1);
+      expect(res.body.sse.busSubscribers).toBeGreaterThanOrEqual(1);
+    } finally {
+      sse.close();
+    }
+  });
+
+  it('stop() closes all SSE connections', async () => {
+    const sse = await connectSSE();
+    const countBefore = eventBus.subscriberCount;
+    expect(countBefore).toBeGreaterThan(0);
+
+    await server.stop();
+
+    // Re-create server for afterEach
+    server = new VedHttpServer(mockApp, { port: 0, host: '127.0.0.1' });
+    port = await server.start();
+  });
+
+  it('requires auth when token is configured', async () => {
+    await server.stop();
+    server = new VedHttpServer(mockApp, { port: 0, host: '127.0.0.1', apiToken: 'secret123' });
+    port = await server.start();
+
+    // Without token
+    const res = await httpGet(port, '/api/events');
+    expect(res.status).toBe(401);
+
+    // With token — should connect
+    const sse = await connectSSE('/api/events', { token: 'secret123' });
+    try {
+      expect(sse.raw).toContain(':ok');
+    } finally {
+      sse.close();
+    }
   });
 });

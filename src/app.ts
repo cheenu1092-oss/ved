@@ -26,6 +26,7 @@ import type { VedConfig, ModuleHealth, VaultFile, AuditEntry } from './types/ind
 import type { IndexStats, RetrieveOptions, RetrievalContext } from './rag/types.js';
 import type { VaultExport, VaultExportFile, ExportOptions, ImportResult } from './export-types.js';
 import type { MCPServerConfig, MCPToolDefinition, ServerInfo } from './mcp/types.js';
+import { EventBus } from './event-bus.js';
 
 const log = createLogger('app');
 
@@ -89,6 +90,7 @@ export class VedApp {
   readonly memory: MemoryManager;
   readonly rag: RagPipeline;
   readonly channels: ChannelManager;
+  readonly eventBus: EventBus;
 
   private initialized = false;
   private cronTickInterval: ReturnType<typeof setInterval> | null = null;
@@ -124,6 +126,12 @@ export class VedApp {
       config,
       db: this.db,
     });
+
+    // Create event bus (real-time event stream for SSE/webhooks)
+    this.eventBus = new EventBus();
+
+    // Wire audit → event bus (every audit append triggers bus emit)
+    this.eventLoop.audit.onAppend = (entry) => this.eventBus.emitFromAudit(entry);
 
     // Create cron scheduler
     this.cron = new CronScheduler(this.db);

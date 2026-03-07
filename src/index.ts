@@ -58,5 +58,9 @@ export type { VaultExport, VaultExportFile, ExportOptions, ImportResult } from '
 export { VedHttpServer } from './http.js';
 export type { HttpServerConfig } from './http.js';
 
+// Event Bus
+export { EventBus } from './event-bus.js';
+export type { VedEvent, EventSubscriber, Subscription } from './event-bus.js';
+
 // App
 export { VedApp, createApp } from './app.js';

@@ -2,6 +2,7 @@
  * Ved HTTP API Server — lightweight REST API on top of VedApp.
  *
  * Built with node:http (zero external deps). Provides:
+ *   GET  /api/events           — SSE event stream (real-time audit events)
  *   GET  /api/health           — Health check
  *   GET  /api/stats            — System stats
  *   GET  /api/search?q=&n=     — RAG search
@@ -19,6 +20,8 @@
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'node:http';
 import { createLogger } from './core/log.js';
 import type { VedApp } from './app.js';
+import type { AuditEventType } from './types/index.js';
+import type { Subscription } from './event-bus.js';
 
 const log = createLogger('http');
 
@@ -53,6 +56,8 @@ export class VedHttpServer {
   private server: Server | null = null;
   private readonly app: VedApp;
   private readonly config: HttpServerConfig;
+  /** Active SSE connections for cleanup on stop. */
+  private readonly sseSubscriptions: Map<string, { sub: Subscription; res: ServerResponse }> = new Map();
 
   constructor(app: VedApp, config?: Partial<HttpServerConfig>) {
     this.app = app;
@@ -92,6 +97,13 @@ export class VedHttpServer {
    */
   async stop(): Promise<void> {
     if (!this.server) return;
+
+    // Close all SSE connections
+    for (const [id, { sub, res }] of this.sseSubscriptions) {
+      sub.unsubscribe();
+      if (!res.writableEnded) res.end();
+      this.sseSubscriptions.delete(id);
+    }
 
     return new Promise((resolve) => {
       this.server!.close(() => {
@@ -158,6 +170,7 @@ export class VedHttpServer {
       if (cleanPath === '/api/vault/files') return { handler: this.getVaultFiles, params: {} };
       if (cleanPath === '/api/vault/file') return { handler: this.getVaultFile, params: {} };
       if (cleanPath === '/api/doctor') return { handler: this.getDoctor, params: {} };
+      if (cleanPath === '/api/events') return { handler: this.getEvents, params: {} };
     }
 
     // POST routes (with path params)
@@ -196,7 +209,13 @@ export class VedHttpServer {
   private getStats = async (_req: IncomingMessage, res: ServerResponse): Promise<void> => {
     try {
       const stats = this.app.getStats();
-      this.json(res, 200, stats);
+      this.json(res, 200, {
+        ...stats,
+        sse: {
+          activeConnections: this.sseSubscriptions.size,
+          busSubscribers: this.app.eventBus.subscriberCount,
+        },
+      });
     } catch (err) {
       this.json(res, 500, { error: this.errMsg(err) });
     }
@@ -336,6 +355,58 @@ export class VedHttpServer {
     } catch (err) {
       this.json(res, 500, { error: this.errMsg(err) });
     }
+  };
+
+  // ── SSE Event Stream ──
+
+  private getEvents = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    // Parse optional filter from query: ?types=message_received,llm_call
+    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+    const typesParam = url.searchParams.get('types');
+    const filter: AuditEventType[] | undefined = typesParam
+      ? typesParam.split(',').map(t => t.trim()).filter(Boolean) as AuditEventType[]
+      : undefined;
+
+    // Set SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': this.config.corsOrigin,
+      'X-Accel-Buffering': 'no', // disable nginx buffering
+    });
+
+    // Send initial comment (keeps connection alive through proxies)
+    res.write(':ok\n\n');
+
+    // Subscribe to event bus
+    const sub = this.app.eventBus.subscribe((event) => {
+      if (res.writableEnded) return;
+      const data = JSON.stringify(event);
+      res.write(`event: ${event.type}\ndata: ${data}\nid: ${event.id}\n\n`);
+    }, filter);
+
+    // Track for cleanup
+    this.sseSubscriptions.set(sub.id, { sub, res });
+
+    // Set up keepalive (every 30s)
+    const keepalive = setInterval(() => {
+      if (res.writableEnded) {
+        clearInterval(keepalive);
+        return;
+      }
+      res.write(':keepalive\n\n');
+    }, 30_000);
+
+    // Clean up on client disconnect
+    req.on('close', () => {
+      clearInterval(keepalive);
+      sub.unsubscribe();
+      this.sseSubscriptions.delete(sub.id);
+      log.debug('SSE client disconnected', { subId: sub.id });
+    });
+
+    log.info('SSE client connected', { subId: sub.id, filter: filter ?? 'all' });
   };
 
   private postApprove = async (req: IncomingMessage, res: ServerResponse, params: Record<string, string>): Promise<void> => {

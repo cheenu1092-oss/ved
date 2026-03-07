@@ -20,6 +20,9 @@ export class AuditLog {
   private count: number = 0;
   private lastId: string = '';
 
+  /** Optional callback invoked after every append (for event bus). */
+  onAppend: ((entry: AuditEntry) => void) | null = null;
+
   // DB reference for dynamic queries
   private readonly db: Database.Database;
 
@@ -166,7 +169,7 @@ export class AuditLog {
     this.lastId = id;
     this.count++;
 
-    return {
+    const entry: AuditEntry = {
       id,
       timestamp,
       eventType: input.eventType,
@@ -176,6 +179,13 @@ export class AuditLog {
       prevHash,
       hash,
     };
+
+    // Notify event bus (if wired)
+    if (this.onAppend) {
+      try { this.onAppend(entry); } catch { /* subscriber errors never crash audit */ }
+    }
+
+    return entry;
   }
 
   /**
