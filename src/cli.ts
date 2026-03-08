@@ -29,7 +29,7 @@ import { vedAlias, resolveAlias } from './cli-alias.js';
 import { vedEnv } from './cli-env.js';
 import { logCmd } from './cli-log.js';
 import { profileCmd } from './cli-profile.js';
-import { helpCmd } from './cli-help.js';
+import { helpCmd, checkHelp } from './cli-help.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
@@ -45,6 +45,7 @@ async function main(): Promise<void> {
     case '--help':
       return helpCmd(args.slice(1));
     case 'init':
+      if (checkHelp('init', args.slice(1))) return;
       return init();
     case 'version':
     case '--version':
@@ -52,40 +53,57 @@ async function main(): Promise<void> {
       console.log(`Ved v${VERSION}`);
       return;
     case 'status':
+      if (checkHelp('status', args.slice(1))) return;
       return status();
     case 'stats':
+      if (checkHelp('stats', args.slice(1))) return;
       return stats();
     case 'reindex':
+      if (checkHelp('reindex', args.slice(1))) return;
       return reindex();
     case 'search':
+      if (checkHelp('search', args.slice(1))) return;
       return search(args.slice(1));
     case 'config':
+      if (checkHelp('config', args.slice(1))) return;
       return config(args.slice(1));
     case 'export':
+      if (checkHelp('export', args.slice(1))) return;
       return exportVault(args.slice(1));
     case 'import':
+      if (checkHelp('import', args.slice(1))) return;
       return importVault(args.slice(1));
     case 'history':
+      if (checkHelp('history', args.slice(1))) return;
       return history(args.slice(1));
     case 'doctor':
+      if (checkHelp('doctor', args.slice(1))) return;
       return doctor();
     case 'backup':
+      if (checkHelp('backup', args.slice(1))) return;
       return backup(args.slice(1));
     case 'cron':
+      if (checkHelp('cron', args.slice(1))) return;
       return cron(args.slice(1));
     case 'upgrade':
+      if (checkHelp('upgrade', args.slice(1))) return;
       return upgrade(args.slice(1));
     case 'watch':
+      if (checkHelp('watch', args.slice(1))) return;
       return watch();
     case 'plugin':
+      if (checkHelp('plugin', args.slice(1))) return;
       return plugin(args.slice(1));
     case 'gc':
+      if (checkHelp('gc', args.slice(1))) return;
       return gc(args.slice(1));
     case 'webhook':
+      if (checkHelp('webhook', args.slice(1))) return;
       return webhook(args.slice(1));
     case 'chat':
     case 'c':
     case 'talk': {
+      if (checkHelp('chat', args.slice(1))) return;
       const { runChat } = await import('./cli-chat.js');
       const app = createApp();
       return runChat(app, args.slice(1));
@@ -94,6 +112,7 @@ async function main(): Promise<void> {
     case 'prompts':
     case 'sp':
     case 'system-prompt': {
+      if (checkHelp('prompt', args.slice(1))) return;
       // Prompt commands don't need full app init for most subcommands
       const promptSub = args[1];
       if (promptSub === 'test' || promptSub === 'preview' || promptSub === 'dry-run') {
@@ -120,6 +139,7 @@ async function main(): Promise<void> {
     case 'template':
     case 'templates':
     case 'tpl': {
+      if (checkHelp('template', args.slice(1))) return;
       const app = createApp();
       await app.init();
       try {
@@ -133,6 +153,7 @@ async function main(): Promise<void> {
     case 'ctx':
     case 'window':
     case 'prompt-debug': {
+      if (checkHelp('context', args.slice(1))) return;
       const app = createApp();
       await app.init();
       try {
@@ -144,6 +165,7 @@ async function main(): Promise<void> {
     }
     case 'memory':
     case 'mem': {
+      if (checkHelp('memory', args.slice(1))) return;
       const app = createApp();
       await app.init();
       try {
@@ -155,6 +177,7 @@ async function main(): Promise<void> {
     }
     case 'trust':
     case 't': {
+      if (checkHelp('trust', args.slice(1))) return;
       const app = createApp();
       await app.init();
       try {
@@ -168,6 +191,7 @@ async function main(): Promise<void> {
     case 'u':
     case 'who':
     case 'users': {
+      if (checkHelp('user', args.slice(1))) return;
       const app = createApp();
       await app.init();
       try {
@@ -180,36 +204,45 @@ async function main(): Promise<void> {
     }
     case 'serve':
     case 'api':
+      if (checkHelp('serve', args.slice(1))) return;
       return serve(args.slice(1));
     case 'completions':
+      if (checkHelp('completions', args.slice(1))) return;
       return completions(args.slice(1));
     case 'run':
     case 'ask':
     case 'query':
     case 'q':
+      if (checkHelp('run', args.slice(1))) return;
       return vedRun(args.slice(1));
     case 'pipe':
     case 'pipeline':
     case 'chain':
+      if (checkHelp('pipe', args.slice(1))) return;
       return vedPipe(args.slice(1));
     case 'alias':
     case 'aliases':
     case 'shortcut':
     case 'shortcuts':
+      if (checkHelp('alias', args.slice(1))) return;
       return vedAlias(args.slice(1));
     case 'env':
     case 'envs':
     case 'environment':
     case 'environments':
+      if (checkHelp('env', args.slice(1))) return;
       return vedEnv(args.slice(1));
     case 'log':
     case 'logs':
+      if (checkHelp('log', args.slice(1))) return;
       return logCmd(args.slice(1));
     case 'profile':
     case 'bench':
     case 'benchmark':
+      if (checkHelp('profile', args.slice(1))) return;
       return profileCmd(args.slice(1));
     case 'start':
+      if (checkHelp('start', args.slice(1))) return;
       return start();
     default: {
       // Check for @-alias shortcut: ved @myalias [args...]

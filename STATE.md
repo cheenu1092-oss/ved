@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 73
+- **Session Number:** 74
 - **Current Phase:** CYCLE (feature development)
 - **Last Run:** 2026-03-07
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 74 — Config hot-reload? `ved profile` (benchmarks)? Help text audit? `ved plugin discover`?
+- **Next Session:** 75 — Wire `checkHelp()` into per-command handlers? `ved plugin discover`? Config hot-reload? v0.3.0 release?
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -108,7 +108,8 @@
 - **Session 70:** CYCLE — **`ved alias` — command shortcut manager.** 8 subcommands: list, add, remove, show, edit, run, export, import. @-shortcut syntax (`ved @myalias [args...]`). YAML-persisted in `~/.ved/aliases.yaml`. Name validation (letter-start, alphanumeric+hyphens, max 64 chars). Reserved name protection (30+ ved commands blocked). Special character round-trip in YAML. Import supports merge + dry-run. Shell completions updated (bash/zsh/fish). Aliases: aliases, shortcut, shortcuts. **43 new tests. 1733/1733 pass (host + Docker parity). 0 type errors. CLI: 26 commands.**
 - **Session 71:** CYCLE — **`ved env` — environment manager + GitHub push (S67-70).** 10 subcommands: current, list, show, create, use, edit, delete, diff, reset + implicit name lookup. Config overlay system: active env YAML merges between config.yaml and config.local.yaml. 3 built-in templates (dev/prod/test). Name validation + reserved name protection. Colored diff output. --from/--template/--from-current creation modes. Secret redaction on --from-current. Shell completions updated (bash/zsh/fish). Pushed S67-70 to GitHub (006c9aa). **58 new tests. 1791/1791 pass (host + Docker parity). 0 type errors. CLI: 27 commands.**
 - **Session 72:** CYCLE — **v0.2.0 release.** Updated CHANGELOG.md (comprehensive v0.2.0 notes), README.md (27-command CLI table, updated stats, refreshed Getting Started), package.json (0.1.0→0.2.0). Tagged v0.2.0, pushed to GitHub (23c4138), created GitHub release. **1791/1791 pass. 0 type errors.**
-- **Session 73:** CYCLE — **`ved log` — structured log viewer, tailer, and analyzer.** 9 subcommands: show (default), tail/follow, search/grep/find, stats/info, levels, modules/mods, clear/truncate, path. 7 filter flags: --level, --module, --since, --until, --limit/-n, --json, --no-color. Relative time parsing (1h, 30m, 2d, 1w). Color-coded output. Tail mode reads only new bytes. Shell completions updated (bash/zsh/fish). Aliases: ved logs. **56 new tests. 1847/1847 pass (host + Docker parity). 0 type errors. CLI: 28 commands.**
+- **Session 73:** CYCLE — **`ved log` + `ved profile` CLIs.** Log: structured log viewer/tailer/analyzer (9 subcommands, 7 filter flags, relative time parsing, color-coded, tail mode). Profile: performance benchmarking for 7 subsystems (audit, vault, RAG, trust, DB, hash, memory) with warmup, iterations, JSON output. Shell completions updated. Aliases: ved logs, ved bench/benchmark. **95 new tests. 1886/1886 pass (host + Docker parity). 0 type errors. CLI: 30 commands.**
+- **Session 74:** CYCLE — **`ved help` — unified help system + GitHub push (S73-74).** Command registry covering 35 commands across 9 categories. `ved help` (overview), `ved help <cmd>` (detailed), `--help`/`-h` flags, `checkHelp()` utility. Fixed VERSION 0.1.0→0.2.0. Pushed to GitHub (94f491c). **48 new tests. 1934/1934 pass (host + Docker parity). 0 type errors. CLI: 29 commands (help is meta).**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -156,8 +157,9 @@
 | 70 | ✅ CYCLE | `ved alias` CLI — command shortcut manager (43 tests) |
 | 71 | ✅ CYCLE | `ved env` CLI — environment manager (58 tests) + GitHub push S67-70 |
 | 72 | ✅ CYCLE | v0.2.0 release (CHANGELOG, README, tag, GitHub release) |
-| 73 | ✅ CYCLE | `ved log` CLI — structured log viewer/tailer (56 tests) |
-| 74+ | CYCLE | New features, polish, releases |
+| 73 | ✅ CYCLE | `ved log` + `ved profile` CLIs (95 tests) |
+| 74 | ✅ CYCLE | `ved help` unified help system + GitHub push S73-74 (48 tests) |
+| 75+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -213,4 +215,6 @@
 | alias-cli S70 | ✅ Complete | ~625 | 43 |
 | env-cli S71 | ✅ Complete | ~490 | 58 |
 | log-cli S73 | ✅ Complete | ~500 | 56 |
-| **Total** | **ALL COMPLETE** | **~30,019** | **1847** |
+| profile-cli S73 | ✅ Complete | ~697 | 39 |
+| help-cli S74 | ✅ Complete | ~380 | 48 |
+| **Total** | **ALL COMPLETE** | **~31,096** | **1934** |

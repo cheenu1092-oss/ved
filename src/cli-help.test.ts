@@ -341,6 +341,53 @@ describe('checkHelp', () => {
   });
 });
 
+// ── checkHelp wiring verification ───────────────────────────────────
+
+describe('checkHelp wiring — all commands', () => {
+  // Every command in the registry should show help via checkHelp
+  const commandNames = COMMANDS.map(c => c.name).filter(n => n !== 'help'); // help routes differently
+
+  it.each(commandNames)('ved %s --help shows help and returns true', (name) => {
+    const origLog = console.log;
+    const logged: string[] = [];
+    console.log = (s: string) => logged.push(s);
+    try {
+      const result = checkHelp(name, ['--help']);
+      expect(result).toBe(true);
+      expect(logged.length).toBeGreaterThan(0);
+      expect(logged[0]).toContain(name);
+    } finally {
+      console.log = origLog;
+    }
+  });
+
+  it.each(commandNames)('ved %s -h shows help and returns true', (name) => {
+    const origLog = console.log;
+    console.log = () => {};
+    try {
+      expect(checkHelp(name, ['-h'])).toBe(true);
+    } finally {
+      console.log = origLog;
+    }
+  });
+
+  it.each(commandNames)('ved %s <normal args> returns false', (name) => {
+    expect(checkHelp(name, ['some-arg', '--verbose'])).toBe(false);
+  });
+
+  it('--help anywhere in args triggers help (not just first position)', () => {
+    const origLog = console.log;
+    console.log = () => {};
+    try {
+      expect(checkHelp('search', ['query', '--help'])).toBe(true);
+      expect(checkHelp('backup', ['create', '-h'])).toBe(true);
+      expect(checkHelp('cron', ['list', '--verbose', '--help'])).toBe(true);
+    } finally {
+      console.log = origLog;
+    }
+  });
+});
+
 // ── Edge Cases ──────────────────────────────────────────────────────
 
 describe('Edge cases', () => {
