@@ -9,7 +9,7 @@
 export type VedId = string;
 
 /** Channel identifier */
-export type ChannelId = 'discord' | 'cli' | 'chat' | 'push' | 'cron';
+export type ChannelId = 'discord' | 'cli' | 'chat' | 'push' | 'cron' | 'run';
 
 /** Author identifier — user ID string or 'ved' for system */
 export type AuthorId = string;

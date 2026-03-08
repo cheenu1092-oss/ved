@@ -22,6 +22,10 @@ import { trustCommand } from './cli-trust.js';
 import { handleUserCommand } from './cli-user.js';
 import { runPromptCli } from './cli-prompt.js';
 import { runTemplate } from './cli-template.js';
+import { runContextCli } from './cli-context.js';
+import { vedRun } from './cli-run.js';
+import { vedPipe } from './cli-pipe.js';
+import { vedAlias, resolveAlias } from './cli-alias.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
@@ -117,6 +121,19 @@ async function main(): Promise<void> {
       }
       return;
     }
+    case 'context':
+    case 'ctx':
+    case 'window':
+    case 'prompt-debug': {
+      const app = createApp();
+      await app.init();
+      try {
+        await runContextCli(app, app.config, args.slice(1));
+      } finally {
+        await app.stop();
+      }
+      return;
+    }
     case 'memory':
     case 'mem': {
       const app = createApp();
@@ -158,13 +175,50 @@ async function main(): Promise<void> {
       return serve(args.slice(1));
     case 'completions':
       return completions(args.slice(1));
-    case 'start':
     case 'run':
+    case 'ask':
+    case 'query':
+    case 'q':
+      return vedRun(args.slice(1));
+    case 'pipe':
+    case 'pipeline':
+    case 'chain':
+      return vedPipe(args.slice(1));
+    case 'alias':
+    case 'aliases':
+    case 'shortcut':
+    case 'shortcuts':
+      return vedAlias(args.slice(1));
+    case 'start':
       return start();
-    default:
+    default: {
+      // Check for @-alias shortcut: ved @myalias [args...]
+      if (command.startsWith('@')) {
+        const aliasName = command.slice(1);
+        const alias = resolveAlias(aliasName);
+        if (alias) {
+          // Re-exec with expanded command
+          const expandedArgs = alias.command.split(/\s+/).concat(args.slice(1));
+          process.argv = [process.argv[0], process.argv[1], ...expandedArgs];
+          return main();
+        }
+        console.error(`Unknown alias: @${aliasName}`);
+        console.log('Run `ved alias list` to see available aliases.');
+        process.exit(1);
+      }
+
+      // Check if command matches a defined alias (without @ prefix)
+      const aliasMatch = resolveAlias(command);
+      if (aliasMatch) {
+        const expandedArgs = aliasMatch.command.split(/\s+/).concat(args.slice(1));
+        process.argv = [process.argv[0], process.argv[1], ...expandedArgs];
+        return main();
+      }
+
       console.error(`Unknown command: ${command}`);
-      console.log('Usage: ved [init|start|chat|serve|status|stats|search|memory|trust|prompt|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|webhook|plugin|gc|completions|version]');
+      console.log('Usage: ved [init|start|run|pipe|chat|serve|status|stats|search|memory|trust|prompt|context|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|webhook|plugin|gc|alias|completions|version]');
       process.exit(1);
+    }
   }
 }
 

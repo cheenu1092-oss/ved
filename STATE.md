@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 66
+- **Session Number:** 70
 - **Current Phase:** CYCLE (feature development)
 - **Last Run:** 2026-03-07
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 67 — Next feature (config hot-reload? notification channels? `ved plugin` CLI polish?)
+- **Next Session:** 71 — Next feature (config hot-reload? notification channels? `ved env` environment manager?)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -101,7 +101,11 @@
 - **Session 63:** CYCLE — **Webhook delivery + web dashboard.** WebhookManager (720 lines): EventBus→HTTP POST delivery with HMAC-SHA256 signing, exponential backoff retries (3 attempts), delivery log in SQLite, event type filtering, custom headers, payload/response caps. Dashboard (894 lines): self-contained SPA with 6 panels (overview/events/search/history/vault/doctor), live SSE stream, dark theme, responsive, token auth. HTTP API: 5 new webhook endpoints + 2 dashboard routes + DELETE method. CLI: `ved webhook` with 8 subcommands (list/add/remove/enable/disable/deliveries/stats/test). DB migration v003 (webhooks + webhook_deliveries tables). **43 new tests. 1321/1321 pass (host + Docker parity). 0 type errors. CLI: 19 commands.**
 - **Session 64:** CYCLE — **`ved memory` — CLI for Obsidian knowledge graph.** 8 subcommands: list (filter by type/tag/folder), show (entity details + frontmatter + links), graph (wikilink walk with depth), timeline (recent activity by date), daily (view/create daily notes), forget (soft-delete to archive), tags (tag counts), types (type counts). Aliases: mem, ls, cat, read, links, recent, today, archive. Shell completions updated (bash/zsh/fish). Pushed to GitHub (5e59758). **37 new tests. 1358/1358 pass (host + Docker parity). 0 type errors. CLI: 20 commands.**
 - **Session 65:** CYCLE — **`ved prompt` — system prompt profile manager + system prompt enhancements.** 8 subcommands: list (profiles with active marker), show (contents or default), create (template/stdin, path traversal protection), edit ($EDITOR), use (auto-updates config.yaml), test (assembled preview with facts+RAG), reset (revert to default), diff (line-by-line, "default" pseudo-profile). Also committed: cli-chat.ts (interactive REPL), system-prompt.test.ts (26 tests), event-loop buildSystemPrompt() enhancements. Shell completions updated. Pushed to GitHub (0e1f735). **58 new tests (32 prompt + 26 system-prompt). 1512/1512 pass (host + Docker parity). 0 type errors. CLI: 21 commands.**
+- **Session 67:** CYCLE — **`ved context` — context window inspector & manager.** 9 subcommands: show (full assembled context), tokens (breakdown with progress bar), facts (list with per-fact tokens), add/remove/clear (audit-logged fact CRUD), messages (conversation history), simulate (dry-run RAG injection), sessions (list active/idle). Aliases: ctx, window, prompt-debug. All commands support `--session <id>` targeting. Shell completions updated. **44 new tests. 1593/1593 pass (host + Docker parity). 0 type errors. CLI: 23 commands.**
+- **Session 68:** CYCLE — **`ved run` — one-shot query mode.** 9 subcommands: show (full assembled context), tokens (breakdown with progress bar), facts (list with per-fact tokens), add/remove/clear (audit-logged fact CRUD), messages (conversation history), simulate (dry-run RAG injection), sessions (list active/idle). Aliases: ctx, window, prompt-debug. All commands support `--session <id>` targeting. Shell completions updated. **44 new tests. 1593/1593 pass (host + Docker parity). 0 type errors. CLI: 23 commands.**
 - **Session 66:** CYCLE — **`ved template` — vault template manager.** 7 subcommands: list (type/vars/size), show (vault or built-in), create (from 6 built-in types or blank), edit ($EDITOR), delete, use (instantiate with `--var k=v` variable substitution, auto-routing to correct vault folder, auto-date, unreplaced detection, --force overwrite), vars (variable names with occurrence counts). 6 built-in templates (person/project/decision/concept/daily/topic). Exported `extractVariables()` + `applyVariables()` utilities. Shell completions updated. **37 new tests. 1549/1549 pass (host + Docker parity). 0 type errors. CLI: 22 commands.**
+- **Session 69:** CYCLE — **`ved pipe` — multi-step pipeline execution.** Chains queries and shell commands into pipelines. Inline mode (`ved pipe "step1" "step2" "!sort"`), YAML files (`-f pipeline.yaml`), saved pipelines (save/load/list/delete in `~/.ved/pipelines/`). Shell steps receive prev output on stdin, stdout feeds next step. Dry-run, JSON/raw output, verbose progress. Validation, fail-fast, name sanitization. Aliases: pipeline, chain. Shell completions updated (bash/zsh/fish). **58 new tests. 1690/1690 pass (host + Docker parity). 0 type errors. CLI: 25 commands.**
+- **Session 70:** CYCLE — **`ved alias` — command shortcut manager.** 8 subcommands: list, add, remove, show, edit, run, export, import. @-shortcut syntax (`ved @myalias [args...]`). YAML-persisted in `~/.ved/aliases.yaml`. Name validation (letter-start, alphanumeric+hyphens, max 64 chars). Reserved name protection (30+ ved commands blocked). Special character round-trip in YAML. Import supports merge + dry-run. Shell completions updated (bash/zsh/fish). Aliases: aliases, shortcut, shortcuts. **43 new tests. 1733/1733 pass (host + Docker parity). 0 type errors. CLI: 26 commands.**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -143,7 +147,11 @@
 | 64 | ✅ CYCLE | `ved memory` CLI (8 subcommands, 37 tests) |
 | 65 | ✅ CYCLE | `ved prompt` CLI + system prompt enhancements (58 tests) |
 | 66 | ✅ CYCLE | `ved template` CLI — vault template manager (37 tests) |
-| 67+ | CYCLE | New features, polish, releases |
+| 67 | ✅ CYCLE | `ved context` CLI — context window inspector (44 tests) |
+| 68 | ✅ CYCLE | `ved run` CLI — one-shot query mode (39 tests) |
+| 69 | ✅ CYCLE | `ved pipe` CLI — multi-step pipeline execution (58 tests) |
+| 70 | ✅ CYCLE | `ved alias` CLI — command shortcut manager (43 tests) |
+| 71+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -193,4 +201,8 @@
 | system-prompt S65 | ✅ Complete | ~614 | 26 |
 | cli-chat S65 | ✅ Complete | ~470 | 0 |
 | template-cli S66 | ✅ Complete | ~701 | 37 |
-| **Total** | **ALL COMPLETE** | **~26,817** | **1549** |
+| context-cli S67 | ✅ Complete | ~697 | 44 |
+| run-cli S68 | ✅ Complete | ~310 | 39 |
+| pipe-cli S69 | ✅ Complete | ~580 | 58 |
+| alias-cli S70 | ✅ Complete | ~625 | 43 |
+| **Total** | **ALL COMPLETE** | **~29,029** | **1733** |

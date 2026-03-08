@@ -1480,11 +1480,12 @@ export class VedApp {
    */
   static generateCompletions(shell: 'bash' | 'zsh' | 'fish'): string {
     const commands = [
-      'init', 'start', 'chat', 'run', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'reindex',
+      'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'version',
     ];
     const chatFlags = ['--model', '--no-rag', '--no-tools', '--verbose', '--help'];
+    const runFlags = ['-q', '--query', '-f', '--file', '-s', '--session', '-m', '--model', '--system', '--json', '--raw', '--no-rag', '--no-tools', '-t', '--timeout', '-v', '--verbose', '--help'];
     const configSubs = ['validate', 'show', 'path'];
     const backupSubs = ['create', 'list', 'restore'];
     const cronSubs = ['list', 'add', 'remove', 'enable', 'disable', 'run', 'history'];
@@ -1497,6 +1498,10 @@ export class VedApp {
     const userSubs = ['list', 'show', 'sessions', 'activity', 'stats'];
     const promptSubs = ['list', 'show', 'create', 'edit', 'use', 'test', 'reset', 'diff'];
     const templateSubs = ['list', 'show', 'create', 'edit', 'delete', 'use', 'vars'];
+    const contextSubs = ['show', 'tokens', 'facts', 'add', 'remove', 'clear', 'messages', 'simulate', 'sessions'];
+    const pipeSubs = ['list', 'ls', 'show', 'save', 'delete', 'rm', 'run'];
+    const pipeFlags = ['-f', '--file', '--json', '--raw', '-v', '--verbose', '-n', '--dry-run', '--help'];
+    const aliasSubs = ['list', 'ls', 'add', 'create', 'remove', 'rm', 'show', 'edit', 'run', 'export', 'import', 'help'];
 
     switch (shell) {
       case 'bash':
@@ -1557,8 +1562,24 @@ _ved_completions() {
       COMPREPLY=( $(compgen -W "${templateSubs.join(' ')}" -- "\${cur}") )
       return 0
       ;;
+    context|ctx|window|prompt-debug)
+      COMPREPLY=( $(compgen -W "${contextSubs.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
     chat|c|talk)
       COMPREPLY=( $(compgen -W "${chatFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    run|ask|query|q)
+      COMPREPLY=( $(compgen -W "${runFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    pipe|pipeline|chain)
+      COMPREPLY=( $(compgen -W "${pipeSubs.join(' ')} ${pipeFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    alias|aliases|shortcut|shortcuts)
+      COMPREPLY=( $(compgen -W "${aliasSubs.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     restore)
@@ -1601,7 +1622,10 @@ _ved() {
   commands=(
     'init:Create ~/.ved/ with default config'
     'start:Start Ved in interactive mode'
-    'run:Alias for start'
+    'run:One-shot query mode'
+    'ask:One-shot query (alias for run)'
+    'query:One-shot query (alias for run)'
+    'q:One-shot query (alias for run)'
     'serve:Start HTTP API server'
     'status:Show health check'
     'stats:Show vault/RAG/audit/session metrics'
@@ -1622,6 +1646,13 @@ _ved() {
     'user:Manage and inspect known users'
     'prompt:Manage system prompt profiles'
     'template:Vault template manager'
+    'context:Inspect and manage LLM context window'
+    'pipe:Multi-step pipeline execution'
+    'pipeline:Multi-step pipeline (alias for pipe)'
+    'chain:Multi-step pipeline (alias for pipe)'
+    'alias:Manage command shortcuts'
+    'aliases:Manage command shortcuts (alias for alias)'
+    'shortcut:Manage command shortcuts (alias for alias)'
     'completions:Generate shell completions'
     'version:Show version'
   )
@@ -1665,6 +1696,36 @@ _ved() {
           ;;
         template|templates|tpl)
           _values 'subcommand' 'list[List templates]' 'show[Display template contents]' 'create[Create a template]' 'edit[Open in editor]' 'delete[Remove a template]' 'use[Instantiate template]' 'vars[Show template variables]'
+          ;;
+        context|ctx|window|prompt-debug)
+          _values 'subcommand' 'show[Show full assembled context]' 'tokens[Token count breakdown]' 'facts[List working memory facts]' 'add[Add a fact]' 'remove[Remove a fact]' 'clear[Clear all facts]' 'messages[List conversation messages]' 'simulate[Preview RAG context injection]' 'sessions[List active sessions]'
+          ;;
+        pipe|pipeline|chain)
+          _values 'subcommand' 'list[List saved pipelines]' 'show[Display pipeline definition]' 'save[Save a pipeline]' 'delete[Delete a saved pipeline]' 'run[Run a saved pipeline]'
+          ;;
+        alias|aliases|shortcut|shortcuts)
+          _values 'subcommand' 'list[List all aliases]' 'add[Create a new alias]' 'remove[Remove an alias]' 'show[Show alias details]' 'edit[Update an alias]' 'run[Run an alias]' 'export[Export aliases]' 'import[Import aliases]'
+          ;;
+        run|ask|query|q)
+          _arguments \\
+            '-q[Query text]:query' \\
+            '--query[Query text]:query' \\
+            '-f[File to attach]:file:_files' \\
+            '--file[File to attach]:file:_files' \\
+            '-s[Session ID]:session' \\
+            '--session[Session ID]:session' \\
+            '-m[Model override]:model' \\
+            '--model[Model override]:model' \\
+            '--system[System prompt override]:prompt' \\
+            '--json[JSON output]' \\
+            '--raw[Raw text output]' \\
+            '--no-rag[Skip RAG retrieval]' \\
+            '--no-tools[Disable tool execution]' \\
+            '-t[Timeout in seconds]:seconds' \\
+            '--timeout[Timeout in seconds]:seconds' \\
+            '-v[Verbose output]' \\
+            '--verbose[Verbose output]' \\
+            '*:query'
           ;;
         serve)
           _arguments \\
@@ -1758,6 +1819,35 @@ ${promptSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from prompt' -
 
 # template subcommands
 ${templateSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from template' -a '${s}'`).join('\n')}
+
+# context subcommands
+${contextSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from context' -a '${s}'`).join('\n')}
+
+# pipe subcommands
+${pipeSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from pipe pipeline chain' -a '${s}'`).join('\n')}
+
+# pipe flags
+complete -c ved -n '__fish_seen_subcommand_from pipe pipeline chain' -s f -l file -d 'Pipeline YAML file' -F
+complete -c ved -n '__fish_seen_subcommand_from pipe pipeline chain' -l json -d 'JSON output'
+complete -c ved -n '__fish_seen_subcommand_from pipe pipeline chain' -l raw -d 'Raw output'
+complete -c ved -n '__fish_seen_subcommand_from pipe pipeline chain' -s v -l verbose -d 'Verbose output'
+complete -c ved -n '__fish_seen_subcommand_from pipe pipeline chain' -s n -l dry-run -d 'Dry run'
+
+# alias subcommands
+${aliasSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from alias aliases shortcut shortcuts' -a '${s}'`).join('\n')}
+
+# run flags
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -s q -l query -d 'Query text'
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -s f -l file -d 'Attach file' -F
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -s s -l session -d 'Session ID'
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -s m -l model -d 'Model override'
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -l system -d 'System prompt override'
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -l json -d 'JSON output'
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -l raw -d 'Raw text output'
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -l no-rag -d 'Skip RAG retrieval'
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -l no-tools -d 'Disable tools'
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -s t -l timeout -d 'Timeout seconds'
+complete -c ved -n '__fish_seen_subcommand_from run ask query q' -s v -l verbose -d 'Verbose output'
 
 # serve flags
 complete -c ved -n '__fish_seen_subcommand_from serve' -s p -l port -d 'Port'
