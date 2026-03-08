@@ -138,38 +138,52 @@ For stronger guarantees, Ved periodically anchors chain state via external HMAC 
 
 ## Design Constraints
 
-- **< 10,000 lines of code.** Complexity is the enemy. If it can't be understood in an afternoon, it's too big.
 - **Single SQLite database.** No Postgres, no Redis, no vector DB service. One file.
 - **Local-first.** LLM via Ollama or any OpenAI-compatible API. Embeddings via Ollama. No cloud dependencies for core functionality.
 - **TypeScript + Node.js.** No framework. No ORM. Just `better-sqlite3`, `sqlite-vec`, and the standard library.
 
 ---
 
-## Modules
+## CLI Commands (27)
 
-| Module | Purpose | Target LoC |
-|--------|---------|-----------|
-| `ved-core` | Event loop, session, config | ~1,000 |
-| `ved-llm` | Multi-provider LLM client | ~800 |
-| `ved-mcp` | MCP client for tools | ~600 |
-| `ved-memory` | 4-tier memory + Obsidian vault | ~2,500 |
-| `ved-rag` | Embed, index, search, rank | ~1,000 |
-| `ved-audit` | Hash-chain + anchoring | ~800 |
-| `ved-trust` | Risk assessment + HITL approval | ~800 |
-| `ved-channel` | Discord + CLI | ~1,500 |
-| **Total** | | **~9,000** |
+| Command | Description |
+|---------|-------------|
+| `ved start` | Start the agent (event loop + channels) |
+| `ved init` | Scaffold vault structure + config template |
+| `ved chat` | Interactive REPL |
+| `ved run` | One-shot query (non-interactive) |
+| `ved search` | Query RAG pipeline (FTS + vector + graph fusion) |
+| `ved memory` | Vault browser: list, show, graph walk, timeline, daily notes |
+| `ved template` | Vault templates: create entities from 6 built-in types |
+| `ved context` | Context window inspector: tokens, facts, messages, simulate |
+| `ved prompt` | System prompt profiles: create, edit, use, test, diff |
+| `ved stats` | Vault, RAG, audit, and session metrics |
+| `ved config` | Validate, show (secrets redacted), print config path |
+| `ved history` | Audit log viewer with chain integrity verification |
+| `ved doctor` | 8-point self-diagnostics |
+| `ved backup` | Create, list, restore vault+DB snapshots |
+| `ved export` | Export vault to portable JSON |
+| `ved import` | Import vault from JSON (merge/overwrite/fail modes) |
+| `ved reindex` | Force-rebuild entire RAG index |
+| `ved watch` | Standalone vault file watcher with live re-indexing |
+| `ved upgrade` | Database migration lifecycle |
+| `ved serve` | HTTP API server with web dashboard |
+| `ved cron` | Scheduled job engine (5-field cron expressions) |
+| `ved pipe` | Multi-step pipelines (queries + shell commands) |
+| `ved alias` | Command shortcuts with @-syntax |
+| `ved env` | Environment manager (config overlays) |
+| `ved trust` | Trust tier management + work order inspection |
+| `ved user` | User profiles, sessions, activity |
+| `ved completions` | Shell completions (bash/zsh/fish) |
+
+All commands support `--help`. Shell completions cover all subcommands and flags.
 
 ---
 
 ## Getting Started
 
-> ⚠️ Ved is in active development. This section will be updated when the first build is complete.
-
 ```bash
-# Prerequisites
-# - Node.js 20+
-# - Ollama with nomic-embed-text model
-# - SQLite 3.41+ (for FTS5 + vec extension)
+# Prerequisites: Node.js 20+, Ollama with nomic-embed-text
 
 # Clone
 git clone https://github.com/cheenu1092-oss/ved.git
@@ -181,11 +195,17 @@ npm install
 # Pull embedding model
 ollama pull nomic-embed-text
 
-# Initialize vault
-npm run init -- --vault ~/ved-vault
+# Initialize vault + config
+ved init --vault ~/ved-vault
 
-# Run
-npm start
+# Start the agent
+ved start
+
+# Or run a one-shot query
+ved run "What do you know about Project Alpha?"
+
+# Or start the web dashboard
+ved serve --port 3000
 ```
 
 ---
@@ -201,5 +221,7 @@ npm start
 MIT
 
 ---
+
+**Current stats:** 27 CLI commands • 1,791 tests • ~29,500 LoC • 0 open vulnerabilities
 
 *Built by [cheenu1092-oss](https://github.com/cheenu1092-oss). Designed in the open.*

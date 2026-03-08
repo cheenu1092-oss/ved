@@ -2,6 +2,66 @@
 
 All notable changes to Ved are documented here.
 
+## [0.2.0] — 2026-03-07
+
+### Highlights
+- **27 CLI commands** (up from 3 in v0.1.0)
+- **1,791 tests** (up from 951)
+- **~29,500 LoC** across all modules
+- Full HTTP API with web dashboard, SSE event stream, and webhook delivery
+- Comprehensive vault management: memory, templates, search, export/import, backup
+- Automation: cron scheduler, pipelines, aliases, environments
+- v0.1.0 → v0.2.0: 22 feature sessions, 840 new tests, 0 regressions
+
+### CLI — Vault & Memory
+- `ved memory` — 8 subcommands: list, show, graph (wikilink walk), timeline, daily, forget, tags, types
+- `ved template` — 7 subcommands: list, show, create, edit, delete, use (variable substitution), vars. 6 built-in templates
+- `ved search` — RAG pipeline query from CLI (FTS + vector + graph fusion, --fts-only, --verbose)
+- `ved export` / `ved import` — Portable JSON vault export with audit + stats; merge/overwrite/fail import modes, dry-run, stdin support
+- `ved context` — 9 subcommands: inspect/manage context window, token breakdown, fact CRUD, RAG simulation
+
+### CLI — Operations
+- `ved stats` — Vault, RAG, audit, and session metrics at a glance
+- `ved config` — Validate, show (secrets redacted), and print config path
+- `ved history` — Audit log viewer with type/date/limit filters, chain integrity verification
+- `ved doctor` — 8-point self-diagnostics (config, DB, vault, git, audit chain, RAG, LLM, MCP)
+- `ved backup` — Create, list, restore vault+DB snapshots as tar.gz. Auto-rotation (keep N)
+- `ved upgrade` — Database migration lifecycle: status, run, verify checksums, history
+- `ved reindex` — Force-rebuild entire RAG index
+- `ved watch` — Standalone vault file watcher with live RAG re-indexing
+- `ved completions` — Shell completion generators for bash/zsh/fish (all 27 commands)
+
+### CLI — Automation & Workflow
+- `ved cron` — Scheduled job engine: 5-field cron expressions, built-in jobs (backup/reindex/doctor), SQLite persistence, manual trigger, execution history
+- `ved pipe` — Multi-step pipelines: chain queries + shell commands, YAML pipeline files, saved pipelines, dry-run
+- `ved alias` — Command shortcuts with @-syntax (`ved @myalias`), YAML persistence, import/export
+- `ved env` — Environment manager: config overlays (dev/prod/test), create/switch/diff/reset, built-in templates
+- `ved run` — One-shot query mode (non-interactive)
+- `ved prompt` — System prompt profile manager: create, edit, use, test, diff, reset
+
+### CLI — Trust & Users
+- `ved trust` — 10 subcommands: matrix display, resolve tiers, assess risk, grant/revoke, ledger, work order management
+- `ved user` — 5 subcommands: list, show, sessions, activity, stats
+
+### HTTP API & Dashboard
+- `ved serve` — REST API on `node:http` (zero deps). 9 endpoints: health, stats, search, history, vault, doctor, approve/deny
+- **EventBus + SSE** — Typed pub/sub event bus, real-time `/api/events` SSE stream with type filtering
+- **Webhook delivery** — EventBus→HTTP POST with HMAC-SHA256 signing, exponential backoff retries, delivery log, event type filtering
+- **Web dashboard** — Self-contained SPA: 6 panels (overview, events, search, history, vault, doctor), live SSE stream, dark theme
+
+### Infrastructure
+- Vault watcher → RAG integration: file changes auto-trigger re-indexing
+- Incremental startup indexing (compare file mtime vs indexed_at)
+- Vault git auto-commit on startup
+- Interactive REPL (`ved chat`) with /help, /status, /clear
+- System prompt enhancements: profile-based prompts with fact injection
+
+### Fixed
+- Critical code deduplication: removed ~646 lines of dead duplicate code in app.ts/cli.ts/mcp-client.ts
+- Timezone-sensitive cron test failures (UTC→local Date constructors)
+- Mock infrastructure: `createMockMemory()` factory eliminates shutdown warnings
+- GitHub repo renamed witness→ved
+
 ## [0.1.0] — 2026-03-06
 
 ### Architecture
