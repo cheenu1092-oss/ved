@@ -1482,8 +1482,10 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'help', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'help', 'version',
     ];
+    const diffSubs = ['log', 'show', 'stat', 'stats', 'blame', 'between', 'files', 'summary', 'evolution', 'overview', 'history', 'changed', 'annotate', 'commit', 'compare'];
+    const diffFlags = ['--limit', '-n', '--since', '--days', '--file'];
     const chatFlags = ['--model', '--no-rag', '--no-tools', '--verbose', '--help'];
     const runFlags = ['-q', '--query', '-f', '--file', '-s', '--session', '-m', '--model', '--system', '--json', '--raw', '--no-rag', '--no-tools', '-t', '--timeout', '-v', '--verbose', '--help'];
     const configSubs = ['validate', 'show', 'path'];
@@ -1599,6 +1601,10 @@ _ved_completions() {
       COMPREPLY=( $(compgen -W "${profileSubs.join(' ')} ${profileFlags.join(' ')}" -- "\${cur}") )
       return 0
       ;;
+    diff|changes|delta)
+      COMPREPLY=( $(compgen -W "${diffSubs.join(' ')} ${diffFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
     restore)
       COMPREPLY=( $(compgen -f -- "\${cur}") )
       return 0
@@ -1678,6 +1684,9 @@ _ved() {
     'profile:Performance benchmarking'
     'bench:Performance benchmarking (alias for profile)'
     'benchmark:Performance benchmarking (alias for profile)'
+    'diff:View vault changes, git history, and knowledge evolution'
+    'changes:View vault changes (alias for diff)'
+    'delta:View vault changes (alias for diff)'
     'completions:Generate shell completions'
     'version:Show version'
   )
@@ -1739,6 +1748,9 @@ _ved() {
           ;;
         profile|bench|benchmark)
           _values 'suite' 'all[Run all benchmarks]' 'audit[Audit log operations]' 'vault[Vault I/O operations]' 'trust[Trust engine operations]' 'db[Raw database operations]' 'hash[Hash chain verification]' 'memory[Memory tier operations]'
+          ;;
+        diff|changes|delta)
+          _values 'subcommand' 'log[Show vault commit history]' 'show[Show a specific commit]' 'stat[File change statistics]' 'blame[Line-by-line blame]' 'between[Diff between two commits]' 'files[List changed files]' 'summary[Vault evolution summary]'
           ;;
         run|ask|query|q)
           _arguments \\
@@ -1895,6 +1907,16 @@ complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -s w -l
 complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -l json -d 'JSON output'
 complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -s v -l verbose -d 'Show iteration times'
 complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -l no-color -d 'Disable colors'
+
+# diff subcommands
+${diffSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -a '${s}'`).join('\n')}
+
+# diff flags
+complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -l limit -d 'Max entries'
+complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -s n -d 'Max entries'
+complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -l since -d 'Filter by date'
+complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -l days -d 'Days to look back'
+complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -l file -d 'Specific file'
 
 # env flags
 complete -c ved -n '__fish_seen_subcommand_from env; and __fish_seen_subcommand_from create' -l from -d 'Copy from existing environment'

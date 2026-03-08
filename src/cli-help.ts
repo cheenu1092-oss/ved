@@ -266,6 +266,26 @@ export const COMMANDS: CommandInfo[] = [
     examples: ['ved profile', 'ved bench audit --iterations 500', 'ved profile rag --json'],
   },
 
+  {
+    name: 'diff',
+    aliases: ['changes', 'delta'],
+    category: 'memory',
+    summary: 'View vault changes, git history, blame, and knowledge evolution',
+    usage: 'ved diff [subcommand|file] [options]',
+    subcommands: ['log', 'show', 'stat', 'blame', 'between', 'files', 'summary'],
+    flags: ['--limit <n>', '-n <n>', '--since <date>', '--days <n>', '--file <path>'],
+    examples: [
+      'ved diff',
+      'ved diff entities/john.md',
+      'ved diff log --limit 10',
+      'ved diff show abc1234',
+      'ved diff blame daily/2026-03-08.md',
+      'ved diff between HEAD~5 HEAD',
+      'ved diff files --since 2026-03-01',
+      'ved diff summary --days 14',
+    ],
+  },
+
   // ── Data & Backup ──
   {
     name: 'export',

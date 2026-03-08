@@ -30,6 +30,7 @@ import { vedEnv } from './cli-env.js';
 import { logCmd } from './cli-log.js';
 import { profileCmd } from './cli-profile.js';
 import { helpCmd, checkHelp } from './cli-help.js';
+import { diffCmd } from './cli-diff.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
@@ -241,6 +242,11 @@ async function main(): Promise<void> {
     case 'benchmark':
       if (checkHelp('profile', args.slice(1))) return;
       return profileCmd(args.slice(1));
+    case 'diff':
+    case 'changes':
+    case 'delta':
+      if (checkHelp('diff', args.slice(1))) return;
+      return diffCmd(args.slice(1));
     case 'start':
       if (checkHelp('start', args.slice(1))) return;
       return start();
