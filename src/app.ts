@@ -1482,7 +1482,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'env', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'help', 'version',
     ];
     const chatFlags = ['--model', '--no-rag', '--no-tools', '--verbose', '--help'];
     const runFlags = ['-q', '--query', '-f', '--file', '-s', '--session', '-m', '--model', '--system', '--json', '--raw', '--no-rag', '--no-tools', '-t', '--timeout', '-v', '--verbose', '--help'];
@@ -1503,6 +1503,10 @@ export class VedApp {
     const pipeFlags = ['-f', '--file', '--json', '--raw', '-v', '--verbose', '-n', '--dry-run', '--help'];
     const aliasSubs = ['list', 'ls', 'add', 'create', 'remove', 'rm', 'show', 'edit', 'run', 'export', 'import', 'help'];
     const envSubs = ['current', 'list', 'ls', 'show', 'cat', 'create', 'new', 'use', 'switch', 'activate', 'edit', 'delete', 'rm', 'remove', 'diff', 'compare', 'reset', 'deactivate', 'clear'];
+    const logSubs = ['show', 'tail', 'follow', 'search', 'grep', 'find', 'stats', 'info', 'levels', 'modules', 'mods', 'clear', 'truncate', 'path'];
+    const logFlags = ['--level', '--module', '--since', '--until', '--limit', '-n', '--json', '--no-color'];
+    const profileSubs = ['all', 'audit', 'vault', 'trust', 'db', 'hash', 'memory'];
+    const profileFlags = ['--iterations', '-i', '--warmup', '-w', '--json', '--verbose', '-v', '--no-color'];
 
     switch (shell) {
       case 'bash':
@@ -1587,6 +1591,14 @@ _ved_completions() {
       COMPREPLY=( $(compgen -W "${envSubs.join(' ')}" -- "\${cur}") )
       return 0
       ;;
+    log|logs)
+      COMPREPLY=( $(compgen -W "${logSubs.join(' ')} ${logFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    profile|bench|benchmark)
+      COMPREPLY=( $(compgen -W "${profileSubs.join(' ')} ${profileFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
     restore)
       COMPREPLY=( $(compgen -f -- "\${cur}") )
       return 0
@@ -1661,6 +1673,11 @@ _ved() {
     'env:Manage configuration environments'
     'envs:Manage environments (alias for env)'
     'environment:Manage environments (alias for env)'
+    'log:View and analyze structured logs'
+    'logs:View and analyze logs (alias for log)'
+    'profile:Performance benchmarking'
+    'bench:Performance benchmarking (alias for profile)'
+    'benchmark:Performance benchmarking (alias for profile)'
     'completions:Generate shell completions'
     'version:Show version'
   )
@@ -1716,6 +1733,12 @@ _ved() {
           ;;
         env|envs|environment|environments)
           _values 'subcommand' 'current[Show active environment]' 'list[List all environments]' 'show[Display environment config]' 'create[Create a new environment]' 'use[Switch to environment]' 'edit[Open in editor]' 'delete[Remove an environment]' 'diff[Compare two environments]' 'reset[Deactivate environment]'
+          ;;
+        log|logs)
+          _values 'subcommand' 'show[Show log entries with filters]' 'tail[Live-follow the log file]' 'search[Full-text search logs]' 'stats[Log file statistics]' 'levels[Log level breakdown]' 'modules[Module breakdown]' 'clear[Truncate log file]' 'path[Print log file path]'
+          ;;
+        profile|bench|benchmark)
+          _values 'suite' 'all[Run all benchmarks]' 'audit[Audit log operations]' 'vault[Vault I/O operations]' 'trust[Trust engine operations]' 'db[Raw database operations]' 'hash[Hash chain verification]' 'memory[Memory tier operations]'
           ;;
         run|ask|query|q)
           _arguments \\
@@ -1849,6 +1872,29 @@ ${aliasSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from alias alia
 
 # env subcommands
 ${envSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from env envs environment environments' -a '${s}'`).join('\n')}
+
+# log subcommands
+${logSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from log logs' -a '${s}'`).join('\n')}
+
+# log flags
+complete -c ved -n '__fish_seen_subcommand_from log logs' -l level -d 'Minimum log level'
+complete -c ved -n '__fish_seen_subcommand_from log logs' -l module -d 'Filter by module'
+complete -c ved -n '__fish_seen_subcommand_from log logs' -l since -d 'Entries after time'
+complete -c ved -n '__fish_seen_subcommand_from log logs' -l until -d 'Entries before time'
+complete -c ved -n '__fish_seen_subcommand_from log logs' -s n -l limit -d 'Max entries'
+complete -c ved -n '__fish_seen_subcommand_from log logs' -l json -d 'Raw JSON output'
+complete -c ved -n '__fish_seen_subcommand_from log logs' -l no-color -d 'Disable colors'
+
+# profile
+complete -c ved -n '__fish_use_subcommand' -a profile -d 'Performance benchmarking'
+complete -c ved -n '__fish_use_subcommand' -a bench -d 'Performance benchmarking (alias)'
+complete -c ved -n '__fish_use_subcommand' -a benchmark -d 'Performance benchmarking (alias)'
+complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -a 'all audit vault trust db hash memory' -d 'Benchmark suite'
+complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -s i -l iterations -d 'Iterations per benchmark'
+complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -s w -l warmup -d 'Warmup iterations'
+complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -l json -d 'JSON output'
+complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -s v -l verbose -d 'Show iteration times'
+complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -l no-color -d 'Disable colors'
 
 # env flags
 complete -c ved -n '__fish_seen_subcommand_from env; and __fish_seen_subcommand_from create' -l from -d 'Copy from existing environment'

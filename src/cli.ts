@@ -27,16 +27,23 @@ import { vedRun } from './cli-run.js';
 import { vedPipe } from './cli-pipe.js';
 import { vedAlias, resolveAlias } from './cli-alias.js';
 import { vedEnv } from './cli-env.js';
+import { logCmd } from './cli-log.js';
+import { profileCmd } from './cli-profile.js';
+import { helpCmd } from './cli-help.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const command = args[0] ?? 'start';
 
   switch (command) {
+    case 'help':
+    case '-h':
+    case '--help':
+      return helpCmd(args.slice(1));
     case 'init':
       return init();
     case 'version':
@@ -195,6 +202,13 @@ async function main(): Promise<void> {
     case 'environment':
     case 'environments':
       return vedEnv(args.slice(1));
+    case 'log':
+    case 'logs':
+      return logCmd(args.slice(1));
+    case 'profile':
+    case 'bench':
+    case 'benchmark':
+      return profileCmd(args.slice(1));
     case 'start':
       return start();
     default: {
@@ -222,7 +236,7 @@ async function main(): Promise<void> {
       }
 
       console.error(`Unknown command: ${command}`);
-      console.log('Usage: ved [init|start|run|pipe|chat|serve|status|stats|search|memory|trust|prompt|context|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|webhook|plugin|gc|alias|env|completions|version]');
+      console.log(`Run 'ved help' to see all available commands.`);
       process.exit(1);
     }
   }
