@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 75
+- **Session Number:** 77
 - **Current Phase:** CYCLE (feature development)
-- **Last Run:** 2026-03-07
+- **Last Run:** 2026-03-08
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 76 — `ved plugin discover`? Config hot-reload? v0.3.0 release? `ved diff` vault diff viewer?
+- **Next Session:** 78 — `ved plugin discover`? Config hot-reload? v0.3.0 release (31 commands since v0.2.0)? `ved migrate` (vault schema migrations)?
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -111,6 +111,8 @@
 - **Session 73:** CYCLE — **`ved log` + `ved profile` CLIs.** Log: structured log viewer/tailer/analyzer (9 subcommands, 7 filter flags, relative time parsing, color-coded, tail mode). Profile: performance benchmarking for 7 subsystems (audit, vault, RAG, trust, DB, hash, memory) with warmup, iterations, JSON output. Shell completions updated. Aliases: ved logs, ved bench/benchmark. **95 new tests. 1886/1886 pass (host + Docker parity). 0 type errors. CLI: 30 commands.**
 - **Session 74:** CYCLE — **`ved help` — unified help system + GitHub push (S73-74).** Command registry covering 35 commands across 9 categories. `ved help` (overview), `ved help <cmd>` (detailed), `--help`/`-h` flags, `checkHelp()` utility. Fixed VERSION 0.1.0→0.2.0. Pushed to GitHub (94f491c). **48 new tests. 1934/1934 pass (host + Docker parity). 0 type errors. CLI: 29 commands (help is meta).**
 - **Session 75:** CYCLE — **Wired `checkHelp()` into all 33 CLI command handlers.** Every command now supports `--help`/`-h` flags without initializing the full app. Pushed to GitHub (1c4e1e5). **103 new tests. 2037/2037 pass (host + Docker parity). 0 type errors.**
+- **Session 76:** CYCLE — **`ved diff` — vault diff viewer & change tracker.** 8 subcommands: working tree diff (staged/unstaged/untracked), log (limit/file filter), show (commit details), stat (change statistics), blame (line-by-line), between (two commits), files (changed list with --since), summary (evolution overview with folder breakdown + most active files). Color-coded output, relative timestamps. No app init needed (fast). Aliases: ved changes, ved delta. Shell completions updated (bash/zsh/fish). Pushed to GitHub (429ae29). **33 new tests. 2073/2073 pass (host + Docker parity). 0 type errors. CLI: 30 commands.**
+- **Session 77:** CYCLE — **`ved snapshot` — vault point-in-time snapshots.** 7 subcommands: list (with relative timestamps), create (annotated git tags, auto-commit dirty vault, name validation), show (details + drift from HEAD), diff (vs HEAD or two snapshots, color-coded, --stat), restore (safety snapshot + rm+checkout strategy, --force), delete (safety tag protection), export (git archive to tar.gz). `ved-snap/` tag prefix. Aliases: ved snap, ved checkpoint. Shell completions updated (bash/zsh/fish). **41 new tests. 2117/2117 pass (Docker parity). 0 type errors. CLI: 31 commands.** 8 subcommands: working tree diff (staged/unstaged/untracked), log (limit/file filter), show (commit details), stat (change statistics), blame (line-by-line), between (two commits), files (changed list with --since), summary (evolution overview with folder breakdown + most active files). Color-coded output, relative timestamps. No app init needed (fast). Aliases: changes, delta. Shell completions updated (bash/zsh/fish). Pushed to GitHub (429ae29). **33 new tests. 2073/2073 pass (host + Docker parity). 0 type errors. CLI: 30 commands.**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -161,7 +163,9 @@
 | 73 | ✅ CYCLE | `ved log` + `ved profile` CLIs (95 tests) |
 | 74 | ✅ CYCLE | `ved help` unified help system + GitHub push S73-74 (48 tests) |
 | 75 | ✅ CYCLE | Wire checkHelp() into all 33 command handlers (103 tests) |
-| 76+ | CYCLE | New features, polish, releases |
+| 76 | ✅ CYCLE | `ved diff` — vault diff viewer & change tracker (33 tests) |
+| 77 | ✅ CYCLE | `ved snapshot` — vault point-in-time snapshots (41 tests) |
+| 78+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -219,4 +223,6 @@
 | log-cli S73 | ✅ Complete | ~500 | 56 |
 | profile-cli S73 | ✅ Complete | ~697 | 39 |
 | help-cli S74 | ✅ Complete | ~380 | 151 |
-| **Total** | **ALL COMPLETE** | **~31,187** | **2037** |
+| diff-cli S76 | ✅ Complete | ~480 | 33 |
+| snapshot-cli S77 | ✅ Complete | ~551 | 41 |
+| **Total** | **ALL COMPLETE** | **~32,218** | **2117** |

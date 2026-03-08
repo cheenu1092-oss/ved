@@ -31,6 +31,7 @@ import { logCmd } from './cli-log.js';
 import { profileCmd } from './cli-profile.js';
 import { helpCmd, checkHelp } from './cli-help.js';
 import { diffCmd } from './cli-diff.js';
+import { snapshotCmd } from './cli-snapshot.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
@@ -247,6 +248,11 @@ async function main(): Promise<void> {
     case 'delta':
       if (checkHelp('diff', args.slice(1))) return;
       return diffCmd(args.slice(1));
+    case 'snapshot':
+    case 'snap':
+    case 'checkpoint':
+      if (checkHelp('snapshot', args.slice(1))) return;
+      return snapshotCmd(args.slice(1));
     case 'start':
       if (checkHelp('start', args.slice(1))) return;
       return start();

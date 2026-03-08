@@ -324,6 +324,25 @@ export const COMMANDS: CommandInfo[] = [
     subcommands: ['status', 'run'],
     examples: ['ved gc status', 'ved gc run'],
   },
+  {
+    name: 'snapshot',
+    aliases: ['snap', 'checkpoint'],
+    category: 'data',
+    summary: 'Lightweight vault point-in-time snapshots using git tags',
+    usage: 'ved snapshot <subcommand> [options]',
+    subcommands: ['list', 'create', 'show', 'diff', 'restore', 'delete', 'export'],
+    flags: ['-m <message>', '--force', '--stat'],
+    examples: [
+      'ved snapshot',
+      'ved snapshot create v1-baseline -m "Initial knowledge base"',
+      'ved snapshot show v1-baseline',
+      'ved snapshot diff v1-baseline',
+      'ved snapshot diff v1-baseline v2-updated --stat',
+      'ved snapshot restore v1-baseline',
+      'ved snapshot delete old-snap',
+      'ved snapshot export v1-baseline ./backup.tar.gz',
+    ],
+  },
 
   // ── Server & API ──
   {

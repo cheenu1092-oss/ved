@@ -1482,7 +1482,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'help', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'help', 'version',
     ];
     const diffSubs = ['log', 'show', 'stat', 'stats', 'blame', 'between', 'files', 'summary', 'evolution', 'overview', 'history', 'changed', 'annotate', 'commit', 'compare'];
     const diffFlags = ['--limit', '-n', '--since', '--days', '--file'];
@@ -1509,6 +1509,7 @@ export class VedApp {
     const logFlags = ['--level', '--module', '--since', '--until', '--limit', '-n', '--json', '--no-color'];
     const profileSubs = ['all', 'audit', 'vault', 'trust', 'db', 'hash', 'memory'];
     const profileFlags = ['--iterations', '-i', '--warmup', '-w', '--json', '--verbose', '-v', '--no-color'];
+    const snapshotSubs = ['list', 'ls', 'create', 'new', 'take', 'show', 'info', 'diff', 'compare', 'restore', 'checkout', 'delete', 'rm', 'remove', 'export', 'archive'];
 
     switch (shell) {
       case 'bash':
@@ -1605,6 +1606,10 @@ _ved_completions() {
       COMPREPLY=( $(compgen -W "${diffSubs.join(' ')} ${diffFlags.join(' ')}" -- "\${cur}") )
       return 0
       ;;
+    snapshot|snap|checkpoint)
+      COMPREPLY=( $(compgen -W "${snapshotSubs.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
     restore)
       COMPREPLY=( $(compgen -f -- "\${cur}") )
       return 0
@@ -1687,6 +1692,9 @@ _ved() {
     'diff:View vault changes, git history, and knowledge evolution'
     'changes:View vault changes (alias for diff)'
     'delta:View vault changes (alias for diff)'
+    'snapshot:Lightweight vault point-in-time snapshots'
+    'snap:Vault snapshots (alias for snapshot)'
+    'checkpoint:Vault snapshots (alias for snapshot)'
     'completions:Generate shell completions'
     'version:Show version'
   )
@@ -1751,6 +1759,9 @@ _ved() {
           ;;
         diff|changes|delta)
           _values 'subcommand' 'log[Show vault commit history]' 'show[Show a specific commit]' 'stat[File change statistics]' 'blame[Line-by-line blame]' 'between[Diff between two commits]' 'files[List changed files]' 'summary[Vault evolution summary]'
+          ;;
+        snapshot|snap|checkpoint)
+          _values 'subcommand' 'list[List all snapshots]' 'create[Create a named snapshot]' 'show[Show snapshot details]' 'diff[Diff snapshot vs HEAD or another]' 'restore[Restore vault to a snapshot]' 'delete[Delete a snapshot]' 'export[Export snapshot as tar.gz]'
           ;;
         run|ask|query|q)
           _arguments \\
@@ -1901,6 +1912,9 @@ complete -c ved -n '__fish_seen_subcommand_from log logs' -l no-color -d 'Disabl
 complete -c ved -n '__fish_use_subcommand' -a profile -d 'Performance benchmarking'
 complete -c ved -n '__fish_use_subcommand' -a bench -d 'Performance benchmarking (alias)'
 complete -c ved -n '__fish_use_subcommand' -a benchmark -d 'Performance benchmarking (alias)'
+complete -c ved -n '__fish_use_subcommand' -a snapshot -d 'Vault point-in-time snapshots'
+complete -c ved -n '__fish_use_subcommand' -a snap -d 'Vault snapshots (alias)'
+complete -c ved -n '__fish_use_subcommand' -a checkpoint -d 'Vault snapshots (alias)'
 complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -a 'all audit vault trust db hash memory' -d 'Benchmark suite'
 complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -s i -l iterations -d 'Iterations per benchmark'
 complete -c ved -n '__fish_seen_subcommand_from profile bench benchmark' -s w -l warmup -d 'Warmup iterations'
@@ -1917,6 +1931,13 @@ complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -s n -d 'Max
 complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -l since -d 'Filter by date'
 complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -l days -d 'Days to look back'
 complete -c ved -n '__fish_seen_subcommand_from diff changes delta' -l file -d 'Specific file'
+
+# snapshot subcommands
+${snapshotSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from snapshot snap checkpoint' -a '${s}'`).join('\n')}
+complete -c ved -n '__fish_seen_subcommand_from snapshot snap checkpoint; and __fish_seen_subcommand_from create' -s m -d 'Snapshot message'
+complete -c ved -n '__fish_seen_subcommand_from snapshot snap checkpoint; and __fish_seen_subcommand_from restore' -l force -d 'Force restore discarding changes'
+complete -c ved -n '__fish_seen_subcommand_from snapshot snap checkpoint; and __fish_seen_subcommand_from diff' -l stat -d 'Show stat summary only'
+complete -c ved -n '__fish_seen_subcommand_from snapshot snap checkpoint; and __fish_seen_subcommand_from delete' -l force -d 'Force delete safety snapshots'
 
 # env flags
 complete -c ved -n '__fish_seen_subcommand_from env; and __fish_seen_subcommand_from create' -l from -d 'Copy from existing environment'
