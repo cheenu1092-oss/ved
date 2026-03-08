@@ -26,6 +26,7 @@ import { runContextCli } from './cli-context.js';
 import { vedRun } from './cli-run.js';
 import { vedPipe } from './cli-pipe.js';
 import { vedAlias, resolveAlias } from './cli-alias.js';
+import { vedEnv } from './cli-env.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
@@ -189,6 +190,11 @@ async function main(): Promise<void> {
     case 'shortcut':
     case 'shortcuts':
       return vedAlias(args.slice(1));
+    case 'env':
+    case 'envs':
+    case 'environment':
+    case 'environments':
+      return vedEnv(args.slice(1));
     case 'start':
       return start();
     default: {
@@ -216,7 +222,7 @@ async function main(): Promise<void> {
       }
 
       console.error(`Unknown command: ${command}`);
-      console.log('Usage: ved [init|start|run|pipe|chat|serve|status|stats|search|memory|trust|prompt|context|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|webhook|plugin|gc|alias|completions|version]');
+      console.log('Usage: ved [init|start|run|pipe|chat|serve|status|stats|search|memory|trust|prompt|context|reindex|config|export|import|history|doctor|backup|cron|upgrade|watch|webhook|plugin|gc|alias|env|completions|version]');
       process.exit(1);
     }
   }

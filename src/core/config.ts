@@ -256,6 +256,26 @@ export function loadConfig(overrides?: Partial<VedConfig>): VedConfig {
     }
   }
 
+  // Load active environment overlay (between config.yaml and config.local.yaml)
+  const activeEnvPath = join(VED_DIR, 'active-env');
+  if (existsSync(activeEnvPath)) {
+    const activeEnvName = readFileSync(activeEnvPath, 'utf8').trim();
+    if (activeEnvName) {
+      const envConfigPath = join(VED_DIR, 'environments', `${activeEnvName}.yaml`);
+      if (existsSync(envConfigPath)) {
+        try {
+          const envRaw = parseYaml(readFileSync(envConfigPath, 'utf8')) as Record<string, unknown>;
+          if (envRaw && typeof envRaw === 'object') {
+            config = deepMerge(config as VedConfig & Record<string, unknown>, envRaw);
+            log.info(`Loaded environment config: ${activeEnvName} (${envConfigPath})`);
+          }
+        } catch (err) {
+          throw new VedError('CONFIG_PARSE_ERROR', `Failed to parse env config ${envConfigPath}`, err as Error);
+        }
+      }
+    }
+  }
+
   // Load config.local.yaml (secrets)
   if (existsSync(LOCAL_CONFIG_PATH)) {
     try {

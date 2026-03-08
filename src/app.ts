@@ -1482,7 +1482,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'env', 'version',
     ];
     const chatFlags = ['--model', '--no-rag', '--no-tools', '--verbose', '--help'];
     const runFlags = ['-q', '--query', '-f', '--file', '-s', '--session', '-m', '--model', '--system', '--json', '--raw', '--no-rag', '--no-tools', '-t', '--timeout', '-v', '--verbose', '--help'];
@@ -1502,6 +1502,7 @@ export class VedApp {
     const pipeSubs = ['list', 'ls', 'show', 'save', 'delete', 'rm', 'run'];
     const pipeFlags = ['-f', '--file', '--json', '--raw', '-v', '--verbose', '-n', '--dry-run', '--help'];
     const aliasSubs = ['list', 'ls', 'add', 'create', 'remove', 'rm', 'show', 'edit', 'run', 'export', 'import', 'help'];
+    const envSubs = ['current', 'list', 'ls', 'show', 'cat', 'create', 'new', 'use', 'switch', 'activate', 'edit', 'delete', 'rm', 'remove', 'diff', 'compare', 'reset', 'deactivate', 'clear'];
 
     switch (shell) {
       case 'bash':
@@ -1582,6 +1583,10 @@ _ved_completions() {
       COMPREPLY=( $(compgen -W "${aliasSubs.join(' ')}" -- "\${cur}") )
       return 0
       ;;
+    env|envs|environment|environments)
+      COMPREPLY=( $(compgen -W "${envSubs.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
     restore)
       COMPREPLY=( $(compgen -f -- "\${cur}") )
       return 0
@@ -1653,6 +1658,9 @@ _ved() {
     'alias:Manage command shortcuts'
     'aliases:Manage command shortcuts (alias for alias)'
     'shortcut:Manage command shortcuts (alias for alias)'
+    'env:Manage configuration environments'
+    'envs:Manage environments (alias for env)'
+    'environment:Manage environments (alias for env)'
     'completions:Generate shell completions'
     'version:Show version'
   )
@@ -1705,6 +1713,9 @@ _ved() {
           ;;
         alias|aliases|shortcut|shortcuts)
           _values 'subcommand' 'list[List all aliases]' 'add[Create a new alias]' 'remove[Remove an alias]' 'show[Show alias details]' 'edit[Update an alias]' 'run[Run an alias]' 'export[Export aliases]' 'import[Import aliases]'
+          ;;
+        env|envs|environment|environments)
+          _values 'subcommand' 'current[Show active environment]' 'list[List all environments]' 'show[Display environment config]' 'create[Create a new environment]' 'use[Switch to environment]' 'edit[Open in editor]' 'delete[Remove an environment]' 'diff[Compare two environments]' 'reset[Deactivate environment]'
           ;;
         run|ask|query|q)
           _arguments \\
@@ -1835,6 +1846,14 @@ complete -c ved -n '__fish_seen_subcommand_from pipe pipeline chain' -s n -l dry
 
 # alias subcommands
 ${aliasSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from alias aliases shortcut shortcuts' -a '${s}'`).join('\n')}
+
+# env subcommands
+${envSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from env envs environment environments' -a '${s}'`).join('\n')}
+
+# env flags
+complete -c ved -n '__fish_seen_subcommand_from env; and __fish_seen_subcommand_from create' -l from -d 'Copy from existing environment'
+complete -c ved -n '__fish_seen_subcommand_from env; and __fish_seen_subcommand_from create' -l from-current -d 'Snapshot current config'
+complete -c ved -n '__fish_seen_subcommand_from env; and __fish_seen_subcommand_from create' -l template -d 'Built-in template (dev/prod/test)'
 
 # run flags
 complete -c ved -n '__fish_seen_subcommand_from run ask query q' -s q -l query -d 'Query text'

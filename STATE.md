@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 70
+- **Session Number:** 71
 - **Current Phase:** CYCLE (feature development)
 - **Last Run:** 2026-03-07
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 71 — Next feature (config hot-reload? notification channels? `ved env` environment manager?)
+- **Next Session:** 72 — Next feature (config hot-reload? notification channels? `ved plugin marketplace`? v0.2.0 release?)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -106,6 +106,7 @@
 - **Session 66:** CYCLE — **`ved template` — vault template manager.** 7 subcommands: list (type/vars/size), show (vault or built-in), create (from 6 built-in types or blank), edit ($EDITOR), delete, use (instantiate with `--var k=v` variable substitution, auto-routing to correct vault folder, auto-date, unreplaced detection, --force overwrite), vars (variable names with occurrence counts). 6 built-in templates (person/project/decision/concept/daily/topic). Exported `extractVariables()` + `applyVariables()` utilities. Shell completions updated. **37 new tests. 1549/1549 pass (host + Docker parity). 0 type errors. CLI: 22 commands.**
 - **Session 69:** CYCLE — **`ved pipe` — multi-step pipeline execution.** Chains queries and shell commands into pipelines. Inline mode (`ved pipe "step1" "step2" "!sort"`), YAML files (`-f pipeline.yaml`), saved pipelines (save/load/list/delete in `~/.ved/pipelines/`). Shell steps receive prev output on stdin, stdout feeds next step. Dry-run, JSON/raw output, verbose progress. Validation, fail-fast, name sanitization. Aliases: pipeline, chain. Shell completions updated (bash/zsh/fish). **58 new tests. 1690/1690 pass (host + Docker parity). 0 type errors. CLI: 25 commands.**
 - **Session 70:** CYCLE — **`ved alias` — command shortcut manager.** 8 subcommands: list, add, remove, show, edit, run, export, import. @-shortcut syntax (`ved @myalias [args...]`). YAML-persisted in `~/.ved/aliases.yaml`. Name validation (letter-start, alphanumeric+hyphens, max 64 chars). Reserved name protection (30+ ved commands blocked). Special character round-trip in YAML. Import supports merge + dry-run. Shell completions updated (bash/zsh/fish). Aliases: aliases, shortcut, shortcuts. **43 new tests. 1733/1733 pass (host + Docker parity). 0 type errors. CLI: 26 commands.**
+- **Session 71:** CYCLE — **`ved env` — environment manager + GitHub push (S67-70).** 10 subcommands: current, list, show, create, use, edit, delete, diff, reset + implicit name lookup. Config overlay system: active env YAML merges between config.yaml and config.local.yaml. 3 built-in templates (dev/prod/test). Name validation + reserved name protection. Colored diff output. --from/--template/--from-current creation modes. Secret redaction on --from-current. Shell completions updated (bash/zsh/fish). Pushed S67-70 to GitHub (006c9aa). **58 new tests. 1791/1791 pass (host + Docker parity). 0 type errors. CLI: 27 commands.**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -151,7 +152,8 @@
 | 68 | ✅ CYCLE | `ved run` CLI — one-shot query mode (39 tests) |
 | 69 | ✅ CYCLE | `ved pipe` CLI — multi-step pipeline execution (58 tests) |
 | 70 | ✅ CYCLE | `ved alias` CLI — command shortcut manager (43 tests) |
-| 71+ | CYCLE | New features, polish, releases |
+| 71 | ✅ CYCLE | `ved env` CLI — environment manager (58 tests) + GitHub push S67-70 |
+| 72+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -205,4 +207,5 @@
 | run-cli S68 | ✅ Complete | ~310 | 39 |
 | pipe-cli S69 | ✅ Complete | ~580 | 58 |
 | alias-cli S70 | ✅ Complete | ~625 | 43 |
-| **Total** | **ALL COMPLETE** | **~29,029** | **1733** |
+| env-cli S71 | ✅ Complete | ~490 | 58 |
+| **Total** | **ALL COMPLETE** | **~29,519** | **1791** |
