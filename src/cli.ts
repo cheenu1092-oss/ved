@@ -35,7 +35,7 @@ import { snapshotCmd } from './cli-snapshot.js';
 import { VedHttpServer } from './http.js';
 
 const log = createLogger('cli');
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);

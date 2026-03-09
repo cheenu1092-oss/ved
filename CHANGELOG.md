@@ -2,6 +2,33 @@
 
 All notable changes to Ved are documented here.
 
+## [0.3.0] — 2026-03-08
+
+### Highlights
+- **31 CLI commands** (up from 27 in v0.2.0)
+- **2,117 tests** (up from 1,791)
+- **~32,200 LoC** across all modules
+- Unified help system with `--help`/`-h` on every command
+- Git-native vault introspection: diff viewer, change tracker, point-in-time snapshots
+- Performance benchmarking and structured log analysis
+- v0.2.0 → v0.3.0: 5 feature sessions, 326 new tests, 0 regressions
+
+### CLI — Observability & Debugging
+- `ved log` — Structured log viewer/analyzer with 9 subcommands: show, tail, search, stats, errors, clear, export, rotate, levels. 7 filter flags, relative time parsing, color-coded output, live tail mode
+- `ved profile` — Performance benchmarking for 7 subsystems (audit, vault, RAG, trust, DB, hash, memory). Warmup iterations, JSON output, per-subsystem profiling
+- `ved help` — Unified help system: overview, per-command details, `--help`/`-h` flags on all 33 command handlers. Command registry with 9 categories
+
+### CLI — Vault History & Versioning
+- `ved diff` — Vault diff viewer & change tracker. 8 subcommands: working tree diff (staged/unstaged/untracked), log, show, stat, blame, between (two commits), files (--since), summary (folder breakdown + most active files). Color-coded output, relative timestamps
+- `ved snapshot` — Vault point-in-time snapshots. 7 subcommands: list, create (annotated git tags + auto-commit dirty vault), show (details + drift from HEAD), diff (vs HEAD or two snapshots, --stat), restore (safety snapshot + force flag), delete (safety tag protection), export (git archive to tar.gz)
+
+### Infrastructure
+- `checkHelp()` wired into all 33 CLI command handlers — `--help`/`-h` works everywhere without app initialization
+- Shell completions updated for all new commands across bash/zsh/fish
+
+### Fixed
+- Webhook delivery test timing flake (durationMs >= 0 for fast mock responses)
+
 ## [0.2.0] — 2026-03-07
 
 ### Highlights

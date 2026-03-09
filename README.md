@@ -144,7 +144,7 @@ For stronger guarantees, Ved periodically anchors chain state via external HMAC 
 
 ---
 
-## CLI Commands (27)
+## CLI Commands (31)
 
 | Command | Description |
 |---------|-------------|
@@ -174,9 +174,13 @@ For stronger guarantees, Ved periodically anchors chain state via external HMAC 
 | `ved env` | Environment manager (config overlays) |
 | `ved trust` | Trust tier management + work order inspection |
 | `ved user` | User profiles, sessions, activity |
+| `ved log` | Structured log viewer/analyzer with tail mode |
+| `ved profile` | Performance benchmarking for 7 subsystems |
+| `ved diff` | Vault diff viewer & change tracker |
+| `ved snapshot` | Vault point-in-time snapshots |
 | `ved completions` | Shell completions (bash/zsh/fish) |
 
-All commands support `--help`. Shell completions cover all subcommands and flags.
+All commands support `--help`/`-h`. Shell completions cover all subcommands and flags.
 
 ---
 
@@ -222,6 +226,6 @@ MIT
 
 ---
 
-**Current stats:** 27 CLI commands • 1,791 tests • ~29,500 LoC • 0 open vulnerabilities
+**Current stats:** 31 CLI commands • 2,117 tests • ~32,200 LoC • 0 open vulnerabilities
 
 *Built by [cheenu1092-oss](https://github.com/cheenu1092-oss). Designed in the open.*

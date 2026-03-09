@@ -302,7 +302,7 @@ describe('WebhookManager', () => {
       expect(deliveries).toHaveLength(1);
       expect(deliveries[0].status).toBe('success');
       expect(deliveries[0].statusCode).toBe(200);
-      expect(deliveries[0].durationMs).toBeGreaterThan(0);
+      expect(deliveries[0].durationMs).toBeGreaterThanOrEqual(0);
     });
 
     it('should record failed delivery with HTTP error', async () => {
