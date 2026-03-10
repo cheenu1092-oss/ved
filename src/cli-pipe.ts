@@ -38,7 +38,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, statSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join, basename, resolve } from 'node:path';
 import { execSync } from 'node:child_process';
 import { ulid } from 'ulid';
 import { createApp, type VedApp } from './app.js';
@@ -474,6 +474,18 @@ export function listSavedPipelines(pipelinesDir?: string): Array<{
 }
 
 /**
+ * Assert that a resolved path is within the given directory (path containment).
+ * Prevents directory traversal via ../
+ */
+function assertPathContained(filePath: string, dir: string): void {
+  const resolvedPath = resolve(filePath);
+  const resolvedDir = resolve(dir);
+  if (!resolvedPath.startsWith(resolvedDir + '/') && resolvedPath !== resolvedDir) {
+    throw new Error(`Path traversal denied: ${filePath} resolves outside ${dir}`);
+  }
+}
+
+/**
  * Load a saved pipeline by name.
  */
 export function loadSavedPipeline(name: string, pipelinesDir?: string): PipelineDefinition | null {
@@ -483,6 +495,12 @@ export function loadSavedPipeline(name: string, pipelinesDir?: string): Pipeline
   // Try exact filename first, then with extensions
   for (const ext of ['', '.yaml', '.yml']) {
     const path = join(dir, `${name}${ext}`);
+    // Path containment check — prevent traversal
+    try {
+      assertPathContained(path, dir);
+    } catch {
+      return null;
+    }
     if (existsSync(path)) {
       const content = readFileSync(path, 'utf-8');
       return parsePipelineYaml(content);
@@ -541,6 +559,12 @@ export function deleteSavedPipeline(name: string, pipelinesDir?: string): boolea
 
   for (const ext of ['', '.yaml', '.yml']) {
     const path = join(dir, `${name}${ext}`);
+    // Path containment check — prevent traversal
+    try {
+      assertPathContained(path, dir);
+    } catch {
+      return false;
+    }
     if (existsSync(path)) {
       unlinkSync(path);
       return true;

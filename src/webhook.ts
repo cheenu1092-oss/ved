@@ -586,11 +586,19 @@ export class WebhookManager {
         headers['X-Ved-Signature-256'] = `sha256=${this.signPayload(body, secret)}`;
       }
 
-      // Custom headers from metadata
+      // Custom headers from metadata (applied BEFORE security headers to prevent override)
       const customHeaders = metadata?.headers as Record<string, string> | undefined;
       if (customHeaders && typeof customHeaders === 'object') {
+        // Block list: security-sensitive headers that must not be overridden
+        const blocked = new Set([
+          'x-ved-signature-256',
+          'x-ved-event-delivery',
+          'content-length',
+          'host',
+          'authorization',
+        ]);
         for (const [key, val] of Object.entries(customHeaders)) {
-          if (typeof val === 'string') {
+          if (typeof val === 'string' && !blocked.has(key.toLowerCase())) {
             headers[key] = val;
           }
         }

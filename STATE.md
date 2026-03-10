@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 77
+- **Session Number:** 79
 - **Current Phase:** CYCLE (feature development)
-- **Last Run:** 2026-03-08
+- **Last Run:** 2026-03-09
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 78 — `ved plugin discover`? Config hot-reload? v0.3.0 release (31 commands since v0.2.0)? `ved migrate` (vault schema migrations)?
+- **Next Session:** 80 — GitHub push (S79), then continue feature dev. Options: `ved plugin` discovery/marketplace, `ved migrate` data migration, `ved hook` lifecycle hooks, `ved notify` push notifications, dashboard v2 (charts/graphs).
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -112,7 +112,9 @@
 - **Session 74:** CYCLE — **`ved help` — unified help system + GitHub push (S73-74).** Command registry covering 35 commands across 9 categories. `ved help` (overview), `ved help <cmd>` (detailed), `--help`/`-h` flags, `checkHelp()` utility. Fixed VERSION 0.1.0→0.2.0. Pushed to GitHub (94f491c). **48 new tests. 1934/1934 pass (host + Docker parity). 0 type errors. CLI: 29 commands (help is meta).**
 - **Session 75:** CYCLE — **Wired `checkHelp()` into all 33 CLI command handlers.** Every command now supports `--help`/`-h` flags without initializing the full app. Pushed to GitHub (1c4e1e5). **103 new tests. 2037/2037 pass (host + Docker parity). 0 type errors.**
 - **Session 76:** CYCLE — **`ved diff` — vault diff viewer & change tracker.** 8 subcommands: working tree diff (staged/unstaged/untracked), log (limit/file filter), show (commit details), stat (change statistics), blame (line-by-line), between (two commits), files (changed list with --since), summary (evolution overview with folder breakdown + most active files). Color-coded output, relative timestamps. No app init needed (fast). Aliases: ved changes, ved delta. Shell completions updated (bash/zsh/fish). Pushed to GitHub (429ae29). **33 new tests. 2073/2073 pass (host + Docker parity). 0 type errors. CLI: 30 commands.**
-- **Session 77:** CYCLE — **`ved snapshot` — vault point-in-time snapshots.** 7 subcommands: list (with relative timestamps), create (annotated git tags, auto-commit dirty vault, name validation), show (details + drift from HEAD), diff (vs HEAD or two snapshots, color-coded, --stat), restore (safety snapshot + rm+checkout strategy, --force), delete (safety tag protection), export (git archive to tar.gz). `ved-snap/` tag prefix. Aliases: ved snap, ved checkpoint. Shell completions updated (bash/zsh/fish). **41 new tests. 2117/2117 pass (Docker parity). 0 type errors. CLI: 31 commands.** 8 subcommands: working tree diff (staged/unstaged/untracked), log (limit/file filter), show (commit details), stat (change statistics), blame (line-by-line), between (two commits), files (changed list with --since), summary (evolution overview with folder breakdown + most active files). Color-coded output, relative timestamps. No app init needed (fast). Aliases: changes, delta. Shell completions updated (bash/zsh/fish). Pushed to GitHub (429ae29). **33 new tests. 2073/2073 pass (host + Docker parity). 0 type errors. CLI: 30 commands.**
+- **Session 77:** CYCLE — **`ved snapshot` — vault point-in-time snapshots.** 7 subcommands: list (with relative timestamps), create (annotated git tags, auto-commit dirty vault, name validation), show (details + drift from HEAD), diff (vs HEAD or two snapshots, color-coded, --stat), restore (safety snapshot + rm+checkout strategy, --force), delete (safety tag protection), export (git archive to tar.gz). `ved-snap/` tag prefix. Aliases: ved snap, ved checkpoint. Shell completions updated (bash/zsh/fish). **41 new tests. 2117/2117 pass (Docker parity). 0 type errors. CLI: 31 commands.**
+- **Session 78:** CYCLE — **v0.3.0 release.**
+- **Session 79:** CYCLE — **RED-TEAM: 91 tests across 11 attack categories.** HTTP API request smuggling (10), webhook SSRF (8), SSE resource exhaustion (5), pipe shell injection (9), snapshot git injection (8), alias command injection (7), HTTP auth bypass (9), webhook payload manipulation (8), HTTP endpoint edge cases (8), EventBus edge cases (8), pipeline YAML parsing (11). **2 vulnerabilities found+fixed:** VULN-18 pipeline path traversal in load/delete (MEDIUM), VULN-19 webhook custom header override could spoof HMAC signature (MEDIUM). **3 findings documented (accepted risk).** All existing defenses held: protocol validation, shell stdin piping, alias name validation, HTTP auth, SSE cleanup, EventBus isolation, YAML safety, work order expiry checks. **2208/2208 pass (host + Docker parity). 0 type errors.** Updated CHANGELOG.md (comprehensive v0.3.0 notes), README.md (31-command CLI table, updated stats), package.json + cli.ts (0.2.0→0.3.0). Fixed webhook delivery test timing flake. Tagged v0.3.0, pushed to GitHub (428eba3), created GitHub release. **2117/2117 pass (host + Docker parity). 0 type errors.**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -165,7 +167,9 @@
 | 75 | ✅ CYCLE | Wire checkHelp() into all 33 command handlers (103 tests) |
 | 76 | ✅ CYCLE | `ved diff` — vault diff viewer & change tracker (33 tests) |
 | 77 | ✅ CYCLE | `ved snapshot` — vault point-in-time snapshots (41 tests) |
-| 78+ | CYCLE | New features, polish, releases |
+| 78 | ✅ CYCLE | v0.3.0 release (CHANGELOG, README, tag, GitHub release) |
+| 79 | ✅ CYCLE | RED-TEAM: HTTP API, webhooks, SSE, pipe, snapshot, alias (91 tests, 2 vulns fixed) |
+| 80+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -225,4 +229,5 @@
 | help-cli S74 | ✅ Complete | ~380 | 151 |
 | diff-cli S76 | ✅ Complete | ~480 | 33 |
 | snapshot-cli S77 | ✅ Complete | ~551 | 41 |
-| **Total** | **ALL COMPLETE** | **~32,218** | **2117** |
+| red-team S79 | ✅ Complete | ~1,144 | 91 |
+| **Total** | **ALL COMPLETE** | **~33,362** | **2208** |
