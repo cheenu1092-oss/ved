@@ -93,6 +93,14 @@ async function main(): Promise<void> {
     case 'watch':
       if (checkHelp('watch', args.slice(1))) return;
       return watch();
+    case 'hook':
+    case 'hooks':
+    case 'on':
+    case 'trigger': {
+      if (checkHelp('hook', args.slice(1))) return;
+      const { hookCommand } = await import('./cli-hook.js');
+      return hookCommand(args.slice(1));
+    }
     case 'plugin':
       if (checkHelp('plugin', args.slice(1))) return;
       return plugin(args.slice(1));

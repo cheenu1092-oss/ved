@@ -1482,7 +1482,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'help', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'help', 'version',
     ];
     const diffSubs = ['log', 'show', 'stat', 'stats', 'blame', 'between', 'files', 'summary', 'evolution', 'overview', 'history', 'changed', 'annotate', 'commit', 'compare'];
     const diffFlags = ['--limit', '-n', '--since', '--days', '--file'];
@@ -1510,6 +1510,8 @@ export class VedApp {
     const profileSubs = ['all', 'audit', 'vault', 'trust', 'db', 'hash', 'memory'];
     const profileFlags = ['--iterations', '-i', '--warmup', '-w', '--json', '--verbose', '-v', '--no-color'];
     const snapshotSubs = ['list', 'ls', 'create', 'new', 'take', 'show', 'info', 'diff', 'compare', 'restore', 'checkout', 'delete', 'rm', 'remove', 'export', 'archive'];
+    const hookSubs = ['list', 'ls', 'add', 'create', 'remove', 'rm', 'delete', 'show', 'info', 'edit', 'update', 'enable', 'disable', 'test', 'dry-run', 'history', 'log', 'types', 'events'];
+    const hookFlags = ['--desc', '--description', '--timeout', '--concurrency', '--max-concurrent', '--events', '--command', '--cmd', '--limit', '-n'];
 
     switch (shell) {
       case 'bash':
@@ -1548,6 +1550,10 @@ _ved_completions() {
       ;;
     webhook)
       COMPREPLY=( $(compgen -W "${webhookSubs.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    hook|hooks|on|trigger)
+      COMPREPLY=( $(compgen -W "${hookSubs.join(' ')} ${hookFlags.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     memory|mem)
@@ -1669,6 +1675,7 @@ _ved() {
     'upgrade:Manage database migrations'
     'watch:Watch vault for changes (standalone)'
     'webhook:Manage webhook event delivery'
+    'hook:Lifecycle hooks — run commands on events'
     'memory:Browse and manage Obsidian knowledge graph'
     'trust:Manage trust tiers and work orders'
     'user:Manage and inspect known users'
@@ -1723,6 +1730,9 @@ _ved() {
           ;;
         webhook)
           _values 'subcommand' 'list[List webhooks]' 'add[Register a webhook]' 'remove[Remove a webhook]' 'enable[Enable a webhook]' 'disable[Disable a webhook]' 'deliveries[View delivery history]' 'stats[Delivery statistics]' 'test[Send a test event]'
+          ;;
+        hook|hooks|on|trigger)
+          _values 'subcommand' 'list[List hooks]' 'add[Create a hook]' 'remove[Remove a hook]' 'show[Show hook details]' 'edit[Update a hook]' 'enable[Enable a hook]' 'disable[Disable a hook]' 'test[Test-run a hook]' 'history[Execution history]' 'types[List event types]'
           ;;
         memory|mem)
           _values 'subcommand' 'list[List entities]' 'show[Display entity details]' 'graph[Show wikilink connections]' 'timeline[Recent memory activity]' 'daily[Show/create daily note]' 'forget[Soft-delete to archive]' 'tags[List all tags]' 'types[List entity types]'
@@ -1861,6 +1871,9 @@ ${upgradeSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from upgrade'
 
 # webhook subcommands
 ${webhookSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from webhook' -a '${s}'`).join('\n')}
+
+# hook subcommands
+${hookSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from hook' -a '${s}'`).join('\n')}
 
 # memory subcommands
 ${memorySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from memory' -a '${s}'`).join('\n')}

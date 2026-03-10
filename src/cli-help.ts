@@ -371,6 +371,22 @@ export const COMMANDS: CommandInfo[] = [
     usage: 'ved watch',
     examples: ['ved watch'],
   },
+  {
+    name: 'hook',
+    aliases: ['hooks', 'on', 'trigger'],
+    category: 'server',
+    summary: 'Lifecycle hooks — run shell commands on Ved events',
+    usage: 'ved hook <subcommand> [options]',
+    subcommands: ['list', 'add', 'remove', 'show', 'edit', 'enable', 'disable', 'test', 'history', 'types'],
+    examples: [
+      'ved hook list',
+      'ved hook add notify-slack message_received "curl -X POST https://hooks.slack.com/..."',
+      'ved hook add backup-on-close session_close "ved backup create"',
+      'ved hook test notify-slack',
+      'ved hook types',
+      'ved hook history --limit 10',
+    ],
+  },
 
   // ── Configuration ──
   {
