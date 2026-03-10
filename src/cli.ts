@@ -33,6 +33,7 @@ import { helpCmd, checkHelp } from './cli-help.js';
 import { diffCmd } from './cli-diff.js';
 import { snapshotCmd } from './cli-snapshot.js';
 import { VedHttpServer } from './http.js';
+import { notifyCommand } from './cli-notify.js';
 
 const log = createLogger('cli');
 const VERSION = '0.3.0';
@@ -101,6 +102,12 @@ async function main(): Promise<void> {
       const { hookCommand } = await import('./cli-hook.js');
       return hookCommand(args.slice(1));
     }
+    case 'notify':
+    case 'notifications':
+    case 'alert':
+    case 'alerts':
+      if (checkHelp('notify', args.slice(1))) return;
+      return notifyCommand(args.slice(1));
     case 'plugin':
       if (checkHelp('plugin', args.slice(1))) return;
       return plugin(args.slice(1));

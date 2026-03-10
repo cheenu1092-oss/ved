@@ -1482,7 +1482,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'help', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'help', 'version',
     ];
     const diffSubs = ['log', 'show', 'stat', 'stats', 'blame', 'between', 'files', 'summary', 'evolution', 'overview', 'history', 'changed', 'annotate', 'commit', 'compare'];
     const diffFlags = ['--limit', '-n', '--since', '--days', '--file'];
@@ -1512,6 +1512,8 @@ export class VedApp {
     const snapshotSubs = ['list', 'ls', 'create', 'new', 'take', 'show', 'info', 'diff', 'compare', 'restore', 'checkout', 'delete', 'rm', 'remove', 'export', 'archive'];
     const hookSubs = ['list', 'ls', 'add', 'create', 'remove', 'rm', 'delete', 'show', 'info', 'edit', 'update', 'enable', 'disable', 'test', 'dry-run', 'history', 'log', 'types', 'events'];
     const hookFlags = ['--desc', '--description', '--timeout', '--concurrency', '--max-concurrent', '--events', '--command', '--cmd', '--limit', '-n'];
+    const notifySubs = ['list', 'ls', 'add', 'create', 'remove', 'rm', 'delete', 'show', 'info', 'edit', 'update', 'enable', 'disable', 'test', 'history', 'channels', 'mute', 'unmute'];
+    const notifyFlags = ['--events', '--channel', '--desc', '--description', '--command', '--cmd', '--log-path', '--title', '--body', '--throttle', '--quiet-start', '--quiet-end', '--limit', '-n'];
 
     switch (shell) {
       case 'bash':
@@ -1554,6 +1556,10 @@ _ved_completions() {
       ;;
     hook|hooks|on|trigger)
       COMPREPLY=( $(compgen -W "${hookSubs.join(' ')} ${hookFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    notify|notifications|alert|alerts)
+      COMPREPLY=( $(compgen -W "${notifySubs.join(' ')} ${notifyFlags.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     memory|mem)
@@ -1699,6 +1705,10 @@ _ved() {
     'diff:View vault changes, git history, and knowledge evolution'
     'changes:View vault changes (alias for diff)'
     'delta:View vault changes (alias for diff)'
+    'notify:Notification rules — get alerted on events'
+    'notifications:Notification rules (alias for notify)'
+    'alert:Notification rules (alias for notify)'
+    'alerts:Notification rules (alias for notify)'
     'snapshot:Lightweight vault point-in-time snapshots'
     'snap:Vault snapshots (alias for snapshot)'
     'checkpoint:Vault snapshots (alias for snapshot)'
@@ -1733,6 +1743,9 @@ _ved() {
           ;;
         hook|hooks|on|trigger)
           _values 'subcommand' 'list[List hooks]' 'add[Create a hook]' 'remove[Remove a hook]' 'show[Show hook details]' 'edit[Update a hook]' 'enable[Enable a hook]' 'disable[Disable a hook]' 'test[Test-run a hook]' 'history[Execution history]' 'types[List event types]'
+          ;;
+        notify|notifications|alert|alerts)
+          _values 'subcommand' 'list[List rules]' 'add[Create a rule]' 'remove[Remove a rule]' 'show[Show rule details]' 'edit[Update a rule]' 'enable[Enable a rule]' 'disable[Disable a rule]' 'test[Test-fire a rule]' 'history[Delivery history]' 'channels[List channels]' 'mute[Mute notifications]' 'unmute[Unmute notifications]'
           ;;
         memory|mem)
           _values 'subcommand' 'list[List entities]' 'show[Display entity details]' 'graph[Show wikilink connections]' 'timeline[Recent memory activity]' 'daily[Show/create daily note]' 'forget[Soft-delete to archive]' 'tags[List all tags]' 'types[List entity types]'
@@ -1874,6 +1887,9 @@ ${webhookSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from webhook'
 
 # hook subcommands
 ${hookSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from hook' -a '${s}'`).join('\n')}
+
+# notify subcommands
+${notifySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from notify' -a '${s}'`).join('\n')}
 
 # memory subcommands
 ${memorySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from memory' -a '${s}'`).join('\n')}

@@ -388,6 +388,25 @@ export const COMMANDS: CommandInfo[] = [
     ],
   },
 
+  {
+    name: 'notify',
+    aliases: ['notifications', 'alert', 'alerts'],
+    category: 'server',
+    summary: 'Notification rules — get alerted when events occur',
+    usage: 'ved notify <subcommand> [options]',
+    subcommands: ['list', 'add', 'remove', 'show', 'edit', 'enable', 'disable', 'test', 'history', 'channels', 'mute', 'unmute'],
+    examples: [
+      'ved notify list',
+      'ved notify add alert-errors error,tool_error desktop',
+      'ved notify add log-all message_received log --log-path /tmp/ved.log --throttle 5000',
+      'ved notify test alert-errors',
+      'ved notify mute 1h',
+      'ved notify unmute',
+      'ved notify history --limit 10',
+      'ved notify channels',
+    ],
+  },
+
   // ── Configuration ──
   {
     name: 'config',

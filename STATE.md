@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 80
+- **Session Number:** 81
 - **Current Phase:** CYCLE (feature development)
-- **Last Run:** 2026-03-09
+- **Last Run:** 2026-03-10
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 81 — GitHub push (S80), then continue feature dev. Options: `ved plugin` discovery/marketplace, `ved migrate` data migration, `ved notify` push notifications, dashboard v2 (charts/graphs).
+- **Next Session:** 82 — GitHub push (S81), then continue feature dev. Options: `ved plugin` discovery/marketplace, `ved migrate` data migration, dashboard v2 (charts/graphs), `ved schedule` (cron improvements), `ved tag` (vault tagging CLI).
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -115,6 +115,7 @@
 - **Session 77:** CYCLE — **`ved snapshot` — vault point-in-time snapshots.** 7 subcommands: list (with relative timestamps), create (annotated git tags, auto-commit dirty vault, name validation), show (details + drift from HEAD), diff (vs HEAD or two snapshots, color-coded, --stat), restore (safety snapshot + rm+checkout strategy, --force), delete (safety tag protection), export (git archive to tar.gz). `ved-snap/` tag prefix. Aliases: ved snap, ved checkpoint. Shell completions updated (bash/zsh/fish). **41 new tests. 2117/2117 pass (Docker parity). 0 type errors. CLI: 31 commands.**
 - **Session 78:** CYCLE — **v0.3.0 release.**
 - **Session 80:** CYCLE — **`ved hook` — lifecycle hook manager.** 11 subcommands: list, add, remove, show, edit, enable, disable, test, history, types. Hooks subscribe to EventBus event types and execute shell commands asynchronously. Event JSON piped to stdin + VED_EVENT_* env vars. Features: concurrency limits (per-hook), timeout enforcement, execution history (500 max), dangerous command blocking (rm -rf, sudo, dd, fork bombs), YAML persistence, HookRunner class for runtime EventBus integration. Aliases: ved hooks, ved on, ved trigger. Shell completions updated (bash/zsh/fish). Help system updated. Pushed S79 to GitHub (f27de0d). **45 new tests. 2256/2256 pass (host + Docker parity). 0 type errors. CLI: 32 commands.**
+- **Session 81:** CYCLE — **`ved notify` — notification rules manager.** 12 subcommands: list, add, remove, show, edit, enable, disable, test, history, channels, mute, unmute. 4 delivery channels: terminal (bell+banner), desktop (osascript/notify-send), command (stdin JSON), log (append). Features: template system ({type}/{actor}/{session}/{detail}), per-rule throttling (ms), quiet hours (overnight support), global mute with auto-expiry, suppression tracking, delivery history (500 max), NotifyRunner for runtime EventBus integration, dangerous command blocking. Aliases: ved notifications, ved alert, ved alerts. Shell completions updated (bash/zsh/fish). Help system updated. Pushed S80 to GitHub (3f33f71). **42 new tests. 2298/2298 pass (host + Docker parity). 0 type errors. CLI: 33 commands.**
 - **Session 79:** CYCLE — **RED-TEAM: 91 tests across 11 attack categories.** HTTP API request smuggling (10), webhook SSRF (8), SSE resource exhaustion (5), pipe shell injection (9), snapshot git injection (8), alias command injection (7), HTTP auth bypass (9), webhook payload manipulation (8), HTTP endpoint edge cases (8), EventBus edge cases (8), pipeline YAML parsing (11). **2 vulnerabilities found+fixed:** VULN-18 pipeline path traversal in load/delete (MEDIUM), VULN-19 webhook custom header override could spoof HMAC signature (MEDIUM). **3 findings documented (accepted risk).** All existing defenses held: protocol validation, shell stdin piping, alias name validation, HTTP auth, SSE cleanup, EventBus isolation, YAML safety, work order expiry checks. **2208/2208 pass (host + Docker parity). 0 type errors.** Updated CHANGELOG.md (comprehensive v0.3.0 notes), README.md (31-command CLI table, updated stats), package.json + cli.ts (0.2.0→0.3.0). Fixed webhook delivery test timing flake. Tagged v0.3.0, pushed to GitHub (428eba3), created GitHub release. **2117/2117 pass (host + Docker parity). 0 type errors.**
 
 ## Phase Schedule (Updated)
@@ -171,7 +172,8 @@
 | 78 | ✅ CYCLE | v0.3.0 release (CHANGELOG, README, tag, GitHub release) |
 | 79 | ✅ CYCLE | RED-TEAM: HTTP API, webhooks, SSE, pipe, snapshot, alias (91 tests, 2 vulns fixed) |
 | 80 | ✅ CYCLE | `ved hook` — lifecycle hook manager (45 tests) |
-| 81+ | CYCLE | New features, polish, releases |
+| 81 | ✅ CYCLE | `ved notify` — notification rules manager (42 tests) |
+| 82+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -233,4 +235,5 @@
 | snapshot-cli S77 | ✅ Complete | ~551 | 41 |
 | red-team S79 | ✅ Complete | ~1,144 | 91 |
 | hook-cli S80 | ✅ Complete | ~580 | 45 |
-| **Total** | **ALL COMPLETE** | **~33,942** | **2256** |
+| notify-cli S81 | ✅ Complete | ~580 | 42 |
+| **Total** | **ALL COMPLETE** | **~34,522** | **2298** |
