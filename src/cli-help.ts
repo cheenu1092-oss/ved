@@ -124,6 +124,15 @@ export const COMMANDS: CommandInfo[] = [
     examples: ['ved template list', 'ved tpl use person --var name="Jane Doe"', 'ved template show decision'],
   },
   {
+    name: 'tag',
+    aliases: ['tags', 'label', 'labels'],
+    category: 'memory',
+    summary: 'Manage vault tags (add, remove, rename, find, stats)',
+    usage: 'ved tag <subcommand> [options]',
+    subcommands: ['list', 'show', 'add', 'remove', 'rename', 'set', 'clear', 'orphans', 'stats', 'find'],
+    examples: ['ved tag list', 'ved tag add entities/john.md person', 'ved tag rename old-tag new-tag', 'ved tag find person project', 'ved tag stats'],
+  },
+  {
     name: 'context',
     aliases: ['ctx', 'window', 'prompt-debug'],
     category: 'memory',

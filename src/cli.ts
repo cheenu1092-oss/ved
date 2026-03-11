@@ -34,6 +34,7 @@ import { diffCmd } from './cli-diff.js';
 import { snapshotCmd } from './cli-snapshot.js';
 import { VedHttpServer } from './http.js';
 import { notifyCommand } from './cli-notify.js';
+import { tagCommand } from './cli-tag.js';
 
 const log = createLogger('cli');
 const VERSION = '0.3.0';
@@ -108,6 +109,20 @@ async function main(): Promise<void> {
     case 'alerts':
       if (checkHelp('notify', args.slice(1))) return;
       return notifyCommand(args.slice(1));
+    case 'tag':
+    case 'tags':
+    case 'label':
+    case 'labels': {
+      if (checkHelp('tag', args.slice(1))) return;
+      const app = createApp();
+      await app.init();
+      try {
+        await tagCommand(app, args.slice(1));
+      } finally {
+        await app.stop();
+      }
+      return;
+    }
     case 'plugin':
       if (checkHelp('plugin', args.slice(1))) return;
       return plugin(args.slice(1));
