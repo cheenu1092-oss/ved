@@ -35,6 +35,7 @@ import { snapshotCmd } from './cli-snapshot.js';
 import { VedHttpServer } from './http.js';
 import { notifyCommand } from './cli-notify.js';
 import { tagCommand } from './cli-tag.js';
+import { migrateCommand } from './cli-migrate.js';
 
 const log = createLogger('cli');
 const VERSION = '0.3.0';
@@ -118,6 +119,19 @@ async function main(): Promise<void> {
       await app.init();
       try {
         await tagCommand(app, args.slice(1));
+      } finally {
+        await app.stop();
+      }
+      return;
+    }
+    case 'migrate':
+    case 'migrations':
+    case 'import-data': {
+      if (checkHelp('migrate', args.slice(1))) return;
+      const app = createApp();
+      await app.init();
+      try {
+        await migrateCommand(app, args.slice(1));
       } finally {
         await app.stop();
       }

@@ -1482,7 +1482,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'help', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'migrate', 'tag', 'help', 'version',
     ];
     const diffSubs = ['log', 'show', 'stat', 'stats', 'blame', 'between', 'files', 'summary', 'evolution', 'overview', 'history', 'changed', 'annotate', 'commit', 'compare'];
     const diffFlags = ['--limit', '-n', '--since', '--days', '--file'];
@@ -1514,6 +1514,12 @@ export class VedApp {
     const hookFlags = ['--desc', '--description', '--timeout', '--concurrency', '--max-concurrent', '--events', '--command', '--cmd', '--limit', '-n'];
     const notifySubs = ['list', 'ls', 'add', 'create', 'remove', 'rm', 'delete', 'show', 'info', 'edit', 'update', 'enable', 'disable', 'test', 'history', 'channels', 'mute', 'unmute'];
     const notifyFlags = ['--events', '--channel', '--desc', '--description', '--command', '--cmd', '--log-path', '--title', '--body', '--throttle', '--quiet-start', '--quiet-end', '--limit', '-n'];
+
+    const tagSubs = ['list', 'ls', 'show', 'get', 'info', 'add', 'remove', 'rm', 'delete', 'del', 'rename', 'mv', 'move', 'set', 'replace', 'clear', 'orphans', 'untagged', 'stats', 'statistics', 'find', 'search', 'filter'];
+    const tagFlags = ['--count', '-c', '--any', '--dry-run', '--include-daily'];
+
+    const migrateSubs = ['status', 'markdown', 'md', 'json', 'obsidian', 'obs', 'csv', 'jsonl', 'undo', 'rollback', 'revert', 'history', 'log', 'validate', 'check', 'verify'];
+    const migrateFlags = ['--dry-run', '--force', '-r', '--recursive', '--tag=', '--folder=', '--name-col=', '--include-hidden', '--limit='];
 
     switch (shell) {
       case 'bash':
@@ -1560,6 +1566,14 @@ _ved_completions() {
       ;;
     notify|notifications|alert|alerts)
       COMPREPLY=( $(compgen -W "${notifySubs.join(' ')} ${notifyFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    tag|tags|label|labels)
+      COMPREPLY=( $(compgen -W "${tagSubs.join(' ')} ${tagFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    migrate|migrations|import-data)
+      COMPREPLY=( $(compgen -W "${migrateSubs.join(' ')} ${migrateFlags.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     memory|mem)
@@ -1709,6 +1723,13 @@ _ved() {
     'notifications:Notification rules (alias for notify)'
     'alert:Notification rules (alias for notify)'
     'alerts:Notification rules (alias for notify)'
+    'tag:Manage vault tags'
+    'tags:Manage vault tags (alias for tag)'
+    'label:Manage vault tags (alias for tag)'
+    'labels:Manage vault tags (alias for tag)'
+    'migrate:Import data from external sources'
+    'migrations:Import data (alias for migrate)'
+    'import-data:Import data (alias for migrate)'
     'snapshot:Lightweight vault point-in-time snapshots'
     'snap:Vault snapshots (alias for snapshot)'
     'checkpoint:Vault snapshots (alias for snapshot)'
@@ -1746,6 +1767,12 @@ _ved() {
           ;;
         notify|notifications|alert|alerts)
           _values 'subcommand' 'list[List rules]' 'add[Create a rule]' 'remove[Remove a rule]' 'show[Show rule details]' 'edit[Update a rule]' 'enable[Enable a rule]' 'disable[Disable a rule]' 'test[Test-fire a rule]' 'history[Delivery history]' 'channels[List channels]' 'mute[Mute notifications]' 'unmute[Unmute notifications]'
+          ;;
+        tag|tags|label|labels)
+          _values 'subcommand' 'list[List all tags]' 'show[Files with tag]' 'add[Add tags to file]' 'remove[Remove tags]' 'rename[Rename across vault]' 'set[Replace all tags]' 'clear[Remove all tags]' 'orphans[Untagged files]' 'stats[Tag statistics]' 'find[Multi-tag search]'
+          ;;
+        migrate|migrations|import-data)
+          _values 'subcommand' 'status[Migration status]' 'markdown[Import markdown files]' 'json[Import JSON data]' 'obsidian[Import Obsidian vault]' 'csv[Import CSV as entities]' 'jsonl[Import JSONL logs]' 'undo[Undo a migration]' 'history[Migration history]' 'validate[Dry-run validation]'
           ;;
         memory|mem)
           _values 'subcommand' 'list[List entities]' 'show[Display entity details]' 'graph[Show wikilink connections]' 'timeline[Recent memory activity]' 'daily[Show/create daily note]' 'forget[Soft-delete to archive]' 'tags[List all tags]' 'types[List entity types]'
@@ -1890,6 +1917,12 @@ ${hookSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from hook' -a '$
 
 # notify subcommands
 ${notifySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from notify' -a '${s}'`).join('\n')}
+
+# tag subcommands
+${tagSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from tag' -a '${s}'`).join('\n')}
+
+# migrate subcommands
+${migrateSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from migrate' -a '${s}'`).join('\n')}
 
 # memory subcommands
 ${memorySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from memory' -a '${s}'`).join('\n')}
