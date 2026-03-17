@@ -6,8 +6,8 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-// Increase hook timeout — VedApp start/stop is heavyweight
-vi.setConfig({ hookTimeout: 30_000, testTimeout: 30_000 });
+// Increase test timeout — VedApp init + shutdown can be slow
+vi.setConfig({ hookTimeout: 15_000, testTimeout: 15_000 });
 import {
   mkdtempSync, mkdirSync, writeFileSync, readFileSync,
   rmSync, existsSync, readdirSync,
@@ -100,7 +100,7 @@ beforeEach(async () => {
   const dbPath = join(tmpBase, 'test.db');
   const config = makeConfig(vaultDir, dbPath);
   app = new VedApp(config);
-  await app.start();
+  await app.init();
 });
 
 afterEach(async () => {
@@ -603,7 +603,8 @@ describe('ved migrate validate', () => {
   });
 
   it('errors on unknown source type', async () => {
-    await migrateCommand(app, ['validate', 'xml', '/some/path']);
+    // Path must exist so validation reaches the type switch
+    await migrateCommand(app, ['validate', 'xml', sourceDir]);
 
     expect(errors.some(l => l.includes('Unknown source'))).toBe(true);
   });
