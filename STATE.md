@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 82
+- **Session Number:** 83
 - **Current Phase:** CYCLE (feature development)
 - **Last Run:** 2026-03-16
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 83 — Complete `ved migrate` tests (48 planned) + shell completions + git integration, then push S82 to GitHub.
+- **Next Session:** 84 — Docker test parity for migrate tests, v0.4.0 release prep (CHANGELOG, README), or new feature.
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -116,7 +116,8 @@
 - **Session 78:** CYCLE — **v0.3.0 release.**
 - **Session 80:** CYCLE — **`ved hook` — lifecycle hook manager.** 11 subcommands: list, add, remove, show, edit, enable, disable, test, history, types. Hooks subscribe to EventBus event types and execute shell commands asynchronously. Event JSON piped to stdin + VED_EVENT_* env vars. Features: concurrency limits (per-hook), timeout enforcement, execution history (500 max), dangerous command blocking (rm -rf, sudo, dd, fork bombs), YAML persistence, HookRunner class for runtime EventBus integration. Aliases: ved hooks, ved on, ved trigger. Shell completions updated (bash/zsh/fish). Help system updated. Pushed S79 to GitHub (f27de0d). **45 new tests. 2256/2256 pass (host + Docker parity). 0 type errors. CLI: 32 commands.**
 - **Session 81:** CYCLE — **`ved notify` — notification rules manager.** 12 subcommands: list, add, remove, show, edit, enable, disable, test, history, channels, mute, unmute. 4 delivery channels: terminal (bell+banner), desktop (osascript/notify-send), command (stdin JSON), log (append). Features: template system ({type}/{actor}/{session}/{detail}), per-rule throttling (ms), quiet hours (overnight support), global mute with auto-expiry, suppression tracking, delivery history (500 max), NotifyRunner for runtime EventBus integration, dangerous command blocking. Aliases: ved notifications, ved alert, ved alerts. Shell completions updated (bash/zsh/fish). Help system updated. Pushed S80 to GitHub (3f33f71). **42 new tests. 2298/2298 pass (host + Docker parity). 0 type errors. CLI: 33 commands.**
-- **Session 82:** CYCLE — **`ved migrate` — data migration tool (WIP).** 8 subcommands: markdown/json/obsidian/csv/jsonl import, undo, validate, history. Migration tracking in ~/.ved/migrations/, frontmatter preservation, entity auto-routing, wikilink preservation, audit logging (3 new event types), collision handling (skip/overwrite/merge). Catch-up session after 31 consecutive opus46 timeouts (6 days) — switched to sonnet. **Tests partial (48 planned, needs completion). 0 type errors. CLI: 34 commands.**
+- **Session 82:** CYCLE — **`ved migrate` — data migration tool.** 9 subcommands: status/markdown/json/obsidian/csv/jsonl import, undo, validate, history. Migration tracking in ~/.ved/migrations/, frontmatter preservation, entity auto-routing, wikilink preservation, audit logging (3 new event types), collision handling (skip/overwrite/merge). Catch-up session after 31 consecutive opus46 timeouts (6 days) — switched to sonnet. **50 tests (partial session, completed in S83). 0 type errors. CLI: 34 commands.**
+- **Session 83:** CYCLE — **Completed `ved migrate` tests + GitHub push.** Fixed 3 test issues from S82 (init() vs start(), timeout, validate path). All 50 migrate tests pass. Full suite: 2392/2393 (1 pre-existing flake). Cleaned up 14 temp debug logs. Pushed to GitHub (b63c140). **0 type errors.**
 - **Session 79:** CYCLE — **RED-TEAM: 91 tests across 11 attack categories.** HTTP API request smuggling (10), webhook SSRF (8), SSE resource exhaustion (5), pipe shell injection (9), snapshot git injection (8), alias command injection (7), HTTP auth bypass (9), webhook payload manipulation (8), HTTP endpoint edge cases (8), EventBus edge cases (8), pipeline YAML parsing (11). **2 vulnerabilities found+fixed:** VULN-18 pipeline path traversal in load/delete (MEDIUM), VULN-19 webhook custom header override could spoof HMAC signature (MEDIUM). **3 findings documented (accepted risk).** All existing defenses held: protocol validation, shell stdin piping, alias name validation, HTTP auth, SSE cleanup, EventBus isolation, YAML safety, work order expiry checks. **2208/2208 pass (host + Docker parity). 0 type errors.** Updated CHANGELOG.md (comprehensive v0.3.0 notes), README.md (31-command CLI table, updated stats), package.json + cli.ts (0.2.0→0.3.0). Fixed webhook delivery test timing flake. Tagged v0.3.0, pushed to GitHub (428eba3), created GitHub release. **2117/2117 pass (host + Docker parity). 0 type errors.**
 
 ## Phase Schedule (Updated)
@@ -174,7 +175,9 @@
 | 79 | ✅ CYCLE | RED-TEAM: HTTP API, webhooks, SSE, pipe, snapshot, alias (91 tests, 2 vulns fixed) |
 | 80 | ✅ CYCLE | `ved hook` — lifecycle hook manager (45 tests) |
 | 81 | ✅ CYCLE | `ved notify` — notification rules manager (42 tests) |
-| 82+ | CYCLE | New features, polish, releases |
+| 82 | ✅ CYCLE | `ved migrate` — data migration tool (50 tests) |
+| 83 | ✅ CYCLE | Complete migrate tests + GitHub push |
+| 84+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -237,4 +240,5 @@
 | red-team S79 | ✅ Complete | ~1,144 | 91 |
 | hook-cli S80 | ✅ Complete | ~580 | 45 |
 | notify-cli S81 | ✅ Complete | ~580 | 42 |
-| **Total** | **ALL COMPLETE** | **~34,522** | **2298** |
+| migrate-cli S82-83 | ✅ Complete | ~1,217 | 50 |
+| **Total** | **ALL COMPLETE** | **~35,739** | **2393** |
