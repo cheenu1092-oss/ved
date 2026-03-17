@@ -362,6 +362,7 @@ export function executeHook(hook: HookEntry, event: VedEvent): Promise<HookExecu
 
     // Pipe event JSON to stdin
     if (child.stdin) {
+      child.stdin.on('error', () => { /* ignore EPIPE — child may exit before reading stdin */ });
       child.stdin.write(eventJson);
       child.stdin.end();
     }
