@@ -1,6 +1,6 @@
 {
   "name": "ved",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "The personal AI agent that remembers everything and proves it",
   "type": "module",
   "main": "dist/index.js",

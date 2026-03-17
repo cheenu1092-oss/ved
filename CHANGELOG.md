@@ -2,6 +2,36 @@
 
 All notable changes to Ved are documented here.
 
+## [0.4.0] — 2026-03-17
+
+### Highlights
+- **34 CLI commands** (up from 31 in v0.3.0)
+- **2,393 tests** (up from 2,117)
+- **~35,700 LoC** across all modules
+- Lifecycle hooks and notification rules for event-driven automation
+- Data migration tool for importing from ChatGPT, Claude, Obsidian, CSV, JSONL, and Markdown
+- Red-team session covering HTTP API, webhooks, SSE, pipes, snapshots, aliases (91 tests, 2 vulns found+fixed)
+- v0.3.0 → v0.4.0: 5 feature sessions, 1 red-team session, 276 new tests, 0 regressions
+
+### CLI — Automation & Event-Driven
+- `ved hook` — Lifecycle hook manager. 11 subcommands: list, add, remove, show, edit, enable, disable, test, history, types. Hooks subscribe to EventBus event types and execute shell commands asynchronously. Event JSON piped to stdin + VED_EVENT_* env vars. Features: concurrency limits (per-hook), timeout enforcement, execution history (500 max), dangerous command blocking (rm -rf, sudo, dd, fork bombs), YAML persistence, HookRunner for runtime EventBus integration
+- `ved notify` — Notification rules manager. 12 subcommands: list, add, remove, show, edit, enable, disable, test, history, channels, mute, unmute. 4 delivery channels: terminal (bell+banner), desktop (osascript/notify-send), command (stdin JSON), log (append). Features: template system ({type}/{actor}/{session}/{detail}), per-rule throttling, quiet hours, global mute with auto-expiry, suppression tracking, delivery history (500 max), NotifyRunner for runtime integration
+
+### CLI — Data Migration
+- `ved migrate` — Data migration tool. 9 subcommands: status, markdown, json, obsidian, csv, jsonl import, undo, validate, history. Supports ChatGPT export JSON, Claude export JSON, generic JSON arrays, CSV with header mapping, JSONL streams, Obsidian vault directories, and Markdown files/directories. Features: migration tracking in ~/.ved/migrations/, frontmatter preservation, entity auto-routing, wikilink preservation, audit logging (3 new event types), collision handling (skip/overwrite/merge)
+
+### Security — Red-Team Session 79
+- **91 new red-team tests** across 11 attack categories: HTTP API request smuggling, webhook SSRF, SSE resource exhaustion, pipe shell injection, snapshot git injection, alias command injection, HTTP auth bypass, webhook payload manipulation, HTTP endpoint edge cases, EventBus edge cases, pipeline YAML parsing
+- **VULN-18 (MEDIUM):** Pipeline path traversal in load/delete — fixed with path containment checks
+- **VULN-19 (MEDIUM):** Webhook custom header override could spoof HMAC signature — fixed by blocking reserved header names
+- 3 findings documented as accepted risk. All existing defenses held
+- **Total vulnerabilities found and fixed across all red-team sessions: 19** (0 open)
+
+### Infrastructure
+- Shell completions updated for all new commands across bash/zsh/fish
+- Help system updated with hook, notify, and migrate commands
+- Docker parity verified for all new test suites
+
 ## [0.3.0] — 2026-03-08
 
 ### Highlights

@@ -144,7 +144,7 @@ For stronger guarantees, Ved periodically anchors chain state via external HMAC 
 
 ---
 
-## CLI Commands (31)
+## CLI Commands (34)
 
 | Command | Description |
 |---------|-------------|
@@ -164,11 +164,14 @@ For stronger guarantees, Ved periodically anchors chain state via external HMAC 
 | `ved backup` | Create, list, restore vault+DB snapshots |
 | `ved export` | Export vault to portable JSON |
 | `ved import` | Import vault from JSON (merge/overwrite/fail modes) |
+| `ved migrate` | Import from ChatGPT, Claude, Obsidian, CSV, JSONL, Markdown |
 | `ved reindex` | Force-rebuild entire RAG index |
 | `ved watch` | Standalone vault file watcher with live re-indexing |
 | `ved upgrade` | Database migration lifecycle |
 | `ved serve` | HTTP API server with web dashboard |
 | `ved cron` | Scheduled job engine (5-field cron expressions) |
+| `ved hook` | Lifecycle hooks: run shell commands on EventBus events |
+| `ved notify` | Notification rules: terminal, desktop, command, log delivery |
 | `ved pipe` | Multi-step pipelines (queries + shell commands) |
 | `ved alias` | Command shortcuts with @-syntax |
 | `ved env` | Environment manager (config overlays) |
@@ -226,6 +229,6 @@ MIT
 
 ---
 
-**Current stats:** 31 CLI commands • 2,117 tests • ~32,200 LoC • 0 open vulnerabilities
+**Current stats:** 34 CLI commands • 2,393 tests • ~35,700 LoC • 0 open vulnerabilities (19 found and fixed)
 
 *Built by [cheenu1092-oss](https://github.com/cheenu1092-oss). Designed in the open.*
