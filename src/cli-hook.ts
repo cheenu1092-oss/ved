@@ -91,7 +91,9 @@ const MAX_OUTPUT_BYTES = 4096;
 
 /** Dangerous command patterns blocked for safety */
 const BLOCKED_PATTERNS = [
-  /\brm\s+-[rf]{1,2}\s+[/~]/i,
+  /\brm\s+(-\w*[rf]\w*\s+)+[/~]/i,      // rm -rf /, rm -rfv /, rm -r -f /
+  /\brm\s+--recursive\b/i,               // rm --recursive
+  /\brm\s+--force\b/i,                   // rm --force
   /\bsudo\b/i,
   /\b(mkfs|fdisk)\b/i,
   /\bdd\s+if=/i,
@@ -327,12 +329,14 @@ export function executeHook(hook: HookEntry, event: VedEvent): Promise<HookExecu
     activeCounts.set(hook.name, active + 1);
 
     // Set environment variables for the hook
+    // Strip null bytes from all values — Node.js rejects them in env vars (TypeError)
+    const sanitizeEnv = (s: string): string => s.replace(/\0/g, '');
     const env = {
       ...process.env,
-      VED_EVENT_TYPE: event.type,
-      VED_EVENT_ID: event.id,
-      VED_EVENT_ACTOR: event.actor,
-      VED_EVENT_SESSION: event.sessionId || '',
+      VED_EVENT_TYPE: sanitizeEnv(event.type),
+      VED_EVENT_ID: sanitizeEnv(event.id),
+      VED_EVENT_ACTOR: sanitizeEnv(event.actor),
+      VED_EVENT_SESSION: sanitizeEnv(event.sessionId || ''),
       VED_EVENT_TIMESTAMP: String(event.timestamp),
     };
 
