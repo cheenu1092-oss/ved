@@ -143,6 +143,13 @@ async function main(): Promise<void> {
     case 'gc':
       if (checkHelp('gc', args.slice(1))) return;
       return gc(args.slice(1));
+    case 'sync':
+    case 'remote':
+    case 'remotes': {
+      if (checkHelp('sync', args.slice(1))) return;
+      const { syncCommand } = await import('./cli-sync.js');
+      return syncCommand(args.slice(1));
+    }
     case 'webhook':
       if (checkHelp('webhook', args.slice(1))) return;
       return webhook(args.slice(1));

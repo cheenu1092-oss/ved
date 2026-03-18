@@ -184,6 +184,16 @@ export type AuditEventType =
   | 'cron_job_executed'
   | 'gc_sessions_cleaned'
   | 'gc_vacuum'
+  | 'sync_remote_added'
+  | 'sync_remote_removed'
+  | 'sync_push_started'
+  | 'sync_push_completed'
+  | 'sync_push_failed'
+  | 'sync_pull_started'
+  | 'sync_pull_completed'
+  | 'sync_pull_failed'
+  | 'sync_auto_enabled'
+  | 'sync_auto_disabled'
   | 'webhook_registered'
   | 'webhook_removed'
   | 'webhook_delivery_success'
@@ -205,6 +215,10 @@ export const AUDIT_EVENT_TYPES: AuditEventType[] = [
   'anchor_created', 'config_change', 'backup_created', 'backup_restored',
   'cron_job_created', 'cron_job_removed', 'cron_job_enabled', 'cron_job_disabled', 'cron_job_executed',
   'gc_sessions_cleaned', 'gc_vacuum',
+  'sync_remote_added', 'sync_remote_removed',
+  'sync_push_started', 'sync_push_completed', 'sync_push_failed',
+  'sync_pull_started', 'sync_pull_completed', 'sync_pull_failed',
+  'sync_auto_enabled', 'sync_auto_disabled',
   'webhook_registered', 'webhook_removed', 'webhook_delivery_success', 'webhook_delivery_failed',
   'migration_completed', 'migration_undone',
   'startup', 'shutdown', 'error',

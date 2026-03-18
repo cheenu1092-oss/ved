@@ -1482,7 +1482,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'migrate', 'tag', 'help', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'sync', 'remote', 'remotes', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'migrate', 'tag', 'help', 'version',
     ];
     const diffSubs = ['log', 'show', 'stat', 'stats', 'blame', 'between', 'files', 'summary', 'evolution', 'overview', 'history', 'changed', 'annotate', 'commit', 'compare'];
     const diffFlags = ['--limit', '-n', '--since', '--days', '--file'];
@@ -1520,6 +1520,9 @@ export class VedApp {
 
     const migrateSubs = ['status', 'markdown', 'md', 'json', 'obsidian', 'obs', 'csv', 'jsonl', 'undo', 'rollback', 'revert', 'history', 'log', 'validate', 'check', 'verify'];
     const migrateFlags = ['--dry-run', '--force', '-r', '--recursive', '--tag=', '--folder=', '--name-col=', '--include-hidden', '--limit='];
+
+    const syncSubs = ['list', 'ls', 'add', 'create', 'remove', 'rm', 'delete', 'push', 'pull', 'status', 'state', 'history', 'log'];
+    const syncFlags = ['--force', '-f', '--limit', '-n', '--failed-only', '--show-auth', '--auth'];
 
     switch (shell) {
       case 'bash':
@@ -1574,6 +1577,10 @@ _ved_completions() {
       ;;
     migrate|migrations|import-data)
       COMPREPLY=( $(compgen -W "${migrateSubs.join(' ')} ${migrateFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    sync|remote|remotes)
+      COMPREPLY=( $(compgen -W "${syncSubs.join(' ')} ${syncFlags.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     memory|mem)
@@ -1730,6 +1737,9 @@ _ved() {
     'migrate:Import data from external sources'
     'migrations:Import data (alias for migrate)'
     'import-data:Import data (alias for migrate)'
+    'sync:Sync vault to/from remote endpoints'
+    'remote:Sync remotes (alias for sync)'
+    'remotes:Sync remotes (alias for sync)'
     'snapshot:Lightweight vault point-in-time snapshots'
     'snap:Vault snapshots (alias for snapshot)'
     'checkpoint:Vault snapshots (alias for snapshot)'
@@ -1773,6 +1783,9 @@ _ved() {
           ;;
         migrate|migrations|import-data)
           _values 'subcommand' 'status[Migration status]' 'markdown[Import markdown files]' 'json[Import JSON data]' 'obsidian[Import Obsidian vault]' 'csv[Import CSV as entities]' 'jsonl[Import JSONL logs]' 'undo[Undo a migration]' 'history[Migration history]' 'validate[Dry-run validation]'
+          ;;
+        sync|remote|remotes)
+          _values 'subcommand' 'list[List remotes]' 'add[Add a remote]' 'remove[Remove a remote]' 'push[Push vault to remote]' 'pull[Pull from remote]' 'status[Check sync state]' 'history[Sync history]'
           ;;
         memory|mem)
           _values 'subcommand' 'list[List entities]' 'show[Display entity details]' 'graph[Show wikilink connections]' 'timeline[Recent memory activity]' 'daily[Show/create daily note]' 'forget[Soft-delete to archive]' 'tags[List all tags]' 'types[List entity types]'
@@ -1923,6 +1936,13 @@ ${tagSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from tag' -a '${s
 
 # migrate subcommands
 ${migrateSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from migrate' -a '${s}'`).join('\n')}
+
+# sync subcommands
+${syncSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from sync remote remotes' -a '${s}'`).join('\n')}
+complete -c ved -n '__fish_seen_subcommand_from sync remote remotes' -l force -d 'Force overwrite'
+complete -c ved -n '__fish_seen_subcommand_from sync remote remotes' -l limit -d 'History limit'
+complete -c ved -n '__fish_seen_subcommand_from sync remote remotes' -l failed-only -d 'Show only failures'
+complete -c ved -n '__fish_seen_subcommand_from sync remote remotes' -l show-auth -d 'Show auth data'
 
 # memory subcommands
 ${memorySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from memory' -a '${s}'`).join('\n')}
