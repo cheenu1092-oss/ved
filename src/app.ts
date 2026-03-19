@@ -513,6 +513,22 @@ export class VedApp {
   }
 
   /**
+   * Query audit log rows (for `ved replay` CLI).
+   */
+  queryAudit(sql: string, ...params: unknown[]): unknown[] {
+    if (!this.db) return [];
+    return this.db.prepare(sql).all(...params);
+  }
+
+  /**
+   * Query single audit log row (for `ved replay` CLI).
+   */
+  queryAuditOne(sql: string, ...params: unknown[]): unknown | undefined {
+    if (!this.db) return undefined;
+    return this.db.prepare(sql).get(...params);
+  }
+
+  /**
    * Get all unique event types present in the audit log.
    */
   getAuditEventTypes(): string[] {
@@ -1482,7 +1498,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'sync', 'remote', 'remotes', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'migrate', 'tag', 'agent', 'agents', 'persona', 'personas', 'help', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'sync', 'remote', 'remotes', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'migrate', 'tag', 'agent', 'agents', 'persona', 'personas', 'replay', 'replays', 'playback', 'help', 'version',
     ];
     const diffSubs = ['log', 'show', 'stat', 'stats', 'blame', 'between', 'files', 'summary', 'evolution', 'overview', 'history', 'changed', 'annotate', 'commit', 'compare'];
     const diffFlags = ['--limit', '-n', '--since', '--days', '--file'];
@@ -1526,6 +1542,9 @@ export class VedApp {
 
     const agentSubs = ['list', 'ls', 'show', 'cat', 'view', 'create', 'new', 'add', 'edit', 'delete', 'rm', 'remove', 'run', 'exec', 'history', 'runs', 'clone', 'copy', 'cp', 'export', 'import'];
     const agentFlags = ['--template', '-t', '--description', '-d', '--desc', '--model', '-m', '--tier', '--json', '--raw', '--verbose', '-v', '--limit', '-n', '--dry-run', '--merge'];
+
+    const replaySubs = ['list', 'ls', 'sessions', 'show', 'replay', 'play', 'trace', 'chain', 'timeline', 'waterfall', 'stats', 'summary', 'compare', 'cmp', 'diff', 'export', 'search', 'find', 'grep'];
+    const replayFlags = ['--limit', '-n', '--verbose', '-v', '--json', '--depth', '-d', '--format', '-f', '--output', '-o', '--markdown', '--md'];
 
     switch (shell) {
       case 'bash':
@@ -1588,6 +1607,10 @@ _ved_completions() {
       ;;
     agent|agents|persona|personas)
       COMPREPLY=( $(compgen -W "${agentSubs.join(' ')} ${agentFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    replay|replays|playback)
+      COMPREPLY=( $(compgen -W "${replaySubs.join(' ')} ${replayFlags.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     memory|mem)
@@ -1797,6 +1820,9 @@ _ved() {
         agent|agents|persona|personas)
           _values 'subcommand' 'list[List agents]' 'show[Show agent config]' 'create[Create new agent]' 'edit[Edit agent config]' 'delete[Delete agent]' 'run[Run agent one-shot]' 'history[Show run history]' 'clone[Clone an agent]' 'export[Export agents to JSON]' 'import[Import agents from JSON]'
           ;;
+        replay|replays|playback)
+          _values 'subcommand' 'list[List sessions]' 'show[Replay session flow]' 'trace[Trace event chain]' 'timeline[Timing waterfall]' 'stats[Session statistics]' 'compare[Compare two sessions]' 'export[Export to JSON/markdown]' 'search[Search events]'
+          ;;
         memory|mem)
           _values 'subcommand' 'list[List entities]' 'show[Display entity details]' 'graph[Show wikilink connections]' 'timeline[Recent memory activity]' 'daily[Show/create daily note]' 'forget[Soft-delete to archive]' 'tags[List all tags]' 'types[List entity types]'
           ;;
@@ -1963,6 +1989,16 @@ complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -
 complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l json -d 'JSON output'
 complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l dry-run -d 'Dry run'
 complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l merge -d 'Merge on import'
+
+# replay subcommands
+${replaySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from replay replays playback' -a '${s}'`).join('\n')}
+complete -c ved -n '__fish_seen_subcommand_from replay replays playback' -l limit -s n -d 'Max results'
+complete -c ved -n '__fish_seen_subcommand_from replay replays playback' -l verbose -s v -d 'Verbose output'
+complete -c ved -n '__fish_seen_subcommand_from replay replays playback' -l json -d 'JSON output'
+complete -c ved -n '__fish_seen_subcommand_from replay replays playback' -l depth -s d -d 'Chain depth'
+complete -c ved -n '__fish_seen_subcommand_from replay replays playback' -l format -s f -d 'Export format'
+complete -c ved -n '__fish_seen_subcommand_from replay replays playback' -l output -s o -d 'Output file'
+complete -c ved -n '__fish_seen_subcommand_from replay replays playback' -l markdown -d 'Markdown format'
 
 # memory subcommands
 ${memorySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from memory' -a '${s}'`).join('\n')}

@@ -33,7 +33,8 @@ export type Category =
   | 'monitoring'
   | 'data'
   | 'server'
-  | 'config';
+  | 'config'
+  | 'observability';
 
 const CATEGORY_LABELS: Record<Category, string> = {
   core: '🏠 Core',
@@ -45,11 +46,12 @@ const CATEGORY_LABELS: Record<Category, string> = {
   data: '💾 Data & Backup',
   server: '🌐 Server & API',
   config: '⚙️  Configuration',
+  observability: '👁️  Observability',
 };
 
 const CATEGORY_ORDER: Category[] = [
   'core', 'memory', 'search', 'trust', 'tools',
-  'monitoring', 'data', 'server', 'config',
+  'monitoring', 'observability', 'data', 'server', 'config',
 ];
 
 export const COMMANDS: CommandInfo[] = [
@@ -228,6 +230,16 @@ export const COMMANDS: CommandInfo[] = [
     subcommands: ['list', 'show', 'create', 'edit', 'delete', 'run', 'history', 'clone', 'export', 'import'],
     flags: ['--template <t>', '--description <d>', '--model <m>', '--tier <n>', '--json', '--verbose', '--dry-run', '--merge'],
     examples: ['ved agent list', 'ved agent create researcher --template researcher', 'ved agent run researcher "What is Ved?"', 'ved agent clone researcher deep-researcher', 'ved agent export > agents.json'],
+  },
+  {
+    name: 'replay',
+    aliases: ['replays', 'playback', 'trace'],
+    category: 'observability',
+    summary: 'Replay and analyze sessions from audit logs (pipeline trace, timeline, stats)',
+    usage: 'ved replay <subcommand> [options]',
+    subcommands: ['list', 'show', 'trace', 'timeline', 'stats', 'compare', 'export', 'search'],
+    flags: ['--limit <n>', '--verbose', '--json', '--depth <n>', '--format <json|markdown>', '--output <file>'],
+    examples: ['ved replay list', 'ved replay show <sessionId>', 'ved replay timeline <sessionId>', 'ved replay stats <sessionId> --json', 'ved replay search "web_search"', 'ved replay compare s1 s2', 'ved replay export <sessionId> --markdown -o replay.md'],
   },
   {
     name: 'completions',

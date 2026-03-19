@@ -65,7 +65,7 @@ describe('Command Registry', () => {
   });
 
   it('every command has a valid category', () => {
-    const valid: Category[] = ['core', 'memory', 'search', 'trust', 'tools', 'monitoring', 'data', 'server', 'config'];
+    const valid: Category[] = ['core', 'memory', 'search', 'trust', 'tools', 'monitoring', 'data', 'server', 'config', 'observability'];
     for (const cmd of COMMANDS) {
       expect(valid).toContain(cmd.category);
     }

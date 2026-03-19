@@ -37,6 +37,7 @@ import { notifyCommand } from './cli-notify.js';
 import { tagCommand } from './cli-tag.js';
 import { migrateCommand } from './cli-migrate.js';
 import { agentCommand } from './cli-agent.js';
+import { replayCommand } from './cli-replay.js';
 
 const log = createLogger('cli');
 const VERSION = '0.5.0';
@@ -144,6 +145,11 @@ async function main(): Promise<void> {
     case 'personas':
       if (checkHelp('agent', args.slice(1))) return;
       return agentCommand(args.slice(1));
+    case 'replay':
+    case 'replays':
+    case 'playback':
+      if (checkHelp('replay', args.slice(1))) return;
+      return replayCommand(args.slice(1));
     case 'plugin':
       if (checkHelp('plugin', args.slice(1))) return;
       return plugin(args.slice(1));
