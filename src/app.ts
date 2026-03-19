@@ -1482,7 +1482,7 @@ export class VedApp {
     const commands = [
       'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'sync', 'remote', 'remotes', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'migrate', 'tag', 'help', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'sync', 'remote', 'remotes', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'migrate', 'tag', 'agent', 'agents', 'persona', 'personas', 'help', 'version',
     ];
     const diffSubs = ['log', 'show', 'stat', 'stats', 'blame', 'between', 'files', 'summary', 'evolution', 'overview', 'history', 'changed', 'annotate', 'commit', 'compare'];
     const diffFlags = ['--limit', '-n', '--since', '--days', '--file'];
@@ -1523,6 +1523,9 @@ export class VedApp {
 
     const syncSubs = ['list', 'ls', 'add', 'create', 'remove', 'rm', 'delete', 'push', 'pull', 'status', 'state', 'history', 'log'];
     const syncFlags = ['--force', '-f', '--limit', '-n', '--failed-only', '--show-auth', '--auth'];
+
+    const agentSubs = ['list', 'ls', 'show', 'cat', 'view', 'create', 'new', 'add', 'edit', 'delete', 'rm', 'remove', 'run', 'exec', 'history', 'runs', 'clone', 'copy', 'cp', 'export', 'import'];
+    const agentFlags = ['--template', '-t', '--description', '-d', '--desc', '--model', '-m', '--tier', '--json', '--raw', '--verbose', '-v', '--limit', '-n', '--dry-run', '--merge'];
 
     switch (shell) {
       case 'bash':
@@ -1581,6 +1584,10 @@ _ved_completions() {
       ;;
     sync|remote|remotes)
       COMPREPLY=( $(compgen -W "${syncSubs.join(' ')} ${syncFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    agent|agents|persona|personas)
+      COMPREPLY=( $(compgen -W "${agentSubs.join(' ')} ${agentFlags.join(' ')}" -- "\${cur}") )
       return 0
       ;;
     memory|mem)
@@ -1787,6 +1794,9 @@ _ved() {
         sync|remote|remotes)
           _values 'subcommand' 'list[List remotes]' 'add[Add a remote]' 'remove[Remove a remote]' 'push[Push vault to remote]' 'pull[Pull from remote]' 'status[Check sync state]' 'history[Sync history]'
           ;;
+        agent|agents|persona|personas)
+          _values 'subcommand' 'list[List agents]' 'show[Show agent config]' 'create[Create new agent]' 'edit[Edit agent config]' 'delete[Delete agent]' 'run[Run agent one-shot]' 'history[Show run history]' 'clone[Clone an agent]' 'export[Export agents to JSON]' 'import[Import agents from JSON]'
+          ;;
         memory|mem)
           _values 'subcommand' 'list[List entities]' 'show[Display entity details]' 'graph[Show wikilink connections]' 'timeline[Recent memory activity]' 'daily[Show/create daily note]' 'forget[Soft-delete to archive]' 'tags[List all tags]' 'types[List entity types]'
           ;;
@@ -1943,6 +1953,16 @@ complete -c ved -n '__fish_seen_subcommand_from sync remote remotes' -l force -d
 complete -c ved -n '__fish_seen_subcommand_from sync remote remotes' -l limit -d 'History limit'
 complete -c ved -n '__fish_seen_subcommand_from sync remote remotes' -l failed-only -d 'Show only failures'
 complete -c ved -n '__fish_seen_subcommand_from sync remote remotes' -l show-auth -d 'Show auth data'
+
+# agent subcommands
+${agentSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -a '${s}'`).join('\n')}
+complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l template -s t -d 'Use built-in template'
+complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l description -s d -d 'Agent description'
+complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l model -s m -d 'LLM model override'
+complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l tier -d 'Trust tier (1-4)'
+complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l json -d 'JSON output'
+complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l dry-run -d 'Dry run'
+complete -c ved -n '__fish_seen_subcommand_from agent agents persona personas' -l merge -d 'Merge on import'
 
 # memory subcommands
 ${memorySubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from memory' -a '${s}'`).join('\n')}

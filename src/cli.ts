@@ -36,6 +36,7 @@ import { VedHttpServer } from './http.js';
 import { notifyCommand } from './cli-notify.js';
 import { tagCommand } from './cli-tag.js';
 import { migrateCommand } from './cli-migrate.js';
+import { agentCommand } from './cli-agent.js';
 
 const log = createLogger('cli');
 const VERSION = '0.5.0';
@@ -137,6 +138,12 @@ async function main(): Promise<void> {
       }
       return;
     }
+    case 'agent':
+    case 'agents':
+    case 'persona':
+    case 'personas':
+      if (checkHelp('agent', args.slice(1))) return;
+      return agentCommand(args.slice(1));
     case 'plugin':
       if (checkHelp('plugin', args.slice(1))) return;
       return plugin(args.slice(1));

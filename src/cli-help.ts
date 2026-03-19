@@ -220,6 +220,16 @@ export const COMMANDS: CommandInfo[] = [
     examples: ['ved plugin list', 'ved plugin tools', 'ved plugin add my-server'],
   },
   {
+    name: 'agent',
+    aliases: ['agents', 'persona', 'personas'],
+    category: 'tools',
+    summary: 'Define and run sub-agent profiles (system prompt, tools, trust, model)',
+    usage: 'ved agent <subcommand> [options]',
+    subcommands: ['list', 'show', 'create', 'edit', 'delete', 'run', 'history', 'clone', 'export', 'import'],
+    flags: ['--template <t>', '--description <d>', '--model <m>', '--tier <n>', '--json', '--verbose', '--dry-run', '--merge'],
+    examples: ['ved agent list', 'ved agent create researcher --template researcher', 'ved agent run researcher "What is Ved?"', 'ved agent clone researcher deep-researcher', 'ved agent export > agents.json'],
+  },
+  {
     name: 'completions',
     aliases: [],
     category: 'tools',
