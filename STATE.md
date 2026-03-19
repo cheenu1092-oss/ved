@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 86
-- **Current Phase:** CYCLE (testing + fixes)
-- **Last Run:** 2026-03-17
+- **Session Number:** 88
+- **Current Phase:** CYCLE (release)
+- **Last Run:** 2026-03-18
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 87 — `ved plugin` or `ved agent` CLI, red-team S80-86, v0.5.0 release, or GitHub push S85-86.
+- **Next Session:** 89 — `ved plugin` or `ved agent` CLI, or new feature.
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -121,6 +121,8 @@
 - **Session 84:** CYCLE — **v0.4.0 release.** Docker parity verified (2393/2393 pass). Updated CHANGELOG.md (comprehensive v0.4.0 notes), README.md (34-command CLI table, updated stats), package.json + cli.ts (0.3.0→0.4.0). Fixed EPIPE warning in cli-hook.ts (child stdin error handler). Tagged v0.4.0, pushed to GitHub (171eb60 + 50d586c), created GitHub release. **2393/2393 pass. 0 type errors.**
 - **Session 85:** CYCLE — **`ved sync` — vault synchronization tool.** 8 subcommands (remotes/add/remove/push/pull/status/auto/history). 4 remote types (git/s3/rsync/local). Features: conflict detection, auto-sync on vault changes, sync history audit log, multiple remotes, auth data storage. Database migration v004 (sync_remotes + sync_history tables). Built SyncManager (491 lines), CLI (356 lines). Security: path validation, credential redaction. **No tests written (deferred to S86). 2 TS errors (deferred to S86). CLI: 35 commands.**
 - **Session 86:** CYCLE — **Sync tests + TS compilation fixes.** Fixed 2 TS errors in cli-sync.ts (unused import, invalid destructuring). Wrote 63 comprehensive sync tests across 7 categories: validation (8), CRUD (10), local adapter push/pull (7), history (7), security (8), LocalAdapter direct (3), edge cases (7). Security verified: parameterized queries, path traversal blocking, auth redaction, CHECK constraints, disabled remote enforcement. **63 new tests. 2459/2459 pass (host + Docker parity). 0 type errors.**
+- **Session 88:** CYCLE — **v0.5.0 release.** Updated CHANGELOG.md (comprehensive v0.5.0 notes), README.md (35-command CLI table, updated stats), package.json + cli.ts (0.4.0→0.5.0). Tagged v0.5.0, pushed to GitHub, created GitHub release. **2542/2542 pass. 0 type errors.**
+- **Session 87:** CYCLE — **RED-TEAM: 83 tests across 18 attack categories.** Hook command blocking bypass (10), hook env var injection (4), hook YAML corruption (6), notify osascript injection (4), notify log path traversal (3), notify template injection (5), migrate path traversal (6), migrate CSV injection (3), sync shell injection (6), sync local adapter traversal (6), sync SQL injection (3), quiet hours edge cases (4), rule name validation (5), command channel safety (4), hook concurrency manipulation (3), mute state tampering (3), YAML rule store corruption (3), sync adapter type safety (5). **2 vulnerabilities found+fixed:** VULN-20 rm flag bypass — expanded BLOCKED_PATTERNS regex (LOW), VULN-21 null bytes in env vars crash executeHook — added sanitizeEnv() (MEDIUM). **4 findings documented (accepted risk).** All existing defenses held: YAML serialization, sq() quoting, parameterized SQL, DB CHECK constraints, content filter, osascript escaping, sanitizeFileName, isPathSafe. **2542/2542 pass (host + Docker parity). 0 type errors.**
 - **Session 79:** CYCLE — **RED-TEAM: 91 tests across 11 attack categories.** HTTP API request smuggling (10), webhook SSRF (8), SSE resource exhaustion (5), pipe shell injection (9), snapshot git injection (8), alias command injection (7), HTTP auth bypass (9), webhook payload manipulation (8), HTTP endpoint edge cases (8), EventBus edge cases (8), pipeline YAML parsing (11). **2 vulnerabilities found+fixed:** VULN-18 pipeline path traversal in load/delete (MEDIUM), VULN-19 webhook custom header override could spoof HMAC signature (MEDIUM). **3 findings documented (accepted risk).** All existing defenses held: protocol validation, shell stdin piping, alias name validation, HTTP auth, SSE cleanup, EventBus isolation, YAML safety, work order expiry checks. **2208/2208 pass (host + Docker parity). 0 type errors.** Updated CHANGELOG.md (comprehensive v0.3.0 notes), README.md (31-command CLI table, updated stats), package.json + cli.ts (0.2.0→0.3.0). Fixed webhook delivery test timing flake. Tagged v0.3.0, pushed to GitHub (428eba3), created GitHub release. **2117/2117 pass (host + Docker parity). 0 type errors.**
 
 ## Phase Schedule (Updated)
@@ -183,7 +185,9 @@
 | 84 | ✅ CYCLE | v0.4.0 release (CHANGELOG, README, tag, GitHub release) + EPIPE fix |
 | 85 | ✅ CYCLE | `ved sync` — vault synchronization (4 remote types) |
 | 86 | ✅ CYCLE | Sync tests (63) + TS compilation fixes |
-| 87+ | CYCLE | New features, polish, releases |
+| 87 | ✅ CYCLE | RED-TEAM: hook, notify, migrate, sync (83 tests, 2 vulns fixed) |
+| 88 | ✅ CYCLE | v0.5.0 release (CHANGELOG, README, tag, GitHub release) |
+| 89+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -251,4 +255,5 @@
 | sync-manager S85 | ✅ Complete | ~491 | 0 |
 | sync-cli S85 | ✅ Complete | ~356 | 0 |
 | sync-tests S86 | ✅ Complete | ~670 | 63 |
-| **Total** | **ALL COMPLETE** | **~37,000** | **2459** |
+| red-team S87 | ✅ Complete | ~1,046 | 83 |
+| **Total** | **ALL COMPLETE** | **~38,000** | **2542** |

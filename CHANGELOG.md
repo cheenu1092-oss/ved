@@ -2,6 +2,32 @@
 
 All notable changes to Ved are documented here.
 
+## [0.5.0] — 2026-03-18
+
+### Highlights
+- **35 CLI commands** (up from 34 in v0.4.0)
+- **2,542 tests** (up from 2,393)
+- **~38,000 LoC** across all modules
+- Vault synchronization with 4 remote types (git, S3, rsync, local)
+- Red-team session covering hook, notify, migrate, sync (83 tests, 2 vulns found+fixed)
+- v0.4.0 → v0.5.0: 2 feature sessions, 1 red-team session, 149 new tests, 0 regressions
+- **Total vulnerabilities found and fixed: 21** (0 open)
+
+### CLI — Vault Synchronization
+- `ved sync` — Vault synchronization tool. 8 subcommands: remotes, add, remove, push, pull, status, auto, history. 4 remote types: git (clone/push/pull), S3 (aws s3 sync), rsync (delta transfer), local (cp -r). Features: conflict detection (push-before-pull enforcement), auto-sync on vault file changes, sync history with audit log, multiple named remotes, auth credential storage (redacted in display), enable/disable per-remote. Database migration v004 adds sync_remotes and sync_history tables with CHECK constraints on type/direction/status
+
+### Security — Red-Team Session 87
+- **83 new red-team tests** across 18 attack categories: hook command blocking bypass, hook env var injection, hook YAML corruption, notify osascript injection, notify log path traversal, notify template injection, migrate path traversal, migrate CSV injection, sync shell injection, sync local adapter traversal, sync SQL injection, quiet hours edge cases, rule name validation, command channel safety, hook concurrency manipulation, mute state tampering, YAML rule store corruption, sync adapter type safety
+- **VULN-20 (LOW):** rm flag bypass (`-rfv`, `-r -f`, `--recursive`, `--force`) in hook command blocking — fixed with expanded BLOCKED_PATTERNS regex
+- **VULN-21 (MEDIUM):** Null bytes in event fields crash executeHook via env vars — fixed with `sanitizeEnv()` stripping `\0` before child_process
+- 4 findings documented as accepted risk. All existing defenses held (YAML serialization, sq() quoting, parameterized SQL, DB CHECK constraints, content filter, osascript escaping, sanitizeFileName, isPathSafe)
+
+### Infrastructure
+- Shell completions updated for sync command across bash/zsh/fish
+- Help system updated with sync command
+- Docker parity verified for all new test suites
+- 63 sync-specific tests covering validation, CRUD, local adapter, history, security, edge cases
+
 ## [0.4.0] — 2026-03-17
 
 ### Highlights

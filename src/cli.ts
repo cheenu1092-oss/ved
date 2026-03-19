@@ -38,7 +38,7 @@ import { tagCommand } from './cli-tag.js';
 import { migrateCommand } from './cli-migrate.js';
 
 const log = createLogger('cli');
-const VERSION = '0.4.0';
+const VERSION = '0.5.0';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
