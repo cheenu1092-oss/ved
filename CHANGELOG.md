@@ -2,6 +2,39 @@
 
 All notable changes to Ved are documented here.
 
+## [0.6.0] — 2026-03-21
+
+### Highlights
+- **46 CLI commands** (up from 35 in v0.5.0)
+- **2,931 tests** (up from 2,542)
+- **~42,600 LoC** across all modules
+- 4 major new CLI commands: agent profiles, session replay, knowledge graph analysis, task management
+- 2 red-team sessions covering all new surfaces (132 tests, 0 vulnerabilities found)
+- v0.5.0 → v0.6.0: 4 feature sessions, 2 red-team sessions, 389 new tests, 0 regressions
+- **Total vulnerabilities found and fixed: 21** (0 open)
+
+### CLI — Agent Profiles
+- `ved agent` — Agent persona manager. 10 subcommands: list, show, create, edit, delete, use, export, import, test, diff. 5 built-in templates (default, researcher, coder, writer, analyst). YAML-based profiles with name, description, system prompt, tools, and model overrides. Import/export with merge + dry-run. Test mode assembles full prompt preview. Aliases: ved persona, ved character
+
+### CLI — Session Replay & Analysis
+- `ved replay` — Session replay and analysis from audit logs. 8 subcommands: list (sessions with message counts), show (full session transcript), trace (pipeline stage visualization), timeline (chronological event view), stats (session metrics + timing), compare (diff two sessions), export (JSON/markdown), search (cross-session text search). Pipeline-aware visualization with 7-stage color-coded flow (receive → enrich → decide → act → record → respond → maintain). Hash chain tracing from any audit entry
+
+### CLI — Knowledge Graph Analysis
+- `ved graph` — Obsidian vault knowledge graph analysis. 9 subcommands: hubs (most-connected entities), orphans (unlinked files), islands (disconnected clusters), path (shortest path between entities), neighbors (N-hop subgraph), broken (dead wikilinks), dot (Graphviz DOT export), summary (vault-wide graph metrics). Aliases: ved kg, ved links
+
+### CLI — Task Management
+- `ved task` — Task management as Markdown files with YAML frontmatter. 10 subcommands: list (filter by status/priority/project/assignee), add (create with metadata), show (task details), edit (update fields), done (mark complete), archive (move to done), board (Kanban view: todo/in-progress/done/blocked columns), stats (project metrics), projects (project listing), search (full-text). Priority levels: critical/high/medium/low. Aliases: ved tasks, ved todo, ved kanban
+
+### Security — Red-Team Sessions 90 & 92
+- **Session 90:** 69 red-team tests across 12 attack categories targeting agent and replay CLIs: agent name traversal, YAML injection, import payloads, JSONL injection, editor command injection, replay SQL injection, export integrity, hash chain attacks, search injection, serialization round-trip, large dataset DoS, template security. **0 vulnerabilities found.** All defenses held
+- **Session 92:** 63 red-team tests across 12 attack categories targeting graph and task CLIs: DOT export path traversal, wikilink ReDoS, Graphviz injection, title/slug injection, frontmatter manipulation, search injection, archive traversal, ID matching ambiguity, symlinks/special files, date validation, large input DoS, concurrent operations. **0 vulnerabilities found.** 5 informational findings documented (all accepted risk). All defenses held: slugify sanitization, vault containment (VULN-14), in-memory search, directory skipping, date validation
+
+### Infrastructure
+- Shell completions updated for agent, replay, graph, task commands (bash/zsh/fish)
+- Help system updated with all 4 new commands in correct categories
+- Docker parity verified: 2,931/2,931 tests pass in both host and Docker
+- GitHub pushed with all session work (S89-92)
+
 ## [0.5.0] — 2026-03-18
 
 ### Highlights

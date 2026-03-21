@@ -144,7 +144,7 @@ For stronger guarantees, Ved periodically anchors chain state via external HMAC 
 
 ---
 
-## CLI Commands (35)
+## CLI Commands (46)
 
 | Command | Description |
 |---------|-------------|
@@ -176,6 +176,10 @@ For stronger guarantees, Ved periodically anchors chain state via external HMAC 
 | `ved pipe` | Multi-step pipelines (queries + shell commands) |
 | `ved alias` | Command shortcuts with @-syntax |
 | `ved env` | Environment manager (config overlays) |
+| `ved agent` | Agent persona profiles: create, edit, use, import/export, diff |
+| `ved replay` | Session replay: transcript, pipeline trace, timeline, compare |
+| `ved graph` | Knowledge graph: hubs, orphans, islands, paths, DOT export |
+| `ved task` | Task management: Kanban board, priorities, projects, search |
 | `ved trust` | Trust tier management + work order inspection |
 | `ved user` | User profiles, sessions, activity |
 | `ved log` | Structured log viewer/analyzer with tail mode |
@@ -230,6 +234,6 @@ MIT
 
 ---
 
-**Current stats:** 35 CLI commands • 2,542 tests • ~38,000 LoC • 0 open vulnerabilities (21 found and fixed)
+**Current stats:** 46 CLI commands • 2,931 tests • ~42,600 LoC • 0 open vulnerabilities (21 found and fixed)
 
 *Built by [cheenu1092-oss](https://github.com/cheenu1092-oss). Designed in the open.*

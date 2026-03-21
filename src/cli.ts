@@ -42,7 +42,7 @@ import { graphCommand } from './cli-graph.js';
 import { runTaskCommand, checkHelp as taskCheckHelp } from './cli-task.js';
 
 const log = createLogger('cli');
-const VERSION = '0.5.0';
+const VERSION = '0.6.0';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
