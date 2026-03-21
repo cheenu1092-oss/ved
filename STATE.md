@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 89
+- **Session Number:** 91
 - **Current Phase:** CYCLE (features)
-- **Last Run:** 2026-03-19
+- **Last Run:** 2026-03-20
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 90 — New feature, red-team, or v0.6.0 release.
+- **Next Session:** 92 — New feature, red-team, or v0.6.0 release.
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -123,6 +123,8 @@
 - **Session 86:** CYCLE — **Sync tests + TS compilation fixes.** Fixed 2 TS errors in cli-sync.ts (unused import, invalid destructuring). Wrote 63 comprehensive sync tests across 7 categories: validation (8), CRUD (10), local adapter push/pull (7), history (7), security (8), LocalAdapter direct (3), edge cases (7). Security verified: parameterized queries, path traversal blocking, auth redaction, CHECK constraints, disabled remote enforcement. **63 new tests. 2459/2459 pass (host + Docker parity). 0 type errors.**
 - **Session 88:** CYCLE — **v0.5.0 release.**
 - **Session 89:** CYCLE — **`ved agent` commit + `ved replay` CLI.** Committed pending agent CLI (10 subcommands, 5 built-in templates, YAML profiles, 55 tests). Built `ved replay` — session replay and analysis from audit logs: 8 subcommands (list/show/trace/timeline/stats/compare/export/search), pipeline-aware visualization (7-stage color-coded flow), hash chain tracing, session comparison, JSON/markdown export. Added 'observability' help category, queryAudit methods on VedApp. **120 new tests. 2667/2667 pass (host + Docker parity). 0 type errors. CLI: 44 commands.** Updated CHANGELOG.md (comprehensive v0.5.0 notes), README.md (35-command CLI table, updated stats), package.json + cli.ts (0.4.0→0.5.0). Tagged v0.5.0, pushed to GitHub, created GitHub release. **2542/2542 pass. 0 type errors.**
+- **Session 90:** CYCLE — **RED-TEAM: Agent + Replay CLI attack surface.** 69 tests across 12 attack categories (agent name traversal, YAML injection, import payloads, JSONL injection, editor command injection, replay SQL injection, export integrity, hash chain attacks, search injection, serialization round-trip, large dataset DoS, template security). **0 vulnerabilities found.** All defenses held. **2736/2736 pass. 0 type errors.**
+- **Session 91:** CYCLE — **`ved graph` + `ved task` CLI wiring + GitHub push.** Wired uncommitted graph CLI (9 subcommands, 44 tests: hubs/orphans/islands/path/neighbors/broken/dot/summary) and task CLI (10 subcommands, 65 tests: list/add/show/edit/done/archive/board/stats/projects/search) into cli.ts + cli-help.ts. Tasks as markdown files with YAML frontmatter, Kanban board view. Pushed to GitHub (f38d745). **2849/2849 pass (host + Docker parity). 0 type errors. CLI: 46 commands.**
 - **Session 87:** CYCLE — **RED-TEAM: 83 tests across 18 attack categories.** Hook command blocking bypass (10), hook env var injection (4), hook YAML corruption (6), notify osascript injection (4), notify log path traversal (3), notify template injection (5), migrate path traversal (6), migrate CSV injection (3), sync shell injection (6), sync local adapter traversal (6), sync SQL injection (3), quiet hours edge cases (4), rule name validation (5), command channel safety (4), hook concurrency manipulation (3), mute state tampering (3), YAML rule store corruption (3), sync adapter type safety (5). **2 vulnerabilities found+fixed:** VULN-20 rm flag bypass — expanded BLOCKED_PATTERNS regex (LOW), VULN-21 null bytes in env vars crash executeHook — added sanitizeEnv() (MEDIUM). **4 findings documented (accepted risk).** All existing defenses held: YAML serialization, sq() quoting, parameterized SQL, DB CHECK constraints, content filter, osascript escaping, sanitizeFileName, isPathSafe. **2542/2542 pass (host + Docker parity). 0 type errors.**
 - **Session 79:** CYCLE — **RED-TEAM: 91 tests across 11 attack categories.** HTTP API request smuggling (10), webhook SSRF (8), SSE resource exhaustion (5), pipe shell injection (9), snapshot git injection (8), alias command injection (7), HTTP auth bypass (9), webhook payload manipulation (8), HTTP endpoint edge cases (8), EventBus edge cases (8), pipeline YAML parsing (11). **2 vulnerabilities found+fixed:** VULN-18 pipeline path traversal in load/delete (MEDIUM), VULN-19 webhook custom header override could spoof HMAC signature (MEDIUM). **3 findings documented (accepted risk).** All existing defenses held: protocol validation, shell stdin piping, alias name validation, HTTP auth, SSE cleanup, EventBus isolation, YAML safety, work order expiry checks. **2208/2208 pass (host + Docker parity). 0 type errors.** Updated CHANGELOG.md (comprehensive v0.3.0 notes), README.md (31-command CLI table, updated stats), package.json + cli.ts (0.2.0→0.3.0). Fixed webhook delivery test timing flake. Tagged v0.3.0, pushed to GitHub (428eba3), created GitHub release. **2117/2117 pass (host + Docker parity). 0 type errors.**
 
@@ -189,7 +191,9 @@
 | 87 | ✅ CYCLE | RED-TEAM: hook, notify, migrate, sync (83 tests, 2 vulns fixed) |
 | 88 | ✅ CYCLE | v0.5.0 release (CHANGELOG, README, tag, GitHub release) |
 | 89 | ✅ CYCLE | `ved agent` commit + `ved replay` CLI (120 tests) |
-| 90+ | CYCLE | New features, polish, releases |
+| 90 | ✅ CYCLE | RED-TEAM: Agent + Replay CLI (69 tests, 0 vulns) |
+| 91 | ✅ CYCLE | `ved graph` + `ved task` CLI wiring + GitHub push |
+| 92+ | CYCLE | New features, polish, releases |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -260,4 +264,7 @@
 | red-team S87 | ✅ Complete | ~1,046 | 83 |
 | agent-cli S89 | ✅ Complete | ~1,007 | 55 |
 | replay-cli S89 | ✅ Complete | ~730 | 65 |
-| **Total** | **ALL COMPLETE** | **~39,800** | **2667** |
+| graph-cli S91 | ✅ Complete | ~717 | 44 |
+| task-cli S91 | ✅ Complete | ~837 | 65 |
+| red-team S90 | ✅ Complete | ~600 | 69 |
+| **Total** | **ALL COMPLETE** | **~41,954** | **2849** |
