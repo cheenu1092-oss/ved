@@ -317,6 +317,45 @@ export const COMMANDS: CommandInfo[] = [
     ],
   },
 
+  {
+    name: 'graph',
+    aliases: ['links', 'kg'],
+    category: 'memory',
+    summary: 'Knowledge graph analysis — hubs, orphans, clusters, paths, DOT export',
+    usage: 'ved graph [subcommand] [options]',
+    subcommands: ['hubs', 'orphans', 'islands', 'path', 'neighbors', 'broken', 'dot', 'summary'],
+    flags: ['--limit <n>', '--output <file>', '-o <file>'],
+    examples: [
+      'ved graph',
+      'ved graph hubs --limit 10',
+      'ved graph orphans',
+      'ved graph islands',
+      'ved graph path alice project-x',
+      'ved graph neighbors alice',
+      'ved graph broken',
+      'ved graph dot --output knowledge.dot',
+      'ved graph summary',
+    ],
+  },
+
+  {
+    name: 'task',
+    aliases: ['tasks', 'todo', 'todos'],
+    category: 'memory',
+    summary: 'Task management backed by Obsidian vault — CRUD, board, stats',
+    usage: 'ved task [subcommand] [options]',
+    subcommands: ['list', 'add', 'show', 'edit', 'done', 'archive', 'board', 'stats', 'projects', 'search'],
+    flags: ['--status <s>', '--priority <p>', '--project <p>', '--assignee <a>', '--due <d>', '--tag <t>', '--limit <n>', '--note <note>', '--before <date>'],
+    examples: [
+      'ved task list',
+      'ved task add "Fix login bug" --priority high --project ved',
+      'ved task show fix-login-bug',
+      'ved task done fix-login-bug',
+      'ved task board --project ved',
+      'ved task stats',
+      'ved task search "memory"',
+    ],
+  },
   // ── Data & Backup ──
   {
     name: 'export',

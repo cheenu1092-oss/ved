@@ -38,6 +38,8 @@ import { tagCommand } from './cli-tag.js';
 import { migrateCommand } from './cli-migrate.js';
 import { agentCommand } from './cli-agent.js';
 import { replayCommand } from './cli-replay.js';
+import { graphCommand } from './cli-graph.js';
+import { runTaskCommand, checkHelp as taskCheckHelp } from './cli-task.js';
 
 const log = createLogger('cli');
 const VERSION = '0.5.0';
@@ -317,6 +319,26 @@ async function main(): Promise<void> {
     case 'checkpoint':
       if (checkHelp('snapshot', args.slice(1))) return;
       return snapshotCmd(args.slice(1));
+    case 'graph':
+    case 'links':
+    case 'kg':
+      if (checkHelp('graph', args.slice(1))) return;
+      return graphCommand(args.slice(1));
+    case 'task':
+    case 'tasks':
+    case 'todo':
+    case 'todos': {
+      if (taskCheckHelp(args.slice(1))) return;
+      const app = createApp();
+      await app.init();
+      try {
+        const output = await runTaskCommand(app, args.slice(1));
+        if (output) console.log(output);
+      } finally {
+        await app.stop();
+      }
+      return;
+    }
     case 'start':
       if (checkHelp('start', args.slice(1))) return;
       return start();
