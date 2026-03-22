@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 93
-- **Current Phase:** CYCLE (release)
-- **Last Run:** 2026-03-21
+- **Session Number:** 95
+- **Current Phase:** CYCLE (polish)
+- **Last Run:** 2026-03-22
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 94 — new features or polish (all current work released).
+- **Next Session:** 96 — `npm publish` dry run, or new feature (MCP server mode, plugin system, etc.).
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -126,6 +126,8 @@
 - **Session 90:** CYCLE — **RED-TEAM: Agent + Replay CLI attack surface.** 69 tests across 12 attack categories (agent name traversal, YAML injection, import payloads, JSONL injection, editor command injection, replay SQL injection, export integrity, hash chain attacks, search injection, serialization round-trip, large dataset DoS, template security). **0 vulnerabilities found.** All defenses held. **2736/2736 pass. 0 type errors.**
 - **Session 91:** CYCLE — **`ved graph` + `ved task` CLI wiring + GitHub push.** Wired uncommitted graph CLI (9 subcommands, 44 tests: hubs/orphans/islands/path/neighbors/broken/dot/summary) and task CLI (10 subcommands, 65 tests: list/add/show/edit/done/archive/board/stats/projects/search) into cli.ts + cli-help.ts. Tasks as markdown files with YAML frontmatter, Kanban board view. Pushed to GitHub (f38d745). **2849/2849 pass (host + Docker parity). 0 type errors. CLI: 46 commands.**
 - **Session 93:** CYCLE — **v0.6.0 release.** Docker parity verified (2931/2931 pass). Updated CHANGELOG.md (comprehensive v0.6.0 notes), README.md (46-command CLI table, updated stats), package.json + cli.ts (0.5.0→0.6.0). Tagged v0.6.0, pushed to GitHub (0734290), created GitHub release. **2931/2931 pass. 0 type errors.**
+- **Session 94:** CYCLE — **cli-chat tests + getting-started guide.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB). Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
+- **Session 95:** CYCLE — **NPM packaging readiness.** Added `.npmignore` (excludes src/tests/docs/sessions/Docker/CI), `SECURITY.md` (vuln reporting + security model), `package.json` updates (exports map, files array, prepublishOnly script). Pack verified: 510KB tarball, 357 files, zero test/doc/session leakage. **3000/3000 host + 3019/3019 Docker. 0 type errors.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB) covering install→config→first chat→memory→audit→backup→API→Docker. Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
 - **Session 92:** CYCLE — **RED-TEAM: Graph + Task CLI attack surface.** 63 tests across 12 attack categories: DOT export path traversal (7), wikilink ReDoS (6), Graphviz injection (5), title/slug injection (7), frontmatter manipulation (6), search injection (5), archive traversal (5), ID matching ambiguity (5), symlinks/special files (4), date validation (5), large input DoS (4), concurrent ops (4). **0 vulnerabilities found.** 5 findings documented (all accepted risk or informational). All defenses held: slugify sanitization, vault containment (VULN-14), in-memory search, directory skipping, date validation. **2912/2912 pass (host + Docker parity). 0 type errors.**
 - **Session 87:** CYCLE — **RED-TEAM: 83 tests across 18 attack categories.** Hook command blocking bypass (10), hook env var injection (4), hook YAML corruption (6), notify osascript injection (4), notify log path traversal (3), notify template injection (5), migrate path traversal (6), migrate CSV injection (3), sync shell injection (6), sync local adapter traversal (6), sync SQL injection (3), quiet hours edge cases (4), rule name validation (5), command channel safety (4), hook concurrency manipulation (3), mute state tampering (3), YAML rule store corruption (3), sync adapter type safety (5). **2 vulnerabilities found+fixed:** VULN-20 rm flag bypass — expanded BLOCKED_PATTERNS regex (LOW), VULN-21 null bytes in env vars crash executeHook — added sanitizeEnv() (MEDIUM). **4 findings documented (accepted risk).** All existing defenses held: YAML serialization, sq() quoting, parameterized SQL, DB CHECK constraints, content filter, osascript escaping, sanitizeFileName, isPathSafe. **2542/2542 pass (host + Docker parity). 0 type errors.**
 - **Session 79:** CYCLE — **RED-TEAM: 91 tests across 11 attack categories.** HTTP API request smuggling (10), webhook SSRF (8), SSE resource exhaustion (5), pipe shell injection (9), snapshot git injection (8), alias command injection (7), HTTP auth bypass (9), webhook payload manipulation (8), HTTP endpoint edge cases (8), EventBus edge cases (8), pipeline YAML parsing (11). **2 vulnerabilities found+fixed:** VULN-18 pipeline path traversal in load/delete (MEDIUM), VULN-19 webhook custom header override could spoof HMAC signature (MEDIUM). **3 findings documented (accepted risk).** All existing defenses held: protocol validation, shell stdin piping, alias name validation, HTTP auth, SSE cleanup, EventBus isolation, YAML safety, work order expiry checks. **2208/2208 pass (host + Docker parity). 0 type errors.** Updated CHANGELOG.md (comprehensive v0.3.0 notes), README.md (31-command CLI table, updated stats), package.json + cli.ts (0.2.0→0.3.0). Fixed webhook delivery test timing flake. Tagged v0.3.0, pushed to GitHub (428eba3), created GitHub release. **2117/2117 pass (host + Docker parity). 0 type errors.**
@@ -197,7 +199,9 @@
 | 91 | ✅ CYCLE | `ved graph` + `ved task` CLI wiring + GitHub push |
 | 92 | ✅ CYCLE | RED-TEAM: Graph + Task CLI (63 tests, 0 vulns) |
 | 93 | ✅ CYCLE | v0.6.0 release (agent, replay, graph, task) |
-| 94+ | CYCLE | New features, polish |
+| 94 | ✅ CYCLE | cli-chat tests (36) + getting-started guide |
+| 95 | ✅ CYCLE | NPM packaging readiness (.npmignore, exports, files, SECURITY.md) |
+| 96+ | CYCLE | New features, polish |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -273,4 +277,6 @@
 | red-team S90 | ✅ Complete | ~600 | 69 |
 | red-team S92 | ✅ Complete | ~650 | 63 |
 | v0.6.0 release S93 | ✅ Complete | ~20 | 0 |
-| **Total** | **ALL COMPLETE** | **~42,624** | **2931** |
+| cli-chat tests S94 | ✅ Complete | ~290 | 36 |
+| getting-started S94 | ✅ Complete | ~180 (docs) | 0 |
+| **Total** | **ALL COMPLETE** | **~43,094** | **2967+** |

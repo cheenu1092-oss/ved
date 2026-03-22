@@ -345,9 +345,16 @@ export function renderTemplate(template: string, event: VedEvent): string {
 export function isInQuietHours(quietStart?: string, quietEnd?: string): boolean {
   if (!quietStart || !quietEnd) return false;
 
+  // Validate HH:MM format
+  const timeRe = /^\d{1,2}:\d{2}$/;
+  if (!timeRe.test(quietStart) || !timeRe.test(quietEnd)) return false;
+
   const now = new Date();
   const [startH, startM] = quietStart.split(':').map(Number);
   const [endH, endM] = quietEnd.split(':').map(Number);
+
+  // Validate ranges
+  if (startH > 23 || startM > 59 || endH > 23 || endM > 59) return false;
 
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const startMinutes = startH * 60 + startM;

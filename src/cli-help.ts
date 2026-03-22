@@ -466,6 +466,19 @@ export const COMMANDS: CommandInfo[] = [
     examples: ['ved serve', 'ved serve --port 8080', 'ved api --token mysecret --cors "*"'],
   },
   {
+    name: 'mcp-serve',
+    aliases: ['mcp-server', 'mcpserve'],
+    category: 'server',
+    summary: 'Start Ved as an MCP tool server (stdio or HTTP). Other agents can connect and use Ved\'s tools.',
+    usage: 'ved mcp-serve [--http] [--port <n>] [--host <addr>]',
+    flags: ['--http', '--port <n>', '--host <addr>'],
+    examples: [
+      'ved mcp-serve                    # stdio (for agent piping)',
+      'ved mcp-serve --http             # HTTP/SSE on port 3142',
+      'ved mcp-serve --port 8080        # HTTP on custom port',
+    ],
+  },
+  {
     name: 'webhook',
     aliases: [],
     category: 'server',

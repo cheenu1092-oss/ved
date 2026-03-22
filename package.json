@@ -5,9 +5,22 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "bin": {
     "ved": "dist/cli.js"
   },
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    "SECURITY.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -15,6 +28,7 @@
     "test:run": "vitest run",
     "lint": "eslint src/",
     "clean": "rm -rf dist/",
+    "prepublishOnly": "npm run clean && npm run build && npm run test:run",
     "migrate": "node --loader ts-node/esm src/db/migrate.ts",
     "docker:build": "docker compose build",
     "docker:test": "docker compose run --rm ved npm run test:run",

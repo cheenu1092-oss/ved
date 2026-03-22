@@ -33,6 +33,7 @@ import { helpCmd, checkHelp } from './cli-help.js';
 import { diffCmd } from './cli-diff.js';
 import { snapshotCmd } from './cli-snapshot.js';
 import { VedHttpServer } from './http.js';
+import { MCPStdioServer, MCPHttpServer } from './mcp-server.js';
 import { notifyCommand } from './cli-notify.js';
 import { tagCommand } from './cli-tag.js';
 import { migrateCommand } from './cli-migrate.js';
@@ -338,6 +339,12 @@ async function main(): Promise<void> {
         await app.stop();
       }
       return;
+    }
+    case 'mcp-serve':
+    case 'mcp-server':
+    case 'mcpserve': {
+      if (checkHelp('mcp-serve', args.slice(1))) return;
+      return mcpServe(args.slice(1));
     }
     case 'start':
       if (checkHelp('start', args.slice(1))) return;
@@ -2514,6 +2521,103 @@ async function serve(args: string[]): Promise<void> {
 
     // Keep process alive
     await new Promise<void>(() => {});
+  } catch (err) {
+    console.error(`Failed to start: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
+}
+
+/**
+ * `ved mcp-serve` — Start Ved as an MCP server.
+ *
+ * Usage:
+ *   ved mcp-serve                  — Start on stdio (default, for agent integration)
+ *   ved mcp-serve --http           — Start on HTTP with SSE
+ *   ved mcp-serve --port 3142      — Custom HTTP port
+ *   ved mcp-serve --host 0.0.0.0   — Bind to all interfaces
+ */
+async function mcpServe(args: string[]): Promise<void> {
+  let transport: 'stdio' | 'http' = 'stdio';
+  let port = 3142;
+  let host = '127.0.0.1';
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--http') {
+      transport = 'http';
+    } else if ((args[i] === '--port' || args[i] === '-p') && args[i + 1]) {
+      transport = 'http';
+      port = parseInt(args[i + 1], 10);
+      if (isNaN(port) || port <= 0 || port > 65535) {
+        console.error('Error: --port must be between 1 and 65535');
+        process.exit(1);
+      }
+      i++;
+    } else if ((args[i] === '--host' || args[i] === '-h') && args[i + 1]) {
+      transport = 'http';
+      host = args[i + 1];
+      i++;
+    } else {
+      console.error(`Unknown mcp-serve flag: ${args[i]}`);
+      console.log('Usage: ved mcp-serve [--http] [--port <N>] [--host <addr>]');
+      process.exit(1);
+    }
+  }
+
+  try {
+    const app = createApp();
+    await app.init();
+
+    if (transport === 'stdio') {
+      // Stdio mode: JSON-RPC over stdin/stdout (for piping to agents)
+      // Don't print anything to stdout except JSON-RPC
+      const server = new MCPStdioServer(app);
+      await server.start();
+
+      const shutdown = async () => {
+        server.stop();
+        await app.stop();
+        process.exit(0);
+      };
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
+
+      // Keep process alive
+      await new Promise<void>(() => {});
+    } else {
+      // HTTP mode: SSE + JSON-RPC over HTTP
+      console.log(`\nVed v${VERSION} — MCP Server (HTTP)\n`);
+
+      const server = new MCPHttpServer(app, { port, host });
+      const actualPort = await server.start();
+
+      console.log(`  🔌 MCP server listening on http://${host}:${actualPort}`);
+      console.log(`  Transport: HTTP/SSE`);
+      console.log('');
+      console.log('  Endpoints:');
+      console.log('    GET  /sse              — SSE stream (connect first)');
+      console.log('    POST /message          — JSON-RPC messages');
+      console.log('    GET  /health           — Health check');
+      console.log('');
+      console.log('  Tools exposed: 12');
+      console.log('    ved_search, ved_memory_list, ved_memory_read, ved_memory_write,');
+      console.log('    ved_memory_graph, ved_daily_read, ved_daily_write, ved_audit_query,');
+      console.log('    ved_audit_verify, ved_stats, ved_doctor, ved_task_list');
+      console.log('');
+      console.log('  Press Ctrl+C to stop.\n');
+
+      const shutdown = async () => {
+        console.log('\n  Stopping...');
+        await server.stop();
+        await app.stop();
+        console.log('  Done.\n');
+        process.exit(0);
+      };
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
+
+      // Keep process alive
+      await new Promise<void>(() => {});
+    }
   } catch (err) {
     console.error(`Failed to start: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);

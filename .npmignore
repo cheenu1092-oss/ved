@@ -1,0 +1,29 @@
+# Source (dist/ is the published artifact)
+src/
+tsconfig.json
+vitest.config.ts
+.eslintrc*
+
+# Tests
+**/*.test.ts
+**/*.test.js
+**/*.test.d.ts
+
+# Dev / CI
+.github/
+.git/
+.gitignore
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Docs (keep README + LICENSE + CHANGELOG)
+docs/
+sessions/
+
+# Local dev
+node_modules/
+coverage/
+.env*
+*.local.yaml
+tmp/
