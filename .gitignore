@@ -4,3 +4,7 @@ dist/
 *.db-wal
 *.db-shm
 .swarm/
+witness/
+ruflo/
+*.html
+*.pdf
