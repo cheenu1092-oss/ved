@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 97
-- **Current Phase:** CYCLE (polish — P1 TUI Overhaul)
-- **Last Run:** 2026-03-24
+- **Session Number:** 98
+- **Current Phase:** CYCLE (polish — P2 Config UX complete, P3 next)
+- **Last Run:** 2026-03-25
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 98 — P1: TUI Overhaul continued (`ved start` daemon TUI with live event stream, sessions panel)
+- **Next Session:** 99 — P3: Gateway Web UI (build web control panel on HTTP API + SSE)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -128,6 +128,7 @@
 - **Session 93:** CYCLE — **v0.6.0 release.** Docker parity verified (2931/2931 pass). Updated CHANGELOG.md (comprehensive v0.6.0 notes), README.md (46-command CLI table, updated stats), package.json + cli.ts (0.5.0→0.6.0). Tagged v0.6.0, pushed to GitHub (0734290), created GitHub release. **2931/2931 pass. 0 type errors.**
 - **Session 94:** CYCLE — **cli-chat tests + getting-started guide.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB). Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
 - **Session 97:** CYCLE — **P1 TUI Overhaul (Phase 1).** Built upgraded `ved chat` TUI: session picker on startup (resume active/idle sessions or start new), `formatAgo()` relative timestamps, `SessionManager.listRecent()` + `VedApp.listRecentSessions()`. Verified existing TUI features: token streaming via `processMessageStream`, fixed status bar (ANSI scroll region + SIGWINCH resize), syntax highlighting for code blocks (box borders + keyword coloring), color-coded risk badges, `--simple` fallback to original REPL. Updated help system. Pushed to GitHub (b23b9ca). **26 new tests. 3093/3093 host + 3112/3112 Docker. 0 type errors.**
+- **Session 98:** CYCLE — **P2 Config UX — Interactive init wizard + config edit.** `ved init` wizard (723 lines): 4 providers with model choices, API key validation (prefix checks + env detection), vault path setup, 3 trust modes (audit/gate-writes/gate-all), Discord channel optional setup, non-interactive fallback (--yes), --force overwrite. `ved config edit [local]`: opens in $EDITOR, auto-validates after save. Config generation: well-commented YAML with secrets separated into config.local.yaml, idempotent vault structure creation. Also committed daemon TUI tests from S97. Pushed to GitHub (24f179d). **76 new tests. 3251/3251 host + Docker parity. 0 type errors. P1+P2 complete.**
 - **Session 96:** CYCLE — **P0 Live Test: Ved talks to a real LLM.** Created comprehensive 8-test live test script. Ved successfully talked to Ollama qwen3:1.7b — simple chat, multi-turn conversation (name recall), system prompt self-identification, audit trail integrity all pass. RAG-enriched chat got a warning (small model ignored injected context — expected). Full 7-step pipeline works end-to-end without code changes. **7/8 tests pass. 3000/3000 unit tests. 0 type errors.**
 - **Session 95:** CYCLE — **NPM packaging readiness.** Added `.npmignore` (excludes src/tests/docs/sessions/Docker/CI), `SECURITY.md` (vuln reporting + security model), `package.json` updates (exports map, files array, prepublishOnly script). Pack verified: 510KB tarball, 357 files, zero test/doc/session leakage. **3000/3000 host + 3019/3019 Docker. 0 type errors.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB) covering install→config→first chat→memory→audit→backup→API→Docker. Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
 - **Session 92:** CYCLE — **RED-TEAM: Graph + Task CLI attack surface.** 63 tests across 12 attack categories: DOT export path traversal (7), wikilink ReDoS (6), Graphviz injection (5), title/slug injection (7), frontmatter manipulation (6), search injection (5), archive traversal (5), ID matching ambiguity (5), symlinks/special files (4), date validation (5), large input DoS (4), concurrent ops (4). **0 vulnerabilities found.** 5 findings documented (all accepted risk or informational). All defenses held: slugify sanitization, vault containment (VULN-14), in-memory search, directory skipping, date validation. **2912/2912 pass (host + Docker parity). 0 type errors.**
@@ -205,7 +206,8 @@
 | 95 | ✅ CYCLE | NPM packaging readiness (.npmignore, exports, files, SECURITY.md) |
 | 96 | ✅ CYCLE | P0 Live Test — first real LLM conversation (Ollama qwen3:1.7b, 7/8 pass) |
 | 97 | ✅ CYCLE | P1 TUI — streaming, status bar, session picker, syntax highlighting (26 tests) |
-| 98+ | CYCLE | P1 TUI continued, P2-P5 polish |
+| 98 | ✅ CYCLE | P2 Config UX — interactive init wizard, config edit (76 tests) |
+| 99+ | CYCLE | P3 Gateway Web UI, P4-P5 polish |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -286,4 +288,7 @@
 | live-test S96 | ✅ Complete | ~285 | 8 (live) |
 | cli-chat-tui S97 | ✅ Complete | ~600 | 86 |
 | session-listRecent S97 | ✅ Complete | ~15 | 7 |
-| **Total** | **ALL COMPLETE** | **~44,000** | **3093+** |
+| init-wizard S98 | ✅ Complete | ~723 | 76 |
+| config-edit S98 | ✅ Complete | ~35 | 0 |
+| daemon-tui-tests S98 | ✅ Complete | ~689 | 65 |
+| **Total** | **ALL COMPLETE** | **~45,400** | **3251+** |
