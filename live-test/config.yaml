@@ -1,0 +1,57 @@
+name: Ved
+version: 0.6.0
+logLevel: debug
+logFormat: pretty
+
+llm:
+  provider: ollama
+  model: qwen3:1.7b
+  baseUrl: http://host.docker.internal:11434
+  maxTokensPerMessage: 4096
+  maxTokensPerSession: 100000
+  temperature: 0.7
+
+memory:
+  vaultPath: ~/ved-vault
+  workingMemoryMaxTokens: 8000
+  ragContextMaxTokens: 4000
+  compressionThreshold: 6000
+  sessionIdleMinutes: 30
+  gitEnabled: true
+  gitAutoCommitIntervalMinutes: 5
+
+trust:
+  ownerIds:
+    - live-test-owner
+  defaultTier: 1
+  approvalTimeoutMs: 300000
+  maxToolCallsPerMessage: 10
+  maxAgenticLoops: 5
+
+audit:
+  anchorInterval: 100
+  hmacSecret: live-test-hmac-secret-2026
+
+rag:
+  vectorTopK: 10
+  ftsTopK: 10
+  graphMaxDepth: 2
+  graphMaxNodes: 20
+  maxContextTokens: 4000
+  embedding:
+    model: nomic-embed-text
+    baseUrl: http://localhost:11434
+    batchSize: 32
+    dimensions: 768
+  chunking:
+    maxTokens: 1024
+    minTokens: 64
+    frontmatterPrefix: true
+
+channels:
+  - type: cli
+    enabled: true
+    config: {}
+
+mcp:
+  servers: []

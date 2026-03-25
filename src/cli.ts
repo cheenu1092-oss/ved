@@ -173,9 +173,15 @@ async function main(): Promise<void> {
     case 'c':
     case 'talk': {
       if (checkHelp('chat', args.slice(1))) return;
-      const { runChat } = await import('./cli-chat.js');
+      const chatArgs = args.slice(1);
+      const simple = chatArgs.includes('--simple') || chatArgs.includes('-s');
       const app = createApp();
-      return runChat(app, args.slice(1));
+      if (simple) {
+        const { runChat } = await import('./cli-chat.js');
+        return runChat(app, chatArgs.filter(a => a !== '--simple' && a !== '-s'));
+      }
+      const { runChatTui } = await import('./cli-chat-tui.js');
+      return runChatTui(app, chatArgs);
     }
     case 'prompt':
     case 'prompts':

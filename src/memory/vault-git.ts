@@ -38,7 +38,7 @@ export class VaultGit {
     const gitDir = join(this.vaultPath, '.git');
     if (existsSync(gitDir)) return;
 
-    this.git(['init']);
+    this.git(['-c', 'init.defaultBranch=main', 'init']);
     // Create .gitignore for Obsidian workspace files
     const gitignore = join(this.vaultPath, '.gitignore');
     if (!existsSync(gitignore)) {

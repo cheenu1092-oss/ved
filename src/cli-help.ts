@@ -92,9 +92,10 @@ export const COMMANDS: CommandInfo[] = [
     name: 'chat',
     aliases: ['c', 'talk'],
     category: 'core',
-    summary: 'Start interactive conversation REPL',
-    usage: 'ved chat',
-    examples: ['ved chat', 'ved c'],
+    summary: 'Start interactive conversation with TUI (streaming, status bar, session picker)',
+    usage: 'ved chat [--model <m>] [--no-rag] [--no-tools] [--verbose] [--simple]',
+    flags: ['--model <m>', '--no-rag', '--no-tools', '--verbose', '--simple'],
+    examples: ['ved chat', 'ved c', 'ved chat --model claude-3-5-sonnet', 'ved chat --simple'],
   },
   {
     name: 'run',

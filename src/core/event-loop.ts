@@ -107,6 +107,9 @@ export class EventLoop {
   private staleCheckIntervalMs = 60_000; // check every 60s
   private lastGitCommit = 0;
 
+  /** Track pending fire-and-forget compression promises so shutdown can await them. */
+  private pendingCompressions = new Set<Promise<unknown>>();
+
   // Prepared statements
   private stmtInboxInsert: Database.Statement;
   private stmtInboxProcessed: Database.Statement;
@@ -270,6 +273,12 @@ export class EventLoop {
     // Stop idle timer first
     if (this.idleTimer) {
       this.idleTimer.stop();
+    }
+
+    // Await any in-flight compressions from maintain() before touching DB/LLM
+    if (this.pendingCompressions.size > 0) {
+      log.info('Awaiting pending compressions...', { count: this.pendingCompressions.size });
+      await Promise.allSettled([...this.pendingCompressions]);
     }
 
     // Close all active sessions and compress their T1 → T2
@@ -442,6 +451,12 @@ export class EventLoop {
    * Async implementation of the 7-step pipeline.
    */
   private async processMessageAsync(msg: VedMessage): Promise<void> {
+    // ─── Guard: skip empty messages ───
+    if (!msg.content || !msg.content.trim()) {
+      log.debug('Skipping empty message', { messageId: msg.id });
+      return;
+    }
+
     // ─── Step 1: RECEIVE ───
     const trustTier = this.trust.resolveTier(msg.channel, msg.author);
     const session = this.sessions.getOrCreate(
@@ -739,6 +754,18 @@ export class EventLoop {
    * - Does not require channels to be initialized
    */
   async processMessageDirect(msg: VedMessage): Promise<VedResponse> {
+    // ─── Guard: reject empty messages ───
+    if (!msg.content || !msg.content.trim()) {
+      return {
+        id: ulid(),
+        inReplyTo: msg.id,
+        content: '',
+        actions: [],
+        memoryOps: [],
+        channelRef: '',
+      };
+    }
+
     // ─── Step 1: RECEIVE ───
     const trustTier = this.trust.resolveTier(msg.channel, msg.author);
     const session = this.sessions.getOrCreate(
@@ -954,6 +981,252 @@ export class EventLoop {
   }
 
   // =========================================================================
+  // Streaming Direct Message Processing (for `ved chat` TUI)
+  // =========================================================================
+
+  /**
+   * Process a message through the full 7-step pipeline with token streaming.
+   *
+   * Like processMessageDirect() but calls `llm.chatStream()` during the DECIDE
+   * stage, yielding text tokens via `onToken` as they arrive from the LLM.
+   * After the stream completes, the remaining pipeline stages run normally.
+   *
+   * Falls back gracefully to non-streaming if the provider doesn't support it.
+   */
+  async processMessageStream(
+    msg: VedMessage,
+    onToken: (token: string) => void,
+  ): Promise<VedResponse> {
+    // ─── Guard: reject empty messages ───
+    if (!msg.content || !msg.content.trim()) {
+      return {
+        id: ulid(),
+        inReplyTo: msg.id,
+        content: '',
+        actions: [],
+        memoryOps: [],
+        channelRef: '',
+      };
+    }
+
+    // ─── Step 1: RECEIVE ───
+    const trustTier = this.trust.resolveTier(msg.channel, msg.author);
+    const session = this.sessions.getOrCreate(
+      msg.channel,
+      '',
+      msg.author,
+      trustTier,
+    );
+
+    // Check for approval commands (no streaming needed)
+    const command = parseApprovalCommand(msg.content);
+    if (command) {
+      const result = executeApprovalCommand(command, msg.channel, msg.author, {
+        workOrders: this.workOrders,
+        trust: this.trust,
+        audit: this.audit,
+        onApproved: (wo) => this.executeApprovedWorkOrder(wo, msg.channel),
+      });
+
+      // Deliver approval result as a single token
+      if (result.response) onToken(result.response);
+
+      return {
+        id: ulid(),
+        inReplyTo: msg.id,
+        content: result.response,
+        actions: [],
+        memoryOps: [],
+        channelRef: '',
+      };
+    }
+
+    // Add user message to working memory
+    session.workingMemory.addMessage({
+      role: 'user',
+      content: msg.content,
+      timestamp: msg.timestamp,
+    });
+
+    this.audit.append({
+      eventType: 'message_received',
+      actor: msg.author,
+      sessionId: session.id,
+      detail: { messageId: msg.id, channel: msg.channel, contentLength: msg.content.length },
+    });
+
+    // ─── Step 2: ENRICH ───
+    let ragContext = '';
+    if (this.rag) {
+      try {
+        const retrieval = await this.rag.retrieve(msg.content);
+        ragContext = retrieval.text;
+      } catch (err) {
+        log.warn('RAG retrieval failed in stream mode', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    const messages = session.workingMemory.messages;
+    const systemPrompt = this.buildSystemPrompt(ragContext, session.workingMemory.facts);
+    const mcpTools = this.mcp ? this.mcp.tools : [];
+    const tools = mcpTools.map(t => ({
+      name: t.name,
+      description: t.description,
+      inputSchema: t.inputSchema,
+      riskLevel: t.riskLevel,
+    }));
+
+    // ─── Step 3: DECIDE (with streaming) + Step 4: ACT ───
+    let responseText = '';
+    const actionLog: Array<{ tool: string; status: string; workOrderId?: string }> = [];
+
+    if (this.llm) {
+      const llmResponse = await this.llm.chatStream(
+        { systemPrompt, messages, tools: tools.length > 0 ? tools : undefined },
+        onToken,
+      );
+
+      responseText = llmResponse.decision.response ?? '';
+      let toolCalls = llmResponse.decision.toolCalls;
+
+      this.audit.append({
+        eventType: 'llm_call',
+        actor: 'ved',
+        sessionId: session.id,
+        detail: {
+          model: llmResponse.usage.model,
+          promptTokens: llmResponse.usage.promptTokens,
+          completionTokens: llmResponse.usage.completionTokens,
+          toolCallCount: toolCalls.length,
+        },
+      });
+
+      // Agentic loop (tool calls are not streamed)
+      let loopCount = 0;
+      const maxLoops = this.config.trust.maxAgenticLoops;
+
+      while (toolCalls.length > 0 && loopCount < maxLoops) {
+        loopCount++;
+        const toolResults: ToolResult[] = [];
+
+        for (const call of toolCalls) {
+          const toolDef = this.mcp?.getTool(call.tool);
+          const riskLevel = toolDef?.riskLevel ?? 'medium';
+          const trustDecision = this.trust.getTrustDecision(trustTier, riskLevel);
+
+          if (trustDecision === 'deny') {
+            toolResults.push({
+              callId: call.id, tool: call.tool, success: false,
+              error: `Denied: insufficient trust (tier ${trustTier}) for ${riskLevel}-risk tool`,
+              durationMs: 0,
+            });
+            actionLog.push({ tool: call.tool, status: 'denied' });
+            continue;
+          }
+
+          if (trustDecision === 'approve') {
+            const workOrder = this.workOrders.create(
+              session.id, msg.id, call.tool, call.params,
+              { level: riskLevel, reasons: [`Trust tier ${trustTier}, risk ${riskLevel}`] },
+              trustTier, toolDef?.serverName ?? '',
+            );
+            toolResults.push({
+              callId: call.id, tool: call.tool, success: false,
+              error: `Awaiting approval (work order ${workOrder.id})`,
+              durationMs: 0,
+            });
+            actionLog.push({ tool: call.tool, status: 'pending_approval', workOrderId: workOrder.id });
+            continue;
+          }
+
+          // auto — execute immediately
+          this.audit.append({
+            eventType: 'tool_requested', actor: 'ved', sessionId: session.id,
+            detail: { tool: call.tool, params: call.params },
+          });
+
+          const result = await this.mcp!.executeTool(call);
+          toolResults.push(result);
+          actionLog.push({ tool: call.tool, status: result.success ? 'success' : 'error' });
+
+          this.audit.append({
+            eventType: result.success ? 'tool_executed' : 'tool_error',
+            actor: 'ved', sessionId: session.id,
+            detail: { tool: call.tool, success: result.success, durationMs: result.durationMs },
+          });
+        }
+
+        // Feed tool results back to LLM (tool follow-up calls are not streamed)
+        const toolMessages = toolResults.map(r => ({
+          role: 'tool' as const,
+          content: r.success ? String(r.result ?? '') : `Error: ${r.error}`,
+          name: r.tool,
+          toolCallId: r.callId,
+          timestamp: Date.now(),
+        }));
+
+        const followUp = await this.llm.chat({
+          systemPrompt,
+          messages: [...messages, ...toolMessages],
+          tools: tools.length > 0 ? tools : undefined,
+          toolResults: toolResults.map(r => ({
+            callId: r.callId, tool: r.tool, success: r.success, result: r.result, error: r.error,
+          })),
+        });
+
+        responseText = followUp.decision.response ?? responseText;
+        toolCalls = followUp.decision.toolCalls;
+      }
+
+      if (loopCount >= maxLoops && toolCalls.length > 0) {
+        responseText += '\n\n⚠️ Tool call loop limit reached.';
+      }
+    } else {
+      responseText = `[No LLM configured] Received: ${msg.content}`;
+      onToken(responseText);
+    }
+
+    // ─── Step 5: RECORD ───
+    if (responseText) {
+      session.workingMemory.addMessage({
+        role: 'assistant',
+        content: responseText,
+        timestamp: Date.now(),
+      });
+    }
+
+    this.audit.append({
+      eventType: 'message_sent',
+      actor: 'ved',
+      sessionId: session.id,
+      detail: { channel: msg.channel, contentLength: responseText.length },
+    });
+
+    // ─── Step 7: MAINTAIN ───
+    this.maintain(session);
+    this.sessions.persist(session);
+
+    log.info('Stream message processed', { messageId: msg.id, sessionId: session.id });
+
+    // Collect any pending work orders created during this message
+    const pendingActions = actionLog
+      .filter(a => a.workOrderId)
+      .map(a => this.workOrders.getById(a.workOrderId!))
+      .filter((wo): wo is WorkOrder => wo !== null && wo !== undefined);
+
+    return {
+      id: ulid(),
+      inReplyTo: msg.id,
+      content: responseText,
+      actions: pendingActions,
+      memoryOps: [],
+      channelRef: '',
+    };
+  }
+
+  // =========================================================================
   // Post-Approval Tool Execution
   // =========================================================================
 
@@ -1126,7 +1399,7 @@ export class EventLoop {
         threshold: this.config.memory.compressionThreshold,
       });
 
-      this.compressor.compress(
+      this.trackCompression(this.compressor.compress(
         session.workingMemory,
         session.id,
         'threshold',
@@ -1135,7 +1408,7 @@ export class EventLoop {
           sessionId: session.id,
           error: err instanceof Error ? err.message : String(err),
         });
-      });
+      }));
     }
 
     // 2. Close stale sessions periodically (every 60s)
@@ -1180,6 +1453,14 @@ export class EventLoop {
   }
 
   /**
+   * Track a fire-and-forget compression promise so shutdown can await it.
+   */
+  private trackCompression(p: Promise<unknown>): void {
+    this.pendingCompressions.add(p);
+    p.finally(() => this.pendingCompressions.delete(p));
+  }
+
+  /**
    * Close stale sessions and compress their T1 → T2.
    * Called periodically from maintain().
    */
@@ -1194,7 +1475,7 @@ export class EventLoop {
       if (!this.compressor) continue;
       if (session.workingMemory.messageCount < 2) continue;
 
-      this.compressor.compress(
+      this.trackCompression(this.compressor.compress(
         session.workingMemory,
         session.id,
         'idle',
@@ -1203,7 +1484,7 @@ export class EventLoop {
           sessionId: session.id,
           error: err instanceof Error ? err.message : String(err),
         });
-      });
+      }));
     }
   }
 

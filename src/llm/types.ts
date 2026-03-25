@@ -69,6 +69,17 @@ export interface LLMProviderAdapter {
 
   /** Make the HTTP call to the provider */
   call(formattedRequest: unknown, config: ProviderConfig): Promise<unknown>;
+
+  /**
+   * Optional streaming call — yields tokens via callback, returns same
+   * reconstructed response shape as `call` when stream completes.
+   * If not implemented, LLMClient falls back to `call`.
+   */
+  callStream?(
+    formattedRequest: unknown,
+    config: ProviderConfig,
+    onToken: (token: string) => void,
+  ): Promise<unknown>;
 }
 
 export interface ProviderConfig {

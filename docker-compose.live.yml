@@ -1,0 +1,17 @@
+services:
+  ved-live:
+    build: .
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./live-test:/root/.ved
+      - ved-live-vault:/root/ved-vault
+    environment:
+      - NODE_ENV=production
+      - VED_LOG_LEVEL=debug
+    stdin_open: true
+    tty: true
+    command: node dist/cli.js chat
+
+volumes:
+  ved-live-vault:

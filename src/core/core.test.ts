@@ -240,7 +240,7 @@ describe('Logger', () => {
 
   it('outputs JSON format', () => {
     initLogger({ level: 'debug', format: 'json' });
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     log('info', 'test message', { key: 'value' });
 
@@ -257,7 +257,7 @@ describe('Logger', () => {
 
   it('outputs pretty format', () => {
     initLogger({ level: 'debug', format: 'pretty' });
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     log('info', 'hello world');
 
@@ -280,7 +280,7 @@ describe('Logger', () => {
   });
 
   it('createLogger adds module name to entries', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const logger = createLogger('ved-test');
 
     logger.info('test');

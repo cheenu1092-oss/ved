@@ -10,7 +10,7 @@ import { mkdirSync, existsSync, readdirSync, statSync, copyFileSync, rmSync } fr
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
-import { createLogger } from './core/log.js';
+import { createLogger, initLogger } from './core/log.js';
 import { loadConfig, validateConfig } from './core/config.js';
 import { migrate, currentVersion, verifyMigrations } from './db/migrate.js';
 import { EventLoop } from './core/event-loop.js';
@@ -100,6 +100,12 @@ export class VedApp {
 
   constructor(config: VedConfig) {
     this.config = config;
+
+    // Initialize logger from config
+    initLogger({
+      level: config.logLevel,
+      format: config.logFormat,
+    });
 
     // Open database
     const dbDir = dirname(config.dbPath);
@@ -325,6 +331,15 @@ export class VedApp {
   }
 
   /**
+   * List recent sessions, ordered by last activity descending.
+   * Used by `ved chat` TUI for session picker on startup.
+   */
+  listRecentSessions(limit = 10): import('./core/session.js').Session[] {
+    if (!this.initialized) return [];
+    return this.eventLoop.sessions.listRecent(limit);
+  }
+
+  /**
    * Process a message through the full 7-step pipeline and return the response.
    * Used by `ved chat` REPL — bypasses channel adapters entirely.
    */
@@ -333,6 +348,21 @@ export class VedApp {
       throw new Error('VedApp not initialized — call init() first');
     }
     return this.eventLoop.processMessageDirect(msg);
+  }
+
+  /**
+   * Process a message with token streaming.
+   * Calls `onToken` for each text token as it arrives from the LLM.
+   * Used by `ved chat` TUI for real-time streaming output.
+   */
+  async processMessageStream(
+    msg: VedMessage,
+    onToken: (token: string) => void,
+  ): Promise<VedResponse> {
+    if (!this.initialized) {
+      throw new Error('VedApp not initialized — call init() first');
+    }
+    return this.eventLoop.processMessageStream(msg, onToken);
   }
 
   /**

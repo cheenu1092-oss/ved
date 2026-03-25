@@ -97,12 +97,8 @@ export function log(level: LogLevel, msg: string, data?: Record<string, unknown>
 
   const output = _format === 'pretty' ? formatPretty(entry) : JSON.stringify(entry);
 
-  // Console: stderr for warn/error, stdout for debug/info
-  if (level === 'error' || level === 'warn') {
-    console.error(output);
-  } else {
-    console.log(output);
-  }
+  // All structured logs go to stderr (keeps stdout clean for user output/piping)
+  console.error(output);
 
   // File sink: always JSON (machine parseable)
   if (_fileStream) {

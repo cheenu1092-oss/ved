@@ -47,7 +47,7 @@ export function openDatabase(options: DbOptions): Database.Database {
   if (!options.readonly) {
     const applied = migrate(db);
     if (applied > 0) {
-      console.log(`[ved-db] Applied ${applied} migration(s)`);
+      console.error(`[ved-db] Applied ${applied} migration(s)`);
     }
   }
 

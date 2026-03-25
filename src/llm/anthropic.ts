@@ -160,6 +160,161 @@ export class AnthropicAdapter implements LLMProviderAdapter {
     return response.json();
   }
 
+  /**
+   * Streaming call via Anthropic SSE API.
+   * Yields text tokens via `onToken` as they arrive.
+   * Returns a reconstructed response compatible with `parseResponse`.
+   */
+  async callStream(
+    formattedRequest: unknown,
+    config: ProviderConfig,
+    onToken: (token: string) => void,
+  ): Promise<unknown> {
+    const req = formattedRequest as AnthropicRequest;
+    req.model = config.model;
+    req.max_tokens = config.maxTokens;
+    req.temperature = config.temperature;
+
+    const baseUrl = config.baseUrl ?? 'https://api.anthropic.com';
+    const url = `${baseUrl}/v1/messages`;
+
+    if (!config.apiKey) {
+      throw new VedError('LLM_API_KEY_MISSING', 'Anthropic API key not configured');
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': config.apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({ ...req, stream: true }),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      if (response.status === 429) {
+        throw new VedError('LLM_RATE_LIMITED', `Anthropic rate limited: ${body}`);
+      }
+      throw new VedError('LLM_REQUEST_FAILED', `Anthropic API error ${response.status}: ${body}`);
+    }
+
+    if (!response.body) {
+      throw new VedError('LLM_REQUEST_FAILED', 'Anthropic streaming response has no body');
+    }
+
+    // Parse SSE stream
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let model = config.model;
+    let stopReason: AnthropicResponse['stop_reason'] = 'end_turn';
+    let accumulatedText = '';
+
+    // Tool call state
+    const toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
+    let currentToolId = '';
+    let currentToolName = '';
+    let currentToolInput = '';
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (!data || data === '[DONE]') continue;
+
+          let event: Record<string, unknown>;
+          try {
+            event = JSON.parse(data) as Record<string, unknown>;
+          } catch {
+            continue;
+          }
+
+          const type = event['type'] as string | undefined;
+
+          if (type === 'message_start') {
+            const msg = event['message'] as Record<string, unknown> | undefined;
+            if (msg) {
+              model = (msg['model'] as string) ?? model;
+              const usage = msg['usage'] as Record<string, number> | undefined;
+              inputTokens = usage?.['input_tokens'] ?? 0;
+            }
+          } else if (type === 'content_block_start') {
+            const block = event['content_block'] as Record<string, unknown> | undefined;
+            if (block?.['type'] === 'tool_use') {
+              currentToolId = (block['id'] as string) ?? '';
+              currentToolName = (block['name'] as string) ?? '';
+              currentToolInput = '';
+            }
+          } else if (type === 'content_block_delta') {
+            const delta = event['delta'] as Record<string, unknown> | undefined;
+            if (delta?.['type'] === 'text_delta') {
+              const text = (delta['text'] as string) ?? '';
+              accumulatedText += text;
+              onToken(text);
+            } else if (delta?.['type'] === 'input_json_delta') {
+              currentToolInput += (delta['partial_json'] as string) ?? '';
+            }
+          } else if (type === 'content_block_stop') {
+            if (currentToolId) {
+              try {
+                toolCalls.push({
+                  id: currentToolId,
+                  name: currentToolName,
+                  input: JSON.parse(currentToolInput || '{}') as Record<string, unknown>,
+                });
+              } catch {
+                // malformed tool input — skip
+              }
+              currentToolId = '';
+              currentToolName = '';
+              currentToolInput = '';
+            }
+          } else if (type === 'message_delta') {
+            const delta = event['delta'] as Record<string, unknown> | undefined;
+            const sr = delta?.['stop_reason'] as AnthropicResponse['stop_reason'] | undefined;
+            if (sr) stopReason = sr;
+            const usage = event['usage'] as Record<string, number> | undefined;
+            outputTokens = usage?.['output_tokens'] ?? outputTokens;
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // Reconstruct a response compatible with parseResponse
+    const content: AnthropicContentBlock[] = [];
+    if (accumulatedText) {
+      content.push({ type: 'text', text: accumulatedText });
+    }
+    for (const tc of toolCalls) {
+      content.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.input });
+    }
+
+    return {
+      id: 'streamed',
+      type: 'message',
+      role: 'assistant',
+      content,
+      model,
+      stop_reason: stopReason,
+      usage: { input_tokens: inputTokens, output_tokens: outputTokens },
+    } satisfies AnthropicResponse;
+  }
+
   // ── Private ──
 
   private convertMessages(

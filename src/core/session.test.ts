@@ -286,3 +286,96 @@ describe('SessionManager — audit', () => {
     expect(() => mgr.getOrCreate('cli', '', 'user-1')).not.toThrow();
   });
 });
+
+// === listRecent ===
+
+describe('SessionManager — listRecent', () => {
+  it('returns empty array when no sessions exist', () => {
+    const db = createTestDb();
+    const mgr = createManager(db);
+    expect(mgr.listRecent()).toEqual([]);
+  });
+
+  it('returns sessions ordered by last_active descending', () => {
+    const db = createTestDb();
+    const mgr = createManager(db);
+
+    const s1 = mgr.getOrCreate('cli', '', 'user-1');
+    // Manually update last_active to ensure ordering
+    db.prepare('UPDATE sessions SET last_active = ? WHERE id = ?').run(1000, s1.id);
+    const s2 = mgr.getOrCreate('discord', '', 'user-2');
+    db.prepare('UPDATE sessions SET last_active = ? WHERE id = ?').run(2000, s2.id);
+
+    const recent = mgr.listRecent();
+    expect(recent.length).toBe(2);
+    // Most recent (s2) first
+    expect(recent[0]!.id).toBe(s2.id);
+    expect(recent[1]!.id).toBe(s1.id);
+  });
+
+  it('respects limit parameter', () => {
+    const db = createTestDb();
+    const mgr = createManager(db);
+
+    mgr.getOrCreate('cli', '', 'user-1');
+    mgr.getOrCreate('cli', '', 'user-2');
+    mgr.getOrCreate('cli', '', 'user-3');
+
+    const recent = mgr.listRecent(2);
+    expect(recent.length).toBe(2);
+  });
+
+  it('includes closed sessions', () => {
+    const db = createTestDb();
+    const mgr = createManager(db);
+
+    const s1 = mgr.getOrCreate('cli', '', 'user-1');
+    mgr.close(s1.id, 'done');
+
+    const recent = mgr.listRecent();
+    expect(recent.length).toBe(1);
+    expect(recent[0]!.status).toBe('closed');
+  });
+
+  it('includes active and idle sessions', () => {
+    const db = createTestDb();
+    const mgr = createManager(db);
+
+    const s1 = mgr.getOrCreate('cli', '', 'user-1');
+    const s2 = mgr.getOrCreate('discord', '', 'user-2');
+    mgr.markIdle(s1.id);
+
+    const recent = mgr.listRecent();
+    expect(recent.length).toBe(2);
+    const statuses = recent.map(s => s.status);
+    expect(statuses).toContain('idle');
+    expect(statuses).toContain('active');
+  });
+
+  it('defaults to limit 10', () => {
+    const db = createTestDb();
+    const mgr = createManager(db);
+
+    for (let i = 0; i < 15; i++) {
+      mgr.getOrCreate('cli', '', `user-${i}`);
+    }
+
+    const recent = mgr.listRecent();
+    expect(recent.length).toBe(10);
+  });
+
+  it('returns valid Session objects with working memory', () => {
+    const db = createTestDb();
+    const mgr = createManager(db);
+
+    const s = mgr.getOrCreate('cli', '', 'user-1');
+    // Add a message to working memory
+    s.workingMemory.addMessage({ role: 'user', content: 'hello', timestamp: Date.now() });
+    mgr.persist(s);
+
+    const recent = mgr.listRecent();
+    expect(recent.length).toBe(1);
+    expect(recent[0]!.workingMemory).toBeDefined();
+    expect(recent[0]!.workingMemory.messageCount).toBe(1);
+  });
+});

@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 95
-- **Current Phase:** CYCLE (polish)
-- **Last Run:** 2026-03-22
+- **Session Number:** 96
+- **Current Phase:** CYCLE (polish — P0 Live Test)
+- **Last Run:** 2026-03-24
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 96 — `npm publish` dry run, or new feature (MCP server mode, plugin system, etc.).
+- **Next Session:** 97 — P1: TUI Overhaul (research ink/clack, start `ved chat` TUI redesign)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)

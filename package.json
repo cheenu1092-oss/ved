@@ -22,7 +22,7 @@
     "SECURITY.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp -r src/db/migrations dist/db/migrations",
     "dev": "tsc --watch",
     "test": "vitest",
     "test:run": "vitest run",

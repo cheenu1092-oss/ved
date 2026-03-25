@@ -133,6 +133,65 @@ export class LLMClient implements VedModule {
   }
 
   /**
+   * Stream a conversation to the LLM, yielding tokens via callback.
+   * Falls back to non-streaming `chat` if the provider doesn't support streaming.
+   */
+  async chatStream(request: LLMRequest, onToken: (token: string) => void): Promise<LLMResponse> {
+    if (!this.adapter || !this.providerConfig) {
+      throw new VedError('INTERNAL_ERROR', 'LLMClient not initialized — call init() first');
+    }
+
+    // Check session budget
+    if (this.llmConfig && this._sessionUsage.totalTokens >= this.llmConfig.maxTokensPerSession) {
+      throw new VedError('LLM_BUDGET_EXCEEDED',
+        `Session token budget exhausted: ${this._sessionUsage.totalTokens}/${this.llmConfig.maxTokensPerSession}`);
+    }
+
+    // Fall back to regular chat if adapter doesn't support streaming
+    if (!this.adapter.callStream) {
+      const response = await this.chat(request);
+      // Deliver full response as a single token so caller gets something
+      if (response.decision.response) {
+        onToken(response.decision.response);
+      }
+      return response;
+    }
+
+    const formatted = this.adapter.formatRequest(request);
+    const startMs = Date.now();
+
+    let raw: unknown;
+    try {
+      raw = await this.adapter.callStream(formatted, this.providerConfig, onToken);
+    } catch (err) {
+      if (err instanceof VedError) throw err;
+      throw new VedError('LLM_REQUEST_FAILED',
+        `LLM streaming call failed: ${err instanceof Error ? err.message : String(err)}`,
+        err instanceof Error ? err : undefined);
+    }
+
+    const durationMs = Date.now() - startMs;
+
+    let response: LLMResponse;
+    try {
+      response = this.adapter.parseResponse(raw);
+    } catch (err) {
+      throw new VedError('LLM_INVALID_RESPONSE',
+        `Failed to parse streamed LLM response: ${err instanceof Error ? err.message : String(err)}`,
+        err instanceof Error ? err : undefined);
+    }
+
+    response.durationMs = durationMs;
+
+    // Track session usage
+    this._sessionUsage.promptTokens += response.usage.promptTokens;
+    this._sessionUsage.completionTokens += response.usage.completionTokens;
+    this._sessionUsage.totalTokens += response.usage.totalTokens;
+
+    return response;
+  }
+
+  /**
    * Compress text (used for T1→T2 compression).
    * Uses a dedicated system prompt for summarization.
    */

@@ -1,0 +1,5 @@
+llm:
+  apiKey: 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
+
+audit:
+  hmacSecret: live-test-hmac-secret-2026

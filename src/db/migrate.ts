@@ -121,7 +121,7 @@ export function migrate(db: Database.Database): number {
   if (pending.length === 0) return 0;
 
   for (const migration of pending) {
-    console.log(`[ved-db] Applying migration: ${migration.filename}`);
+    console.error(`[ved-db] Applying migration: ${migration.filename}`);
 
     const txn = db.transaction(() => {
       db.exec(migration.sql);
@@ -143,7 +143,7 @@ export function migrate(db: Database.Database): number {
     });
 
     txn();
-    console.log(`[ved-db] Applied v${String(migration.version).padStart(3, '0')}`);
+    console.error(`[ved-db] Applied v${String(migration.version).padStart(3, '0')}`);
   }
 
   return pending.length;

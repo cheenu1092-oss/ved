@@ -73,6 +73,7 @@ export class SessionManager {
   private stmtClose: Database.Statement;
   private stmtCloseStale: Database.Statement;
   private stmtGetStale: Database.Statement;
+  private stmtListRecent: Database.Statement;
 
   constructor(db: Database.Database, opts: SessionManagerOptions) {
     this.opts = opts;
@@ -118,6 +119,10 @@ export class SessionManager {
     this.stmtGetStale = db.prepare(`
       SELECT * FROM sessions
       WHERE status IN ('active', 'idle') AND last_active < @cutoff
+    `);
+
+    this.stmtListRecent = db.prepare(`
+      SELECT * FROM sessions ORDER BY last_active DESC LIMIT ?
     `);
   }
 
@@ -227,6 +232,15 @@ export class SessionManager {
       this.audit('session_close', 'ved', sessionId, { summary: summary ?? null });
       log.info('Session closed', { sessionId });
     }
+  }
+
+  /**
+   * List recent sessions, ordered by last_active descending.
+   * Includes active, idle, and recently closed sessions.
+   */
+  listRecent(limit = 10): Session[] {
+    const rows = this.stmtListRecent.all(limit) as SessionRow[];
+    return rows.map(r => this.rowToSession(r));
   }
 
   /**
