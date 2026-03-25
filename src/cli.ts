@@ -10,7 +10,7 @@
  *   ved version    — Show version
  */
 
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp, VedApp } from './app.js';
 import { getConfigDir, loadConfig, validateConfig } from './core/config.js';
@@ -41,6 +41,7 @@ import { agentCommand } from './cli-agent.js';
 import { replayCommand } from './cli-replay.js';
 import { graphCommand } from './cli-graph.js';
 import { runTaskCommand, checkHelp as taskCheckHelp } from './cli-task.js';
+import { runInitWizard, parseInitArgs, getEditorCommand } from './cli-init-wizard.js';
 
 const log = createLogger('cli');
 const VERSION = '0.6.0';
@@ -56,7 +57,7 @@ async function main(): Promise<void> {
       return helpCmd(args.slice(1));
     case 'init':
       if (checkHelp('init', args.slice(1))) return;
-      return init();
+      return init(args.slice(1));
     case 'version':
     case '--version':
     case '-v':
@@ -352,9 +353,16 @@ async function main(): Promise<void> {
       if (checkHelp('mcp-serve', args.slice(1))) return;
       return mcpServe(args.slice(1));
     }
-    case 'start':
+    case 'start': {
       if (checkHelp('start', args.slice(1))) return;
-      return start();
+      const startArgs = args.slice(1);
+      const simpleStart = startArgs.includes('--simple') || startArgs.includes('-s') || startArgs.includes('--no-tui');
+      if (simpleStart) {
+        return start();
+      }
+      const { runDaemonTui } = await import('./cli-start-tui.js');
+      return runDaemonTui(createApp(), startArgs);
+    }
     default: {
       // Check for @-alias shortcut: ved @myalias [args...]
       if (command.startsWith('@')) {
@@ -387,95 +395,11 @@ async function main(): Promise<void> {
 }
 
 /**
- * Initialize ~/.ved/ directory with default config.
+ * Initialize ~/.ved/ directory with interactive wizard.
  */
-function init(): void {
-  const configDir = getConfigDir();
-
-  if (existsSync(join(configDir, 'config.yaml'))) {
-    console.log(`Config already exists at ${configDir}/config.yaml`);
-    return;
-  }
-
-  mkdirSync(configDir, { recursive: true });
-
-  const defaultConfig = `# Ved Configuration
-# See docs for full options: https://github.com/cheenu1092-oss/ved
-
-# LLM provider settings
-llm:
-  provider: anthropic
-  model: claude-sonnet-4-20250514
-  # apiKey: set in config.local.yaml or VED_LLM_API_KEY env var
-
-# Memory / Obsidian vault
-memory:
-  vaultPath: ~/ved-vault
-  gitEnabled: true
-
-# Trust tiers
-trust:
-  ownerIds:
-    - "your-discord-id-here"  # REQUIRED: set your ID
-
-# Channels (at least one must be enabled)
-channels:
-  - type: cli
-    enabled: true
-    config: {}
-
-# MCP tool servers
-mcp:
-  servers: []
-`;
-
-  writeFileSync(join(configDir, 'config.yaml'), defaultConfig);
-
-  // Create config.local.yaml template (gitignored, for secrets)
-  const localConfigPath = join(configDir, 'config.local.yaml');
-  if (!existsSync(localConfigPath)) {
-    const localConfig = `# Ved Local Config — SECRETS GO HERE (gitignored)
-# This file overrides config.yaml for sensitive values.
-
-llm:
-  # apiKey: sk-your-anthropic-key-here
-  # Or set env: VED_LLM_API_KEY
-
-# channels:
-#   - type: discord
-#     enabled: true
-#     config:
-#       token: your-discord-bot-token
-`;
-    writeFileSync(localConfigPath, localConfig);
-  }
-
-  // Create default vault directory
-  const vaultPath = join(process.env.HOME ?? '~', 'ved-vault');
-  if (!existsSync(vaultPath)) {
-    mkdirSync(vaultPath, { recursive: true });
-    mkdirSync(join(vaultPath, 'daily'), { recursive: true });
-    mkdirSync(join(vaultPath, 'entities'), { recursive: true });
-    mkdirSync(join(vaultPath, 'concepts'), { recursive: true });
-    mkdirSync(join(vaultPath, 'decisions'), { recursive: true });
-
-    // Vault README for Obsidian users
-    writeFileSync(join(vaultPath, 'README.md'),
-      `# Ved Vault\n\nThis is Ved's knowledge graph. Open this folder in Obsidian to visualize connections.\n\n` +
-      `## Structure\n- \`daily/\` — Episodic memory (session summaries)\n- \`entities/\` — People, orgs, projects\n` +
-      `- \`concepts/\` — Ideas, technologies\n- \`decisions/\` — Dated decision records\n`
-    );
-  }
-
-  console.log(`✅ Created ${configDir}/config.yaml`);
-  console.log(`✅ Created ${configDir}/config.local.yaml (add your API keys here)`);
-  if (existsSync(vaultPath)) {
-    console.log(`✅ Created vault at ${vaultPath}`);
-  }
-  console.log(`\nNext steps:`);
-  console.log(`  1. Edit ${configDir}/config.yaml — set your owner ID`);
-  console.log(`  2. Edit ${configDir}/config.local.yaml — add API keys`);
-  console.log(`  3. Run: ved`);
+async function init(args: string[]): Promise<void> {
+  const opts = parseInitArgs(args);
+  await runInitWizard(opts);
 }
 
 /**
@@ -748,9 +672,48 @@ async function config(args: string[]): Promise<void> {
       console.log(getConfigDir());
       break;
 
+    case 'edit': {
+      const configDir = getConfigDir();
+      const target = args[1] === 'local' ? 'config.local.yaml' : 'config.yaml';
+      const configPath = join(configDir, target);
+
+      if (!existsSync(configPath)) {
+        console.error(`Config file not found: ${configPath}`);
+        console.log(`Run \`ved init\` first to create it.`);
+        process.exit(1);
+      }
+
+      const editor = getEditorCommand();
+      const { execSync } = await import('node:child_process');
+      try {
+        execSync(`${editor} ${configPath}`, { stdio: 'inherit' });
+      } catch {
+        console.error(`Failed to open editor: ${editor}`);
+        console.log(`Set $EDITOR or $VISUAL to your preferred editor.`);
+        process.exit(1);
+      }
+
+      // Validate after edit
+      try {
+        const cfg = loadConfig();
+        const errors = validateConfig(cfg);
+        if (errors.length > 0) {
+          console.log(`\n⚠️  Config has ${errors.length} issue(s) after edit:\n`);
+          for (const e of errors) {
+            console.log(`  ${e.code === 'REQUIRED' ? '❌' : '⚠️'} ${e.path}: ${e.message}`);
+          }
+        } else {
+          console.log(`\n✅ Config is valid.`);
+        }
+      } catch (err) {
+        console.log(`\n⚠️  Could not validate config: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      break;
+    }
+
     default:
       console.error(`Unknown config subcommand: ${sub}`);
-      console.log('Usage: ved config [validate|show|path]');
+      console.log('Usage: ved config [validate|show|path|edit [local]]');
       process.exit(1);
   }
 }
