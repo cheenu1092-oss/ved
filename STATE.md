@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 96
-- **Current Phase:** CYCLE (polish — P0 Live Test)
+- **Session Number:** 97
+- **Current Phase:** CYCLE (polish — P1 TUI Overhaul)
 - **Last Run:** 2026-03-24
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 97 — P1: TUI Overhaul (research ink/clack, start `ved chat` TUI redesign)
+- **Next Session:** 98 — P1: TUI Overhaul continued (`ved start` daemon TUI with live event stream, sessions panel)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -127,6 +127,8 @@
 - **Session 91:** CYCLE — **`ved graph` + `ved task` CLI wiring + GitHub push.** Wired uncommitted graph CLI (9 subcommands, 44 tests: hubs/orphans/islands/path/neighbors/broken/dot/summary) and task CLI (10 subcommands, 65 tests: list/add/show/edit/done/archive/board/stats/projects/search) into cli.ts + cli-help.ts. Tasks as markdown files with YAML frontmatter, Kanban board view. Pushed to GitHub (f38d745). **2849/2849 pass (host + Docker parity). 0 type errors. CLI: 46 commands.**
 - **Session 93:** CYCLE — **v0.6.0 release.** Docker parity verified (2931/2931 pass). Updated CHANGELOG.md (comprehensive v0.6.0 notes), README.md (46-command CLI table, updated stats), package.json + cli.ts (0.5.0→0.6.0). Tagged v0.6.0, pushed to GitHub (0734290), created GitHub release. **2931/2931 pass. 0 type errors.**
 - **Session 94:** CYCLE — **cli-chat tests + getting-started guide.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB). Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
+- **Session 97:** CYCLE — **P1 TUI Overhaul (Phase 1).** Built upgraded `ved chat` TUI: session picker on startup (resume active/idle sessions or start new), `formatAgo()` relative timestamps, `SessionManager.listRecent()` + `VedApp.listRecentSessions()`. Verified existing TUI features: token streaming via `processMessageStream`, fixed status bar (ANSI scroll region + SIGWINCH resize), syntax highlighting for code blocks (box borders + keyword coloring), color-coded risk badges, `--simple` fallback to original REPL. Updated help system. Pushed to GitHub (b23b9ca). **26 new tests. 3093/3093 host + 3112/3112 Docker. 0 type errors.**
+- **Session 96:** CYCLE — **P0 Live Test: Ved talks to a real LLM.** Created comprehensive 8-test live test script. Ved successfully talked to Ollama qwen3:1.7b — simple chat, multi-turn conversation (name recall), system prompt self-identification, audit trail integrity all pass. RAG-enriched chat got a warning (small model ignored injected context — expected). Full 7-step pipeline works end-to-end without code changes. **7/8 tests pass. 3000/3000 unit tests. 0 type errors.**
 - **Session 95:** CYCLE — **NPM packaging readiness.** Added `.npmignore` (excludes src/tests/docs/sessions/Docker/CI), `SECURITY.md` (vuln reporting + security model), `package.json` updates (exports map, files array, prepublishOnly script). Pack verified: 510KB tarball, 357 files, zero test/doc/session leakage. **3000/3000 host + 3019/3019 Docker. 0 type errors.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB) covering install→config→first chat→memory→audit→backup→API→Docker. Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
 - **Session 92:** CYCLE — **RED-TEAM: Graph + Task CLI attack surface.** 63 tests across 12 attack categories: DOT export path traversal (7), wikilink ReDoS (6), Graphviz injection (5), title/slug injection (7), frontmatter manipulation (6), search injection (5), archive traversal (5), ID matching ambiguity (5), symlinks/special files (4), date validation (5), large input DoS (4), concurrent ops (4). **0 vulnerabilities found.** 5 findings documented (all accepted risk or informational). All defenses held: slugify sanitization, vault containment (VULN-14), in-memory search, directory skipping, date validation. **2912/2912 pass (host + Docker parity). 0 type errors.**
 - **Session 87:** CYCLE — **RED-TEAM: 83 tests across 18 attack categories.** Hook command blocking bypass (10), hook env var injection (4), hook YAML corruption (6), notify osascript injection (4), notify log path traversal (3), notify template injection (5), migrate path traversal (6), migrate CSV injection (3), sync shell injection (6), sync local adapter traversal (6), sync SQL injection (3), quiet hours edge cases (4), rule name validation (5), command channel safety (4), hook concurrency manipulation (3), mute state tampering (3), YAML rule store corruption (3), sync adapter type safety (5). **2 vulnerabilities found+fixed:** VULN-20 rm flag bypass — expanded BLOCKED_PATTERNS regex (LOW), VULN-21 null bytes in env vars crash executeHook — added sanitizeEnv() (MEDIUM). **4 findings documented (accepted risk).** All existing defenses held: YAML serialization, sq() quoting, parameterized SQL, DB CHECK constraints, content filter, osascript escaping, sanitizeFileName, isPathSafe. **2542/2542 pass (host + Docker parity). 0 type errors.**
@@ -201,7 +203,9 @@
 | 93 | ✅ CYCLE | v0.6.0 release (agent, replay, graph, task) |
 | 94 | ✅ CYCLE | cli-chat tests (36) + getting-started guide |
 | 95 | ✅ CYCLE | NPM packaging readiness (.npmignore, exports, files, SECURITY.md) |
-| 96+ | CYCLE | New features, polish |
+| 96 | ✅ CYCLE | P0 Live Test — first real LLM conversation (Ollama qwen3:1.7b, 7/8 pass) |
+| 97 | ✅ CYCLE | P1 TUI — streaming, status bar, session picker, syntax highlighting (26 tests) |
+| 98+ | CYCLE | P1 TUI continued, P2-P5 polish |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -279,4 +283,7 @@
 | v0.6.0 release S93 | ✅ Complete | ~20 | 0 |
 | cli-chat tests S94 | ✅ Complete | ~290 | 36 |
 | getting-started S94 | ✅ Complete | ~180 (docs) | 0 |
-| **Total** | **ALL COMPLETE** | **~43,094** | **2967+** |
+| live-test S96 | ✅ Complete | ~285 | 8 (live) |
+| cli-chat-tui S97 | ✅ Complete | ~600 | 86 |
+| session-listRecent S97 | ✅ Complete | ~15 | 7 |
+| **Total** | **ALL COMPLETE** | **~44,000** | **3093+** |
