@@ -156,6 +156,88 @@ describe('getDashboardHtml', () => {
     expect(html).toContain('const maxEvents = 200');
     expect(html).toContain('while (stream.children.length > maxEvents)');
   });
+
+  // ── New panels (Session 99) ──
+
+  it('contains trust nav button and panel', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('data-panel="trust"');
+    expect(html).toContain('id="panel-trust"');
+  });
+
+  it('contains cron nav button and panel', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('data-panel="cron"');
+    expect(html).toContain('id="panel-cron"');
+  });
+
+  it('contains config nav button and panel', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('data-panel="config"');
+    expect(html).toContain('id="panel-config"');
+  });
+
+  it('trust panel has work-orders list and trust-config containers', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="work-orders-list"');
+    expect(html).toContain('id="trust-config"');
+  });
+
+  it('cron panel has jobs list and history list', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="cron-jobs-list"');
+    expect(html).toContain('id="cron-history-list"');
+  });
+
+  it('config panel has config-tree container', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="config-tree"');
+  });
+
+  it('includes sessions list in overview panel', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="sessions-list"');
+    expect(html).toContain('/api/sessions');
+  });
+
+  it('includes events type dropdown filter', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="event-type-filter"');
+  });
+
+  it('includes new API endpoint references', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('/api/sessions');
+    expect(html).toContain('/api/work-orders');
+    expect(html).toContain('/api/trust');
+    expect(html).toContain('/api/cron');
+    expect(html).toContain('/api/config');
+  });
+
+  it('trust panel includes approve/deny API calls', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('/api/approve/');
+    expect(html).toContain('/api/deny/');
+  });
+
+  it('cron panel includes run and toggle API calls', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('/run');
+    expect(html).toContain('/toggle');
+  });
+
+  it('includes risk badge rendering', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('function riskBadge(risk)');
+    expect(html).toContain('badge-high');
+    expect(html).toContain('badge-critical');
+  });
+
+  it('includes config tree renderer', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('function renderConfigTree(obj');
+    expect(html).toContain('[REDACTED]');
+  });
 });
 
 // ── HTTP Integration: Dashboard served at / and /dashboard ──

@@ -10,6 +10,15 @@
  *   GET  /api/vault/files      — List vault files
  *   GET  /api/vault/file?path= — Read a vault file
  *   GET  /api/doctor           — Run diagnostics
+ *   GET  /api/sessions         — List recent sessions
+ *   GET  /api/work-orders      — Pending work orders
+ *   GET  /api/work-orders/:id  — Single work order
+ *   GET  /api/trust            — Trust configuration
+ *   GET  /api/cron             — List cron jobs
+ *   GET  /api/cron/history     — Cron execution history
+ *   POST /api/cron/:id/run     — Trigger a cron job
+ *   POST /api/cron/:id/toggle  — Enable/disable a cron job
+ *   GET  /api/config           — Sanitized config
  *   POST /api/approve/:id      — Approve a work order
  *   POST /api/deny/:id         — Deny a work order
  *
@@ -175,6 +184,25 @@ export class VedHttpServer {
       if (cleanPath === '/api/events') return { handler: this.getEvents, params: {} };
       if (cleanPath === '/api/webhooks') return { handler: this.getWebhooks, params: {} };
       if (cleanPath === '/api/webhooks/stats') return { handler: this.getWebhookStats, params: {} };
+      if (cleanPath === '/api/sessions') return { handler: this.getSessions, params: {} };
+      if (cleanPath === '/api/mcp/servers') return { handler: this.getMcpServers, params: {} };
+      if (cleanPath === '/api/mcp/tools') return { handler: this.getMcpTools, params: {} };
+      if (cleanPath === '/api/vault/graph') return { handler: this.getVaultGraph, params: {} };
+      // GET /api/sessions/:id
+      const sessMatch = cleanPath.match(/^\/api\/sessions\/(.+)$/);
+      if (sessMatch) {
+        return { handler: this.getSessionDetail, params: { id: decodeURIComponent(sessMatch[1]) } };
+      }
+      if (cleanPath === '/api/work-orders') return { handler: this.getWorkOrders, params: {} };
+      if (cleanPath === '/api/trust') return { handler: this.getTrust, params: {} };
+      if (cleanPath === '/api/cron') return { handler: this.getCron, params: {} };
+      if (cleanPath === '/api/cron/history') return { handler: this.getCronHistory, params: {} };
+      if (cleanPath === '/api/config') return { handler: this.getConfig, params: {} };
+      // GET /api/work-orders/:id
+      const woMatch = cleanPath.match(/^\/api\/work-orders\/(.+)$/);
+      if (woMatch) {
+        return { handler: this.getWorkOrder, params: { id: decodeURIComponent(woMatch[1]) } };
+      }
       // GET /api/webhooks/:id/deliveries
       const whDelMatch = cleanPath.match(/^\/api\/webhooks\/(.+)\/deliveries$/);
       if (whDelMatch) {
@@ -192,6 +220,14 @@ export class VedHttpServer {
       const denyMatch = cleanPath.match(/^\/api\/deny\/(.+)$/);
       if (denyMatch) {
         return { handler: this.postDeny, params: { id: decodeURIComponent(denyMatch[1]) } };
+      }
+      const cronRunMatch = cleanPath.match(/^\/api\/cron\/(.+)\/run$/);
+      if (cronRunMatch) {
+        return { handler: this.postCronRun, params: { id: decodeURIComponent(cronRunMatch[1]) } };
+      }
+      const cronToggleMatch = cleanPath.match(/^\/api\/cron\/(.+)\/toggle$/);
+      if (cronToggleMatch) {
+        return { handler: this.postCronToggle, params: { id: decodeURIComponent(cronToggleMatch[1]) } };
       }
     }
 
@@ -584,6 +620,275 @@ export class VedHttpServer {
       }
     }
   };
+
+  // ── Sessions ──
+
+  private getSessions = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const params = this.parseQuery(req.url ?? '');
+    const limit = parseInt(params.get('limit') ?? '20', 10);
+
+    if (isNaN(limit) || limit <= 0 || limit > 500) {
+      this.json(res, 400, { error: 'Parameter limit must be between 1 and 500' });
+      return;
+    }
+
+    try {
+      const sessions = this.app.listRecentSessions(limit);
+      this.json(res, 200, { count: sessions.length, sessions });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  // ── Session Detail ──
+
+  private getSessionDetail = async (_req: IncomingMessage, res: ServerResponse, params: Record<string, string>): Promise<void> => {
+    const sessionId = params.id;
+
+    try {
+      const sessions = this.app.listRecentSessions(500);
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) {
+        this.json(res, 404, { error: `Session not found: ${sessionId}` });
+        return;
+      }
+
+      const messages = session.workingMemory?.messages ?? [];
+      const factsMap = session.workingMemory?.facts ?? new Map();
+
+      this.json(res, 200, {
+        id: session.id,
+        channel: session.channel,
+        channelId: session.channelId,
+        author: session.author,
+        trustTier: session.trustTier,
+        status: session.status,
+        startedAt: session.startedAt,
+        lastActive: session.lastActive,
+        messageCount: messages.length,
+        messages: messages.map(m => ({
+          role: m.role,
+          content: typeof m.content === 'string' ? m.content.substring(0, 2000) : m.content,
+          name: m.name,
+          timestamp: m.timestamp,
+        })),
+        facts: [...factsMap].map(([key, value]) => ({ key, value })),
+      });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  // ── MCP ──
+
+  private getMcpServers = async (_req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    try {
+      const servers = this.app.pluginList();
+      this.json(res, 200, { count: servers.length, servers });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  private getMcpTools = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const params = this.parseQuery(req.url ?? '');
+    const serverName = params.get('server') ?? undefined;
+
+    try {
+      const tools = this.app.pluginTools(serverName);
+      this.json(res, 200, { count: tools.length, tools });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  // ── Vault Graph ──
+
+  private getVaultGraph = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const params = this.parseQuery(req.url ?? '');
+    const maxNodes = parseInt(params.get('max') ?? '200', 10);
+
+    try {
+      const vault = this.app['memory'].vault as import('./memory/vault.js').VaultManager;
+      const files = vault.listFiles();
+      const backlinkMap = vault.getAllBacklinks();
+
+      // Build node + edge data for visualization
+      const nodeSet = new Set<string>();
+      const edges: { source: string; target: string }[] = [];
+
+      for (const file of files.slice(0, maxNodes)) {
+        const name = file.replace(/\.md$/, '').split('/').pop() ?? file;
+        nodeSet.add(name);
+
+        try {
+          const links = vault.getLinks(file);
+          for (const link of links) {
+            const targetName = link.replace(/\.md$/, '').split('/').pop() ?? link;
+            nodeSet.add(targetName);
+            edges.push({ source: name, target: targetName });
+          }
+        } catch {
+          // file may not exist anymore
+        }
+      }
+
+      // Compute backlink counts for sizing
+      const backlinkCounts: Record<string, number> = {};
+      for (const [target, sources] of backlinkMap) {
+        const name = target.replace(/\.md$/, '').split('/').pop() ?? target;
+        backlinkCounts[name] = sources.size;
+      }
+
+      const nodes = [...nodeSet].slice(0, maxNodes).map(name => ({
+        id: name,
+        backlinks: backlinkCounts[name.toLowerCase()] ?? 0,
+        // Classify by folder
+        type: files.find(f => f.includes(name))?.split('/')[0] ?? 'unknown',
+      }));
+
+      this.json(res, 200, {
+        nodeCount: nodes.length,
+        edgeCount: edges.length,
+        nodes,
+        edges,
+      });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  // ── Work Orders ──
+
+  private getWorkOrders = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const params = this.parseQuery(req.url ?? '');
+    const sessionId = params.get('sessionId') ?? undefined;
+
+    try {
+      const workOrders = this.app.workOrdersPending(sessionId);
+      this.json(res, 200, { count: workOrders.length, workOrders });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  private getWorkOrder = async (_req: IncomingMessage, res: ServerResponse, params: Record<string, string>): Promise<void> => {
+    const id = params.id;
+
+    try {
+      const workOrder = this.app.workOrderGet(id);
+      if (!workOrder) {
+        this.json(res, 404, { error: `Work order not found: ${id}` });
+        return;
+      }
+      this.json(res, 200, workOrder);
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  // ── Trust ──
+
+  private getTrust = async (_req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    try {
+      const trust = this.app.trustConfig;
+      this.json(res, 200, trust);
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  // ── Cron ──
+
+  private getCron = async (_req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    try {
+      const jobs = this.app.cronList();
+      this.json(res, 200, { count: jobs.length, jobs });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  private getCronHistory = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const params = this.parseQuery(req.url ?? '');
+    const jobName = params.get('job') ?? undefined;
+    const limit = params.get('limit') ? parseInt(params.get('limit')!, 10) : undefined;
+
+    try {
+      const history = this.app.cronHistory(jobName, limit);
+      this.json(res, 200, { count: history.length, history });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  private postCronRun = async (_req: IncomingMessage, res: ServerResponse, params: Record<string, string>): Promise<void> => {
+    const id = params.id;
+
+    try {
+      const result = await this.app.cronRun(id);
+      this.json(res, 200, result);
+    } catch (err) {
+      const msg = this.errMsg(err);
+      if (msg.includes('not found') || msg.includes('No cron job')) {
+        this.json(res, 404, { error: msg });
+      } else {
+        this.json(res, 500, { error: msg });
+      }
+    }
+  };
+
+  private postCronToggle = async (req: IncomingMessage, res: ServerResponse, params: Record<string, string>): Promise<void> => {
+    const id = params.id;
+
+    try {
+      const body = await this.readBody(req);
+      const enabled = body?.enabled as boolean | undefined;
+
+      if (enabled === undefined || typeof enabled !== 'boolean') {
+        this.json(res, 400, { error: 'Missing required field: enabled (boolean)' });
+        return;
+      }
+
+      const job = this.app.cronToggle(id, enabled);
+      if (!job) {
+        this.json(res, 404, { error: `Cron job not found: ${id}` });
+        return;
+      }
+      this.json(res, 200, job);
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  // ── Config ──
+
+  private getConfig = async (_req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    try {
+      const cfg = this.app.config;
+      // Sanitize: redact sensitive fields
+      const sanitized = this.sanitizeConfig(cfg as unknown as Record<string, unknown>);
+      this.json(res, 200, sanitized);
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  private sanitizeConfig(obj: Record<string, unknown>, depth = 0): Record<string, unknown> {
+    if (depth > 10) return obj; // guard against circular refs
+    const REDACT_KEYS = new Set(['apiKey', 'api_key', 'secret', 'token', 'password', 'passwd', 'privateKey', 'private_key', 'accessKey', 'access_key']);
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (REDACT_KEYS.has(key) && value) {
+        result[key] = '[REDACTED]';
+      } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        result[key] = this.sanitizeConfig(value as Record<string, unknown>, depth + 1);
+      } else {
+        result[key] = value;
+      }
+    }
+    return result;
+  }
 
   // ── Utilities ──
 

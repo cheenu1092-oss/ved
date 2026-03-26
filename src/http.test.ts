@@ -30,8 +30,9 @@ function createMockApp(overrides: Record<string, unknown> = {}): any {
   return {
     eventBus: overrides.eventBus ?? new EventBus(),
     config: {
-      trust: { ownerIds: defaultOwnerIds },
+      trust: { ownerIds: defaultOwnerIds, tribeIds: ['tribe-1'], knownIds: [], defaultTier: 2 },
       memory: { vaultPath: '/tmp/test-vault', gitEnabled: false },
+      llm: { provider: 'anthropic', apiKey: 'sk-secret', model: 'claude-opus-4-6' },
       dbPath: '/tmp/test.db',
       ...overrides.config as object,
     },
@@ -95,6 +96,45 @@ function createMockApp(overrides: Record<string, unknown> = {}): any {
       failed: 0,
       infos: 0,
     }),
+    listRecentSessions: vi.fn().mockReturnValue([
+      { id: 'sess-001', createdAt: Date.now(), persona: 'default', model: 'claude-opus-4-6' },
+      { id: 'sess-002', createdAt: Date.now() - 3600000, persona: 'dev', model: 'claude-opus-4-6' },
+    ]),
+    workOrdersPending: vi.fn().mockReturnValue([
+      { id: 'wo-001', description: 'Test action', riskLevel: 'medium', sessionId: 'sess-001', createdAt: Date.now() },
+    ]),
+    workOrderGet: vi.fn().mockImplementation((id: string) => {
+      if (id === 'wo-001') return { id: 'wo-001', description: 'Test action', riskLevel: 'medium', sessionId: 'sess-001' };
+      return null;
+    }),
+    get trustConfig() {
+      return {
+        ownerIds: defaultOwnerIds,
+        tribeIds: ['tribe-1'],
+        knownIds: [],
+        defaultTier: 2,
+        approvalTimeoutMs: 300000,
+      };
+    },
+    cronList: vi.fn().mockReturnValue([
+      { id: 'job-1', name: 'daily-backup', schedule: '0 2 * * *', enabled: true },
+      { id: 'job-2', name: 'weekly-report', schedule: '0 9 * * 1', enabled: false },
+    ]),
+    cronRun: vi.fn().mockImplementation(async (idOrName: string) => {
+      if (idOrName === 'daily-backup' || idOrName === 'job-1') {
+        return { success: true, jobName: 'daily-backup', durationMs: 150 };
+      }
+      throw new Error('No cron job found: ' + idOrName);
+    }),
+    cronToggle: vi.fn().mockImplementation((idOrName: string, enabled: boolean) => {
+      if (idOrName === 'job-1' || idOrName === 'daily-backup') {
+        return { id: 'job-1', name: 'daily-backup', schedule: '0 2 * * *', enabled };
+      }
+      return null;
+    }),
+    cronHistory: vi.fn().mockReturnValue([
+      { jobName: 'daily-backup', executedAt: Date.now() - 86400000, exitCode: 0, durationMs: 142, output: 'Done' },
+    ]),
     memory: {
       vault: {
         listFiles: vi.fn().mockReturnValue(['daily/2026-03-07.md', 'entities/test.md']),
@@ -665,6 +705,183 @@ describe('VedHttpServer', () => {
       const res = await httpPost(port, '/api/deny/valid-wo-id');
       expect(res.status).toBe(500);
       expect(res.body.error).toContain('No owner IDs');
+    });
+  });
+
+  // ── Sessions ──
+
+  describe('GET /api/sessions', () => {
+    it('returns recent sessions', async () => {
+      const res = await httpGet(port, '/api/sessions');
+      expect(res.status).toBe(200);
+      expect(res.body.count).toBe(2);
+      expect(res.body.sessions).toHaveLength(2);
+      expect(res.body.sessions[0].id).toBe('sess-001');
+    });
+
+    it('passes limit parameter', async () => {
+      await httpGet(port, '/api/sessions?limit=5');
+      expect(mockApp.listRecentSessions).toHaveBeenCalledWith(5);
+    });
+
+    it('rejects invalid limit', async () => {
+      const res = await httpGet(port, '/api/sessions?limit=0');
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects limit > 500', async () => {
+      const res = await httpGet(port, '/api/sessions?limit=999');
+      expect(res.status).toBe(400);
+    });
+  });
+
+  // ── Work Orders ──
+
+  describe('GET /api/work-orders', () => {
+    it('returns pending work orders', async () => {
+      const res = await httpGet(port, '/api/work-orders');
+      expect(res.status).toBe(200);
+      expect(res.body.count).toBe(1);
+      expect(res.body.workOrders[0].id).toBe('wo-001');
+    });
+
+    it('passes sessionId filter', async () => {
+      await httpGet(port, '/api/work-orders?sessionId=sess-001');
+      expect(mockApp.workOrdersPending).toHaveBeenCalledWith('sess-001');
+    });
+  });
+
+  describe('GET /api/work-orders/:id', () => {
+    it('returns a work order by id', async () => {
+      const res = await httpGet(port, '/api/work-orders/wo-001');
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe('wo-001');
+      expect(res.body.description).toBe('Test action');
+    });
+
+    it('returns 404 for unknown work order', async () => {
+      const res = await httpGet(port, '/api/work-orders/unknown-wo');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toContain('not found');
+    });
+  });
+
+  // ── Trust ──
+
+  describe('GET /api/trust', () => {
+    it('returns trust configuration', async () => {
+      const res = await httpGet(port, '/api/trust');
+      expect(res.status).toBe(200);
+      expect(res.body.ownerIds).toContain('owner-1');
+      expect(res.body.tribeIds).toContain('tribe-1');
+      expect(res.body.defaultTier).toBe(2);
+    });
+  });
+
+  // ── Cron ──
+
+  describe('GET /api/cron', () => {
+    it('returns cron jobs list', async () => {
+      const res = await httpGet(port, '/api/cron');
+      expect(res.status).toBe(200);
+      expect(res.body.count).toBe(2);
+      expect(res.body.jobs[0].name).toBe('daily-backup');
+      expect(res.body.jobs[1].enabled).toBe(false);
+    });
+  });
+
+  describe('GET /api/cron/history', () => {
+    it('returns cron execution history', async () => {
+      const res = await httpGet(port, '/api/cron/history');
+      expect(res.status).toBe(200);
+      expect(res.body.count).toBe(1);
+      expect(res.body.history[0].jobName).toBe('daily-backup');
+    });
+
+    it('passes job filter', async () => {
+      await httpGet(port, '/api/cron/history?job=daily-backup');
+      expect(mockApp.cronHistory).toHaveBeenCalledWith('daily-backup', undefined);
+    });
+
+    it('passes limit parameter', async () => {
+      await httpGet(port, '/api/cron/history?limit=50');
+      expect(mockApp.cronHistory).toHaveBeenCalledWith(undefined, 50);
+    });
+  });
+
+  describe('POST /api/cron/:id/run', () => {
+    it('runs a cron job', async () => {
+      const res = await httpPost(port, '/api/cron/daily-backup/run');
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.jobName).toBe('daily-backup');
+    });
+
+    it('returns 404 for unknown job', async () => {
+      const res = await httpPost(port, '/api/cron/nonexistent-job/run');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toContain('No cron job found');
+    });
+  });
+
+  describe('POST /api/cron/:id/toggle', () => {
+    it('enables a cron job', async () => {
+      const res = await httpPost(port, '/api/cron/job-1/toggle', { enabled: true });
+      expect(res.status).toBe(200);
+      expect(res.body.enabled).toBe(true);
+      expect(mockApp.cronToggle).toHaveBeenCalledWith('job-1', true);
+    });
+
+    it('disables a cron job', async () => {
+      const res = await httpPost(port, '/api/cron/job-1/toggle', { enabled: false });
+      expect(res.status).toBe(200);
+      expect(res.body.enabled).toBe(false);
+    });
+
+    it('returns 400 without enabled field', async () => {
+      const res = await httpPost(port, '/api/cron/job-1/toggle', {});
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('enabled');
+    });
+
+    it('returns 400 if enabled is not boolean', async () => {
+      const res = await httpPost(port, '/api/cron/job-1/toggle', { enabled: 'yes' });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 for unknown job', async () => {
+      const res = await httpPost(port, '/api/cron/unknown-job/toggle', { enabled: true });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ── Config ──
+
+  describe('GET /api/config', () => {
+    it('returns sanitized config', async () => {
+      const res = await httpGet(port, '/api/config');
+      expect(res.status).toBe(200);
+      expect(res.body).toBeDefined();
+    });
+
+    it('redacts apiKey fields', async () => {
+      const res = await httpGet(port, '/api/config');
+      expect(res.status).toBe(200);
+      // The llm.apiKey should be redacted
+      expect(res.body.llm?.apiKey).toBe('[REDACTED]');
+    });
+
+    it('preserves non-sensitive fields', async () => {
+      const res = await httpGet(port, '/api/config');
+      expect(res.status).toBe(200);
+      expect(res.body.llm?.provider).toBe('anthropic');
+      expect(res.body.llm?.model).toBe('claude-opus-4-6');
+    });
+
+    it('preserves trust config structure', async () => {
+      const res = await httpGet(port, '/api/config');
+      expect(res.status).toBe(200);
+      expect(res.body.trust?.ownerIds).toContain('owner-1');
     });
   });
 });

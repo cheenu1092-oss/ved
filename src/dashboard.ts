@@ -24,6 +24,7 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     --yellow: #d29922;
     --red: #f85149;
     --purple: #bc8cff;
+    --orange: #f0883e;
     --radius: 8px;
     --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
     --mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
@@ -91,6 +92,7 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     padding: 8px 24px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
+    overflow-x: auto;
   }
 
   nav button {
@@ -103,6 +105,7 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     font-size: 0.85rem;
     font-family: var(--font);
     transition: all 0.15s;
+    white-space: nowrap;
   }
 
   nav button:hover { color: var(--text); background: rgba(255,255,255,0.05); }
@@ -233,6 +236,19 @@ export function getDashboardHtml(baseUrl: string = ''): string {
   button.btn:hover { opacity: 0.85; }
   button.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  button.btn-sm {
+    padding: 4px 12px;
+    font-size: 0.8rem;
+  }
+
+  button.btn-danger {
+    background: var(--red);
+  }
+
+  button.btn-success {
+    background: var(--green);
+  }
+
   .results-list { margin-top: 12px; }
 
   .result-item {
@@ -334,6 +350,13 @@ export function getDashboardHtml(baseUrl: string = ''): string {
   .badge-pass { background: rgba(63,185,80,0.15); color: var(--green); }
   .badge-warn { background: rgba(210,153,34,0.15); color: var(--yellow); }
   .badge-fail { background: rgba(248,81,73,0.15); color: var(--red); }
+  .badge-low { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge-medium { background: rgba(210,153,34,0.15); color: var(--yellow); }
+  .badge-high { background: rgba(248,81,73,0.15); color: var(--red); }
+  .badge-critical { background: rgba(188,140,255,0.2); color: var(--purple); }
+  .badge-pending { background: rgba(88,166,255,0.15); color: var(--accent); }
+  .badge-enabled { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge-disabled { background: rgba(139,148,158,0.15); color: var(--text-dim); }
 
   .empty-state {
     text-align: center;
@@ -352,11 +375,144 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     font-weight: 600;
   }
 
+  /* Work order card */
+  .wo-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .wo-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .wo-id {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+
+  .wo-actions {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+
+  .wo-description {
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .wo-meta {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  /* Trust tiers */
+  .trust-tier {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .trust-tier:last-child { border-bottom: none; }
+
+  .trust-tier-name {
+    font-weight: 600;
+    min-width: 120px;
+  }
+
+  .trust-ids {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    flex: 1;
+  }
+
+  /* Cron job row */
+  .cron-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cron-row:last-child { border-bottom: none; }
+
+  .cron-name {
+    font-weight: 500;
+    min-width: 160px;
+  }
+
+  .cron-schedule {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    flex: 1;
+  }
+
+  .cron-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  /* Config tree */
+  .config-tree {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    overflow-x: auto;
+  }
+
+  .config-key { color: var(--accent); }
+  .config-value { color: var(--text); }
+  .config-string { color: var(--green); }
+  .config-number { color: var(--yellow); }
+  .config-bool { color: var(--purple); }
+  .config-null { color: var(--text-dim); }
+  .config-redacted { color: var(--red); }
+  .config-indent { padding-left: 20px; }
+
+  /* Sessions list */
+  .session-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+
+  .session-item:last-child { border-bottom: none; }
+
+  .session-id {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+    min-width: 120px;
+  }
+
+  .session-meta { color: var(--text-dim); }
+
   @media (max-width: 768px) {
     .event-entry { grid-template-columns: 1fr; gap: 2px; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
     nav { overflow-x: auto; }
     .history-filters { flex-direction: column; }
+    .wo-actions { flex-direction: column; }
+    .cron-row { flex-wrap: wrap; }
   }
 </style>
 </head>
@@ -378,6 +534,9 @@ export function getDashboardHtml(baseUrl: string = ''): string {
   <button data-panel="history">History</button>
   <button data-panel="vault">Vault</button>
   <button data-panel="doctor">Doctor</button>
+  <button data-panel="trust">Trust &amp; Approvals</button>
+  <button data-panel="cron">Cron</button>
+  <button data-panel="config">Config</button>
 </nav>
 
 <main>
@@ -389,14 +548,39 @@ export function getDashboardHtml(baseUrl: string = ''): string {
         <div class="empty-state">Loading...</div>
       </div>
     </div>
+    <div class="card">
+      <h2>Recent Sessions</h2>
+      <div id="sessions-list">
+        <div class="empty-state">Loading...</div>
+      </div>
+    </div>
   </div>
 
   <!-- Events Panel -->
   <div class="panel" id="panel-events">
     <div class="card">
       <h2>Live Event Stream</h2>
-      <div style="margin-bottom: 12px;">
-        <input type="text" id="event-filter" placeholder="Filter by type (e.g. message_received, llm_call)" style="width: 100%;">
+      <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+        <label style="font-size:0.85rem; color:var(--text-dim);">Filter:</label>
+        <select id="event-type-filter" style="min-width:200px;">
+          <option value="">All events</option>
+          <option value="message_received">message_received</option>
+          <option value="llm_call">llm_call</option>
+          <option value="llm_response">llm_response</option>
+          <option value="tool_call">tool_call</option>
+          <option value="tool_result">tool_result</option>
+          <option value="memory_write">memory_write</option>
+          <option value="memory_compress">memory_compress</option>
+          <option value="trust_change">trust_change</option>
+          <option value="work_order_created">work_order_created</option>
+          <option value="work_order_approved">work_order_approved</option>
+          <option value="work_order_denied">work_order_denied</option>
+          <option value="cron_executed">cron_executed</option>
+          <option value="startup">startup</option>
+          <option value="shutdown">shutdown</option>
+          <option value="error">error</option>
+        </select>
+        <input type="text" id="event-filter" placeholder="Or type to search..." style="flex:1;">
       </div>
       <div class="event-stream" id="event-stream">
         <div class="empty-state">Waiting for events...</div>
@@ -474,6 +658,60 @@ export function getDashboardHtml(baseUrl: string = ''): string {
       </div>
     </div>
   </div>
+
+  <!-- Trust & Approvals Panel -->
+  <div class="panel" id="panel-trust">
+    <div class="card">
+      <h2>Pending Work Orders</h2>
+      <div style="margin-bottom: 12px;">
+        <button class="btn btn-sm" id="wo-refresh-btn">Refresh</button>
+      </div>
+      <div id="work-orders-list">
+        <div class="empty-state">Loading...</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Trust Configuration</h2>
+      <div id="trust-config">
+        <div class="empty-state">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cron Panel -->
+  <div class="panel" id="panel-cron">
+    <div class="card">
+      <h2>Cron Jobs</h2>
+      <div style="margin-bottom: 12px;">
+        <button class="btn btn-sm" id="cron-refresh-btn">Refresh</button>
+      </div>
+      <div id="cron-jobs-list">
+        <div class="empty-state">Loading...</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Execution History</h2>
+      <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center;">
+        <input type="text" id="cron-history-job" placeholder="Filter by job name..." style="max-width: 250px;">
+        <input type="number" id="cron-history-limit" value="20" min="1" max="200" style="width: 80px;">
+        <button class="btn btn-sm" id="cron-history-btn">Load</button>
+      </div>
+      <div id="cron-history-list">
+        <div class="empty-state">Click Load to fetch execution history.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config Panel -->
+  <div class="panel" id="panel-config">
+    <div class="card">
+      <h2>Configuration</h2>
+      <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:12px;">Sensitive fields (apiKey, secret, token, password) are redacted.</p>
+      <div id="config-tree">
+        <div class="empty-state">Loading...</div>
+      </div>
+    </div>
+  </div>
 </main>
 
 <script>
@@ -487,6 +725,10 @@ export function getDashboardHtml(baseUrl: string = ''): string {
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+      // Lazy-load panel data on first visit
+      if (btn.dataset.panel === 'trust') loadTrustPanel();
+      if (btn.dataset.panel === 'cron') loadCronPanel();
+      if (btn.dataset.panel === 'config') loadConfig();
     });
   });
 
@@ -500,6 +742,16 @@ export function getDashboardHtml(baseUrl: string = ''): string {
 
   async function api(path) {
     const res = await fetch(BASE + path, { headers: headers() });
+    if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+    return res.json();
+  }
+
+  async function apiPost(path, body) {
+    const res = await fetch(BASE + path, {
+      method: 'POST',
+      headers: { ...headers(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
     if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
     return res.json();
   }
@@ -520,6 +772,12 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
   }
 
+  function riskBadge(risk) {
+    if (!risk) return '';
+    const cls = { low: 'badge-low', medium: 'badge-medium', high: 'badge-high', critical: 'badge-critical' }[risk.toLowerCase()] || 'badge-medium';
+    return '<span class="badge ' + cls + '">' + esc(risk) + '</span>';
+  }
+
   // ── Stats ──
   async function loadStats() {
     try {
@@ -528,16 +786,16 @@ export function getDashboardHtml(baseUrl: string = ''): string {
       const items = [];
 
       if (data.vault) {
-        items.push({ label: 'Vault Files', value: data.vault.totalFiles ?? '—' });
+        items.push({ label: 'Vault Files', value: data.vault.totalFiles ?? data.vault.fileCount ?? '—' });
         items.push({ label: 'Vault Size', value: fmtBytes(data.vault.totalBytes ?? 0) });
       }
       if (data.rag) {
-        items.push({ label: 'RAG Indexed', value: data.rag.indexedFiles ?? '—' });
-        items.push({ label: 'RAG Vectors', value: data.rag.vectorCount ?? '—' });
+        items.push({ label: 'RAG Indexed', value: data.rag.indexedFiles ?? data.rag.filesIndexed ?? '—' });
+        items.push({ label: 'RAG Vectors', value: data.rag.vectorCount ?? data.rag.chunksStored ?? '—' });
       }
       if (data.audit) {
-        items.push({ label: 'Audit Entries', value: data.audit.totalEntries ?? '—' });
-        items.push({ label: 'Chain Head', value: '#' + (data.audit.chainHead?.count ?? '—') });
+        items.push({ label: 'Audit Entries', value: data.audit.totalEntries ?? data.audit.chainLength ?? '—' });
+        items.push({ label: 'Chain Head', value: '#' + (data.audit.chainHead?.count ?? data.audit.chainLength ?? '—') });
       }
       if (data.sessions) {
         items.push({ label: 'Active Sessions', value: data.sessions.active ?? '—' });
@@ -572,8 +830,31 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     return (b / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
+  // ── Sessions (Overview) ──
+  async function loadSessions() {
+    const list = document.getElementById('sessions-list');
+    try {
+      const data = await api('/api/sessions?limit=10');
+      const sessions = data.sessions || [];
+      if (sessions.length === 0) {
+        list.innerHTML = '<div class="empty-state">No sessions found.</div>';
+        return;
+      }
+      list.innerHTML = sessions.map(s =>
+        '<div class="session-item">' +
+        '<span class="session-id">' + esc((s.id ?? s.sessionId ?? '').substring(0, 12)) + '…</span>' +
+        '<span class="session-meta">' + esc(s.persona ?? s.model ?? '—') + '</span>' +
+        '<span class="session-meta" style="margin-left:auto;">' + esc(fmtDate(s.createdAt ?? s.startedAt ?? s.ts ?? 0)) + '</span>' +
+        '</div>'
+      ).join('');
+    } catch (err) {
+      list.innerHTML = '<div class="empty-state">Failed to load sessions: ' + esc(err.message) + '</div>';
+    }
+  }
+
   // Refresh stats every 10s
   loadStats();
+  loadSessions();
   setInterval(loadStats, 10000);
 
   // ── SSE Events ──
@@ -625,10 +906,13 @@ export function getDashboardHtml(baseUrl: string = ''): string {
 
   function addEvent(type, dataStr, id) {
     const stream = document.getElementById('event-stream');
-    const filter = document.getElementById('event-filter').value.trim().toLowerCase();
+    const typeFilter = document.getElementById('event-type-filter').value.trim().toLowerCase();
+    const textFilter = document.getElementById('event-filter').value.trim().toLowerCase();
 
-    // Check filter
-    if (filter && !type.toLowerCase().includes(filter)) return;
+    // Check dropdown filter (exact match or empty)
+    if (typeFilter && type.toLowerCase() !== typeFilter) return;
+    // Check text filter (substring match)
+    if (textFilter && !type.toLowerCase().includes(textFilter)) return;
 
     eventCount++;
     document.getElementById('event-count').textContent = eventCount;
@@ -665,11 +949,6 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     }
   }
 
-  // Filter events on input change
-  document.getElementById('event-filter').addEventListener('input', () => {
-    // Filter only affects new events (existing ones stay)
-  });
-
   connectSSE();
 
   // ── Search ──
@@ -698,8 +977,8 @@ export function getDashboardHtml(baseUrl: string = ''): string {
 
       results.innerHTML = items.map(r =>
         '<div class="result-item">' +
-        '<span class="result-score">score: ' + esc((r.score ?? r.fusedScore ?? 0).toFixed(3)) + '</span>' +
-        '<div class="result-path">' + esc(r.path ?? r.file ?? '—') + '</div>' +
+        '<span class="result-score">score: ' + esc((r.score ?? r.rrfScore ?? r.fusedScore ?? 0).toFixed(3)) + '</span>' +
+        '<div class="result-path">' + esc(r.path ?? r.filePath ?? r.file ?? '—') + '</div>' +
         '<div class="result-snippet">' + esc(r.snippet ?? r.content ?? '—') + '</div>' +
         '</div>'
       ).join('');
@@ -760,8 +1039,8 @@ export function getDashboardHtml(baseUrl: string = ''): string {
 
     try {
       const data = await api('/api/history?verify=true&limit=1');
-      if (data.chainValid === true) {
-        results.innerHTML = '<div class="empty-state" style="color:var(--green);">✅ Hash chain verified — ' + (data.chainLength ?? '?') + ' entries, all intact.</div>';
+      if (data.chainValid === true || data.intact === true) {
+        results.innerHTML = '<div class="empty-state" style="color:var(--green);">✅ Hash chain verified — ' + (data.chainLength ?? data.total ?? '?') + ' entries, all intact.</div>';
       } else {
         results.innerHTML = '<div class="empty-state" style="color:var(--red);">❌ Chain verification failed at entry ' + (data.brokenAt ?? '?') + '</div>';
       }
@@ -832,7 +1111,7 @@ export function getDashboardHtml(baseUrl: string = ''): string {
 
     try {
       const data = await api('/api/vault/file?path=' + encodeURIComponent(path));
-      content.textContent = data.content ?? '(empty)';
+      content.textContent = data.body ?? data.content ?? '(empty)';
     } catch (err) {
       content.textContent = 'Error: ' + err.message;
     }
@@ -887,6 +1166,242 @@ export function getDashboardHtml(baseUrl: string = ''): string {
       btn.textContent = 'Run Doctor';
     }
   });
+
+  // ── Trust & Approvals ──
+  let trustPanelLoaded = false;
+
+  document.getElementById('wo-refresh-btn').addEventListener('click', loadTrustPanel);
+
+  async function loadTrustPanel() {
+    await Promise.all([loadWorkOrders(), loadTrustConfig()]);
+    trustPanelLoaded = true;
+  }
+
+  async function loadWorkOrders() {
+    const list = document.getElementById('work-orders-list');
+    list.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const data = await api('/api/work-orders');
+      const orders = data.workOrders || [];
+      if (orders.length === 0) {
+        list.innerHTML = '<div class="empty-state">No pending work orders.</div>';
+        return;
+      }
+      list.innerHTML = orders.map(wo =>
+        '<div class="wo-card">' +
+        '<div class="wo-header">' +
+        riskBadge(wo.riskLevel ?? wo.risk) +
+        '<span class="wo-id">' + esc((wo.id ?? '').substring(0, 16)) + '…</span>' +
+        '<div class="wo-actions">' +
+        '<button class="btn btn-sm btn-success" onclick="approveOrder(\'' + esc(wo.id) + '\', this)">Approve</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="denyOrder(\'' + esc(wo.id) + '\', this)">Deny</button>' +
+        '</div></div>' +
+        '<div class="wo-description">' + esc(wo.description ?? wo.action ?? wo.command ?? '—') + '</div>' +
+        '<div class="wo-meta">Session: ' + esc((wo.sessionId ?? '').substring(0, 8)) + ' · ' +
+        'Created: ' + esc(fmtDate(wo.createdAt ?? wo.ts ?? 0)) + '</div>' +
+        '</div>'
+      ).join('');
+    } catch (err) {
+      list.innerHTML = '<div class="empty-state">Failed: ' + esc(err.message) + '</div>';
+    }
+  }
+
+  async function approveOrder(id, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      await apiPost('/api/approve/' + encodeURIComponent(id), {});
+      await loadWorkOrders();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Approve';
+      alert('Failed to approve: ' + err.message);
+    }
+  }
+
+  async function denyOrder(id, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      await apiPost('/api/deny/' + encodeURIComponent(id), { reason: 'Denied via dashboard' });
+      await loadWorkOrders();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Deny';
+      alert('Failed to deny: ' + err.message);
+    }
+  }
+
+  // Expose to onclick handlers
+  window.approveOrder = approveOrder;
+  window.denyOrder = denyOrder;
+
+  async function loadTrustConfig() {
+    const el = document.getElementById('trust-config');
+    try {
+      const trust = await api('/api/trust');
+      const tiers = [
+        { name: 'Owner IDs', ids: trust.ownerIds ?? [], color: 'var(--red)' },
+        { name: 'Tribe IDs', ids: trust.tribeIds ?? [], color: 'var(--yellow)' },
+        { name: 'Known IDs', ids: trust.knownIds ?? [], color: 'var(--green)' },
+      ];
+      let html = '';
+      tiers.forEach(t => {
+        html += '<div class="trust-tier">' +
+          '<span class="trust-tier-name" style="color:' + t.color + ';">' + esc(t.name) + '</span>' +
+          '<span class="trust-ids">' + (t.ids.length > 0 ? t.ids.map(id => esc(id)).join(', ') : '<em style="color:var(--text-dim)">none</em>') + '</span>' +
+          '</div>';
+      });
+      if (trust.defaultTier !== undefined) {
+        html += '<div style="margin-top:12px; font-size:0.85rem; color:var(--text-dim);">Default tier: ' + esc(trust.defaultTier) +
+          (trust.approvalTimeoutMs ? ' · Approval timeout: ' + esc(Math.round(trust.approvalTimeoutMs / 60000)) + 'm' : '') +
+          (trust.maxAgenticLoops ? ' · Max agentic loops: ' + esc(trust.maxAgenticLoops) : '') +
+          '</div>';
+      }
+      el.innerHTML = html;
+    } catch (err) {
+      el.innerHTML = '<div class="empty-state">Failed: ' + esc(err.message) + '</div>';
+    }
+  }
+
+  // ── Cron ──
+  let cronPanelLoaded = false;
+
+  document.getElementById('cron-refresh-btn').addEventListener('click', loadCronPanel);
+  document.getElementById('cron-history-btn').addEventListener('click', loadCronHistory);
+
+  async function loadCronPanel() {
+    await loadCronJobs();
+    cronPanelLoaded = true;
+  }
+
+  async function loadCronJobs() {
+    const list = document.getElementById('cron-jobs-list');
+    list.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const data = await api('/api/cron');
+      const jobs = data.jobs || [];
+      if (jobs.length === 0) {
+        list.innerHTML = '<div class="empty-state">No cron jobs configured.</div>';
+        return;
+      }
+      list.innerHTML = jobs.map(job => {
+        const enabled = job.enabled !== false;
+        return '<div class="cron-row">' +
+          '<span class="cron-name">' + esc(job.name ?? job.id ?? '—') + '</span>' +
+          '<span class="cron-schedule">' + esc(job.schedule ?? job.cron ?? '—') + '</span>' +
+          '<span class="badge ' + (enabled ? 'badge-enabled' : 'badge-disabled') + '">' + (enabled ? 'enabled' : 'disabled') + '</span>' +
+          '<div class="cron-actions">' +
+          '<button class="btn btn-sm" onclick="runCronJob(\'' + esc(job.id ?? job.name) + '\', this)">Run</button>' +
+          '<button class="btn btn-sm" style="background:' + (enabled ? 'var(--yellow)' : 'var(--green)') + ';" ' +
+          'onclick="toggleCronJob(\'' + esc(job.id ?? job.name) + '\', ' + (!enabled) + ', this)">' +
+          (enabled ? 'Disable' : 'Enable') + '</button>' +
+          '</div></div>';
+      }).join('');
+    } catch (err) {
+      list.innerHTML = '<div class="empty-state">Failed: ' + esc(err.message) + '</div>';
+    }
+  }
+
+  async function runCronJob(id, btn) {
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      const result = await apiPost('/api/cron/' + encodeURIComponent(id) + '/run', {});
+      btn.textContent = result.success ? '✓ Done' : '✗ Failed';
+      setTimeout(() => { btn.disabled = false; btn.textContent = 'Run'; }, 2000);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Run';
+      alert('Failed: ' + err.message);
+    }
+  }
+
+  async function toggleCronJob(id, enabled, btn) {
+    btn.disabled = true;
+    try {
+      await apiPost('/api/cron/' + encodeURIComponent(id) + '/toggle', { enabled });
+      await loadCronJobs();
+    } catch (err) {
+      btn.disabled = false;
+      alert('Failed: ' + err.message);
+    }
+  }
+
+  // Expose to onclick handlers
+  window.runCronJob = runCronJob;
+  window.toggleCronJob = toggleCronJob;
+
+  async function loadCronHistory() {
+    const list = document.getElementById('cron-history-list');
+    const job = document.getElementById('cron-history-job').value.trim();
+    const limit = document.getElementById('cron-history-limit').value;
+    list.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      let url = '/api/cron/history?limit=' + limit;
+      if (job) url += '&job=' + encodeURIComponent(job);
+      const data = await api(url);
+      const history = data.history || [];
+      if (history.length === 0) {
+        list.innerHTML = '<div class="empty-state">No execution history.</div>';
+        return;
+      }
+      let html = '<table><thead><tr><th>Time</th><th>Job</th><th>Status</th><th>Duration</th><th>Output</th></tr></thead><tbody>';
+      history.forEach(h => {
+        const ok = h.exitCode === 0 || h.success === true || h.status === 'success';
+        html += '<tr>' +
+          '<td class="mono">' + esc(fmtDate(h.executedAt ?? h.ts ?? h.createdAt ?? 0)) + '</td>' +
+          '<td class="mono">' + esc(h.jobName ?? h.name ?? '—') + '</td>' +
+          '<td><span class="badge ' + (ok ? 'badge-pass' : 'badge-fail') + '">' + (ok ? 'ok' : 'fail') + '</span></td>' +
+          '<td class="mono">' + esc(h.durationMs !== undefined ? h.durationMs + 'ms' : '—') + '</td>' +
+          '<td style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc((h.output ?? h.stderr ?? '').substring(0, 120)) + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      list.innerHTML = html;
+    } catch (err) {
+      list.innerHTML = '<div class="empty-state">Failed: ' + esc(err.message) + '</div>';
+    }
+  }
+
+  // ── Config ──
+  let configLoaded = false;
+
+  async function loadConfig() {
+    if (configLoaded) return;
+    const el = document.getElementById('config-tree');
+    try {
+      const data = await api('/api/config');
+      el.innerHTML = '<div class="config-tree">' + renderConfigTree(data, 0) + '</div>';
+      configLoaded = true;
+    } catch (err) {
+      el.innerHTML = '<div class="empty-state">Failed: ' + esc(err.message) + '</div>';
+    }
+  }
+
+  function renderConfigTree(obj, depth) {
+    if (obj === null) return '<span class="config-null">null</span>';
+    if (typeof obj === 'boolean') return '<span class="config-bool">' + obj + '</span>';
+    if (typeof obj === 'number') return '<span class="config-number">' + obj + '</span>';
+    if (typeof obj === 'string') {
+      if (obj === '[REDACTED]') return '<span class="config-redacted">[REDACTED]</span>';
+      return '<span class="config-string">"' + esc(obj) + '"</span>';
+    }
+    if (Array.isArray(obj)) {
+      if (obj.length === 0) return '<span style="color:var(--text-dim)">[]</span>';
+      return '[' + obj.map(v => renderConfigTree(v, depth)).join(', ') + ']';
+    }
+    if (typeof obj === 'object') {
+      const entries = Object.entries(obj);
+      if (entries.length === 0) return '<span style="color:var(--text-dim)">{}</span>';
+      const indent = '<div class="config-indent">';
+      const lines = entries.map(([k, v]) =>
+        indent + '<span class="config-key">' + esc(k) + '</span>: ' + renderConfigTree(v, depth + 1) + '</div>'
+      ).join('');
+      return '{' + lines + '}';
+    }
+    return esc(String(obj));
+  }
 })();
 </script>
 </body>
