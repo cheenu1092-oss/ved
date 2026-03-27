@@ -2,12 +2,12 @@
 
 All notable changes to Ved are documented here.
 
-## [0.7.0] — 2026-03-26
+## [0.7.0] — 2026-03-27
 
 ### Highlights
 - **npm publish ready** — Ved is now `ved-ai` on npm with `npx ved-ai init` support
-- **3,345+ tests** (up from 3,251 in v0.6.0)
-- **~45,400 LoC** across all modules
+- **3,413+ tests** (up from 2,931 in v0.6.0)
+- **~43,200 LoC** across all modules
 - P0-P3 "Primetime Readiness" complete: live LLM testing, TUI overhaul, config wizard, web dashboard
 - Post-install script with Ollama detection and helpful onboarding
 - Dual binary entry: `ved` and `ved-ai` both work
