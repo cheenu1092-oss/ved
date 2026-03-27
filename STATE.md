@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 100
-- **Current Phase:** CYCLE (polish — P0-P4 COMPLETE, ready for npm publish)
+- **Session Number:** 101
+- **Current Phase:** CYCLE (v0.7.0 released — P0-P4 COMPLETE, ready for npm publish)
 - **Last Run:** 2026-03-27
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 101 — v0.7.0 release prep (CHANGELOG, GitHub release, npm publish decision)
+- **Next Session:** 102 — P5 Polish & DX (error messages, loading states, onboarding, doctor fixes)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -132,6 +132,7 @@
 - **Session 100:** CYCLE — **P4: npm Publish (Final Readiness).** Verified npm package end-to-end: pack (566KB, 378 files), install flow, binary accessibility (ved + ved-ai), init wizard (--yes creates config + vault), help system, dry-run publish. Created comprehensive test script (test-npm-flow.sh) covering version/help/doctor/init/stats. Verified README quickstart accurate for npm users. **All tests pass. Ved ready for public npm release. P4 COMPLETE. P0-P4 ALL COMPLETE.**
 - **Session 98:** CYCLE — **P2 Config UX — Interactive init wizard + config edit.** `ved init` wizard (723 lines): 4 providers with model choices, API key validation (prefix checks + env detection), vault path setup, 3 trust modes (audit/gate-writes/gate-all), Discord channel optional setup, non-interactive fallback (--yes), --force overwrite. `ved config edit [local]`: opens in $EDITOR, auto-validates after save. Config generation: well-commented YAML with secrets separated into config.local.yaml, idempotent vault structure creation. Also committed daemon TUI tests from S97. Pushed to GitHub (24f179d). **76 new tests. 3251/3251 host + Docker parity. 0 type errors. P1+P2 complete.**
 - **Session 96:** CYCLE — **P0 Live Test: Ved talks to a real LLM.** Created comprehensive 8-test live test script. Ved successfully talked to Ollama qwen3:1.7b — simple chat, multi-turn conversation (name recall), system prompt self-identification, audit trail integrity all pass. RAG-enriched chat got a warning (small model ignored injected context — expected). Full 7-step pipeline works end-to-end without code changes. **7/8 tests pass. 3000/3000 unit tests. 0 type errors.**
+- **Session 101:** CYCLE — **v0.7.0 release.** Docker parity verified (3413/3413 pass). Updated CHANGELOG.md (corrected stats, date), README.md (updated stats). Tagged v0.7.0, pushed to GitHub (d202858), created GitHub release. **3413/3413 pass. 0 type errors. P0-P4 ALL COMPLETE.**
 - **Session 95:** CYCLE — **NPM packaging readiness.** Added `.npmignore` (excludes src/tests/docs/sessions/Docker/CI), `SECURITY.md` (vuln reporting + security model), `package.json` updates (exports map, files array, prepublishOnly script). Pack verified: 510KB tarball, 357 files, zero test/doc/session leakage. **3000/3000 host + 3019/3019 Docker. 0 type errors.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB) covering install→config→first chat→memory→audit→backup→API→Docker. Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
 - **Session 92:** CYCLE — **RED-TEAM: Graph + Task CLI attack surface.** 63 tests across 12 attack categories: DOT export path traversal (7), wikilink ReDoS (6), Graphviz injection (5), title/slug injection (7), frontmatter manipulation (6), search injection (5), archive traversal (5), ID matching ambiguity (5), symlinks/special files (4), date validation (5), large input DoS (4), concurrent ops (4). **0 vulnerabilities found.** 5 findings documented (all accepted risk or informational). All defenses held: slugify sanitization, vault containment (VULN-14), in-memory search, directory skipping, date validation. **2912/2912 pass (host + Docker parity). 0 type errors.**
 - **Session 87:** CYCLE — **RED-TEAM: 83 tests across 18 attack categories.** Hook command blocking bypass (10), hook env var injection (4), hook YAML corruption (6), notify osascript injection (4), notify log path traversal (3), notify template injection (5), migrate path traversal (6), migrate CSV injection (3), sync shell injection (6), sync local adapter traversal (6), sync SQL injection (3), quiet hours edge cases (4), rule name validation (5), command channel safety (4), hook concurrency manipulation (3), mute state tampering (3), YAML rule store corruption (3), sync adapter type safety (5). **2 vulnerabilities found+fixed:** VULN-20 rm flag bypass — expanded BLOCKED_PATTERNS regex (LOW), VULN-21 null bytes in env vars crash executeHook — added sanitizeEnv() (MEDIUM). **4 findings documented (accepted risk).** All existing defenses held: YAML serialization, sq() quoting, parameterized SQL, DB CHECK constraints, content filter, osascript escaping, sanitizeFileName, isPathSafe. **2542/2542 pass (host + Docker parity). 0 type errors.**
@@ -211,7 +212,8 @@
 | 98 | ✅ CYCLE | P2 Config UX — interactive init wizard, config edit (76 tests) |
 | 99 | ✅ CYCLE | P3 Gateway Web UI — 6 new panels + npm publish prep (55 tests) |
 | 100 | ✅ CYCLE | P4 npm Publish — package verification, install flow testing |
-| 101+ | CYCLE | v0.7.0 release, P5 polish |
+| 101 | ✅ CYCLE | v0.7.0 release (CHANGELOG, README, tag, GitHub release) |
+| 102+ | CYCLE | P5 polish & DX |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -298,4 +300,5 @@
 | dashboard-v2 S99 | ✅ Complete | ~869 | 36 |
 | npm-publish S99 | ✅ Complete | ~410 (scripts+pkg) | 19 |
 | http-env-config S99 | ✅ Complete | ~84 | 0 (covered in v2) |
-| **Total** | **ALL COMPLETE** | **~46,800** | **3413+** |
+| v0.7.0 release S101 | ✅ Complete | ~20 | 0 |
+| **Total** | **ALL COMPLETE** | **~43,200** | **3413+** |
