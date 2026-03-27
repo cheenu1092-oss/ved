@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 98
-- **Current Phase:** CYCLE (polish — P2 Config UX complete, P3 next)
-- **Last Run:** 2026-03-25
+- **Session Number:** 100
+- **Current Phase:** CYCLE (polish — P0-P4 COMPLETE, ready for npm publish)
+- **Last Run:** 2026-03-27
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 99 — P3: Gateway Web UI (build web control panel on HTTP API + SSE)
+- **Next Session:** 101 — v0.7.0 release prep (CHANGELOG, GitHub release, npm publish decision)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -128,6 +128,8 @@
 - **Session 93:** CYCLE — **v0.6.0 release.** Docker parity verified (2931/2931 pass). Updated CHANGELOG.md (comprehensive v0.6.0 notes), README.md (46-command CLI table, updated stats), package.json + cli.ts (0.5.0→0.6.0). Tagged v0.6.0, pushed to GitHub (0734290), created GitHub release. **2931/2931 pass. 0 type errors.**
 - **Session 94:** CYCLE — **cli-chat tests + getting-started guide.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB). Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
 - **Session 97:** CYCLE — **P1 TUI Overhaul (Phase 1).** Built upgraded `ved chat` TUI: session picker on startup (resume active/idle sessions or start new), `formatAgo()` relative timestamps, `SessionManager.listRecent()` + `VedApp.listRecentSessions()`. Verified existing TUI features: token streaming via `processMessageStream`, fixed status bar (ANSI scroll region + SIGWINCH resize), syntax highlighting for code blocks (box borders + keyword coloring), color-coded risk badges, `--simple` fallback to original REPL. Updated help system. Pushed to GitHub (b23b9ca). **26 new tests. 3093/3093 host + 3112/3112 Docker. 0 type errors.**
+- **Session 99:** CYCLE — **P3 Gateway Web UI — 6 new dashboard panels + npm publish prep.** Dashboard v2 (869 new lines): Knowledge Graph (force-directed Canvas viz with zoom/pan/tooltip), mini graph overview, Memory Browser (sidebar+detail+backlinks+search), MCP Servers & Tools panel, Config editor (inline YAML save + env selector), Session detail modal (click-to-inspect messages). HTTP API: 5 new endpoints (POST /api/config, GET/POST envs). npm publish prep: package.json ved→ved-ai v0.7.0, dual bin, exports types, postinstall.js (Ollama check + welcome), Dockerfile/compose fixes. **55 new tests (36 dashboard-v2 + 19 npm-publish). 3413/3413 pass (host + Docker parity). 0 type errors. P3 COMPLETE.**
+- **Session 100:** CYCLE — **P4: npm Publish (Final Readiness).** Verified npm package end-to-end: pack (566KB, 378 files), install flow, binary accessibility (ved + ved-ai), init wizard (--yes creates config + vault), help system, dry-run publish. Created comprehensive test script (test-npm-flow.sh) covering version/help/doctor/init/stats. Verified README quickstart accurate for npm users. **All tests pass. Ved ready for public npm release. P4 COMPLETE. P0-P4 ALL COMPLETE.**
 - **Session 98:** CYCLE — **P2 Config UX — Interactive init wizard + config edit.** `ved init` wizard (723 lines): 4 providers with model choices, API key validation (prefix checks + env detection), vault path setup, 3 trust modes (audit/gate-writes/gate-all), Discord channel optional setup, non-interactive fallback (--yes), --force overwrite. `ved config edit [local]`: opens in $EDITOR, auto-validates after save. Config generation: well-commented YAML with secrets separated into config.local.yaml, idempotent vault structure creation. Also committed daemon TUI tests from S97. Pushed to GitHub (24f179d). **76 new tests. 3251/3251 host + Docker parity. 0 type errors. P1+P2 complete.**
 - **Session 96:** CYCLE — **P0 Live Test: Ved talks to a real LLM.** Created comprehensive 8-test live test script. Ved successfully talked to Ollama qwen3:1.7b — simple chat, multi-turn conversation (name recall), system prompt self-identification, audit trail integrity all pass. RAG-enriched chat got a warning (small model ignored injected context — expected). Full 7-step pipeline works end-to-end without code changes. **7/8 tests pass. 3000/3000 unit tests. 0 type errors.**
 - **Session 95:** CYCLE — **NPM packaging readiness.** Added `.npmignore` (excludes src/tests/docs/sessions/Docker/CI), `SECURITY.md` (vuln reporting + security model), `package.json` updates (exports map, files array, prepublishOnly script). Pack verified: 510KB tarball, 357 files, zero test/doc/session leakage. **3000/3000 host + 3019/3019 Docker. 0 type errors.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB) covering install→config→first chat→memory→audit→backup→API→Docker. Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
@@ -207,7 +209,9 @@
 | 96 | ✅ CYCLE | P0 Live Test — first real LLM conversation (Ollama qwen3:1.7b, 7/8 pass) |
 | 97 | ✅ CYCLE | P1 TUI — streaming, status bar, session picker, syntax highlighting (26 tests) |
 | 98 | ✅ CYCLE | P2 Config UX — interactive init wizard, config edit (76 tests) |
-| 99+ | CYCLE | P3 Gateway Web UI, P4-P5 polish |
+| 99 | ✅ CYCLE | P3 Gateway Web UI — 6 new panels + npm publish prep (55 tests) |
+| 100 | ✅ CYCLE | P4 npm Publish — package verification, install flow testing |
+| 101+ | CYCLE | v0.7.0 release, P5 polish |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -291,4 +295,7 @@
 | init-wizard S98 | ✅ Complete | ~723 | 76 |
 | config-edit S98 | ✅ Complete | ~35 | 0 |
 | daemon-tui-tests S98 | ✅ Complete | ~689 | 65 |
-| **Total** | **ALL COMPLETE** | **~45,400** | **3251+** |
+| dashboard-v2 S99 | ✅ Complete | ~869 | 36 |
+| npm-publish S99 | ✅ Complete | ~410 (scripts+pkg) | 19 |
+| http-env-config S99 | ✅ Complete | ~84 | 0 (covered in v2) |
+| **Total** | **ALL COMPLETE** | **~46,800** | **3413+** |
