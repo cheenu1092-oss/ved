@@ -135,9 +135,23 @@ function createMockApp(overrides: Record<string, unknown> = {}): any {
     cronHistory: vi.fn().mockReturnValue([
       { jobName: 'daily-backup', executedAt: Date.now() - 86400000, exitCode: 0, durationMs: 142, output: 'Done' },
     ]),
+    pluginList: vi.fn().mockReturnValue([
+      { name: 'filesystem', status: 'connected', toolCount: 3 },
+      { name: 'brave-search', status: 'disconnected', toolCount: 1 },
+    ]),
+    pluginTools: vi.fn().mockReturnValue([
+      { name: 'read_file', description: 'Read a file from the filesystem', server: 'filesystem', inputSchema: {} },
+      { name: 'write_file', description: 'Write a file to the filesystem', server: 'filesystem', inputSchema: {} },
+      { name: 'list_dir', description: 'List directory contents', server: 'filesystem', inputSchema: {} },
+      { name: 'brave_search', description: 'Search the web', server: 'brave-search', inputSchema: {} },
+    ]),
     memory: {
       vault: {
         listFiles: vi.fn().mockReturnValue(['daily/2026-03-07.md', 'entities/test.md']),
+        getAllBacklinks: vi.fn().mockReturnValue(new Map([
+          ['entities/test.md', new Set(['daily/2026-03-07.md'])],
+        ])),
+        getLinks: vi.fn().mockReturnValue([]),
         readFile: vi.fn().mockImplementation((path: string) => {
           if (path === 'entities/test.md') {
             return {
@@ -852,6 +866,86 @@ describe('VedHttpServer', () => {
     it('returns 404 for unknown job', async () => {
       const res = await httpPost(port, '/api/cron/unknown-job/toggle', { enabled: true });
       expect(res.status).toBe(404);
+    });
+  });
+
+  // ── Vault Graph ──
+
+  describe('GET /api/vault/graph', () => {
+    it('returns nodes and edges arrays', async () => {
+      const res = await httpGet(port, '/api/vault/graph');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('nodes');
+      expect(res.body).toHaveProperty('edges');
+      expect(Array.isArray(res.body.nodes)).toBe(true);
+      expect(Array.isArray(res.body.edges)).toBe(true);
+    });
+
+    it('includes nodeCount and edgeCount', async () => {
+      const res = await httpGet(port, '/api/vault/graph');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('nodeCount');
+      expect(res.body).toHaveProperty('edgeCount');
+      expect(typeof res.body.nodeCount).toBe('number');
+      expect(typeof res.body.edgeCount).toBe('number');
+    });
+
+    it('accepts max parameter', async () => {
+      const res = await httpGet(port, '/api/vault/graph?max=10');
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // ── MCP Servers ──
+
+  describe('GET /api/mcp/servers', () => {
+    it('returns server list', async () => {
+      const res = await httpGet(port, '/api/mcp/servers');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('count');
+      expect(res.body).toHaveProperty('servers');
+      expect(Array.isArray(res.body.servers)).toBe(true);
+    });
+
+    it('count matches servers array length', async () => {
+      const res = await httpGet(port, '/api/mcp/servers');
+      expect(res.body.count).toBe(res.body.servers.length);
+    });
+
+    it('returns server names', async () => {
+      const res = await httpGet(port, '/api/mcp/servers');
+      expect(res.status).toBe(200);
+      expect(res.body.servers[0].name).toBe('filesystem');
+    });
+  });
+
+  // ── MCP Tools ──
+
+  describe('GET /api/mcp/tools', () => {
+    it('returns tool list', async () => {
+      const res = await httpGet(port, '/api/mcp/tools');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('count');
+      expect(res.body).toHaveProperty('tools');
+      expect(Array.isArray(res.body.tools)).toBe(true);
+    });
+
+    it('count matches tools array length', async () => {
+      const res = await httpGet(port, '/api/mcp/tools');
+      expect(res.body.count).toBe(res.body.tools.length);
+    });
+
+    it('filters by server name', async () => {
+      await httpGet(port, '/api/mcp/tools?server=filesystem');
+      expect(mockApp.pluginTools).toHaveBeenCalledWith('filesystem');
+    });
+
+    it('returns empty tools when none registered', async () => {
+      mockApp.pluginTools.mockReturnValueOnce([]);
+      const res = await httpGet(port, '/api/mcp/tools');
+      expect(res.status).toBe(200);
+      expect(res.body.count).toBe(0);
+      expect(res.body.tools).toHaveLength(0);
     });
   });
 

@@ -44,7 +44,7 @@ import { runTaskCommand, checkHelp as taskCheckHelp } from './cli-task.js';
 import { runInitWizard, parseInitArgs, getEditorCommand } from './cli-init-wizard.js';
 
 const log = createLogger('cli');
-const VERSION = '0.6.0';
+const VERSION = '0.7.0';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);

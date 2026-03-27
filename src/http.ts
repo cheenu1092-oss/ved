@@ -19,6 +19,11 @@
  *   POST /api/cron/:id/run     — Trigger a cron job
  *   POST /api/cron/:id/toggle  — Enable/disable a cron job
  *   GET  /api/config           — Sanitized config
+ *   POST /api/config           — Write config changes to config.local.yaml
+ *   GET  /api/envs             — List all environments
+ *   GET  /api/envs/current     — Get active environment
+ *   POST /api/envs/use         — Switch environment { name: string }
+ *   POST /api/envs/reset       — Deactivate environment
  *   POST /api/approve/:id      — Approve a work order
  *   POST /api/deny/:id         — Deny a work order
  *
@@ -27,11 +32,16 @@
  */
 
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from 'node:http';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { stringify as stringifyYaml } from 'yaml';
 import { createLogger } from './core/log.js';
 import type { VedApp } from './app.js';
 import type { AuditEventType } from './types/index.js';
 import type { Subscription } from './event-bus.js';
 import { getDashboardHtml } from './dashboard.js';
+import { getConfigDir } from './core/config.js';
+import { listEnvs, getActiveEnv, setActiveEnv, deactivateEnv, envExists } from './cli-env.js';
 
 const log = createLogger('http');
 
@@ -198,6 +208,8 @@ export class VedHttpServer {
       if (cleanPath === '/api/cron') return { handler: this.getCron, params: {} };
       if (cleanPath === '/api/cron/history') return { handler: this.getCronHistory, params: {} };
       if (cleanPath === '/api/config') return { handler: this.getConfig, params: {} };
+      if (cleanPath === '/api/envs') return { handler: this.getEnvs, params: {} };
+      if (cleanPath === '/api/envs/current') return { handler: this.getEnvsCurrent, params: {} };
       // GET /api/work-orders/:id
       const woMatch = cleanPath.match(/^\/api\/work-orders\/(.+)$/);
       if (woMatch) {
@@ -212,6 +224,9 @@ export class VedHttpServer {
 
     // POST routes (with path params)
     if (method === 'POST') {
+      if (cleanPath === '/api/config') return { handler: this.postConfig, params: {} };
+      if (cleanPath === '/api/envs/use') return { handler: this.postEnvsUse, params: {} };
+      if (cleanPath === '/api/envs/reset') return { handler: this.postEnvsReset, params: {} };
       if (cleanPath === '/api/webhooks') return { handler: this.postWebhook, params: {} };
       const approveMatch = cleanPath.match(/^\/api\/approve\/(.+)$/);
       if (approveMatch) {
@@ -869,6 +884,75 @@ export class VedHttpServer {
       // Sanitize: redact sensitive fields
       const sanitized = this.sanitizeConfig(cfg as unknown as Record<string, unknown>);
       this.json(res, 200, sanitized);
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  private postConfig = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const body = await this.readBody(req);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      this.json(res, 400, { error: 'Request body must be a JSON object' });
+      return;
+    }
+
+    try {
+      const yamlContent = stringifyYaml(body);
+      const configDir = getConfigDir();
+      writeFileSync(join(configDir, 'config.local.yaml'), yamlContent, 'utf8');
+      const cfg = this.app.config;
+      const sanitized = this.sanitizeConfig(cfg as unknown as Record<string, unknown>);
+      this.json(res, 200, { ok: true, config: sanitized });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  // ── Environments ──
+
+  private getEnvs = async (_req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    try {
+      const envs = listEnvs();
+      this.json(res, 200, { count: envs.length, envs });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  private getEnvsCurrent = async (_req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    try {
+      const active = getActiveEnv();
+      this.json(res, 200, { active });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  private postEnvsUse = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const body = await this.readBody(req);
+    const name = body?.name as string | undefined;
+
+    if (!name || typeof name !== 'string') {
+      this.json(res, 400, { error: 'Missing required field: name (string)' });
+      return;
+    }
+
+    try {
+      if (!envExists(name)) {
+        this.json(res, 404, { error: `Environment not found: ${name}` });
+        return;
+      }
+      setActiveEnv(name);
+      this.json(res, 200, { active: name });
+    } catch (err) {
+      this.json(res, 500, { error: this.errMsg(err) });
+    }
+  };
+
+  private postEnvsReset = async (_req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    try {
+      deactivateEnv();
+      this.json(res, 200, { active: null });
     } catch (err) {
       this.json(res, 500, { error: this.errMsg(err) });
     }

@@ -506,6 +506,79 @@ export function getDashboardHtml(baseUrl: string = ''): string {
 
   .session-meta { color: var(--text-dim); }
 
+  /* Graph panel */
+  .graph-container { position: relative; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .graph-canvas { display: block; cursor: grab; }
+  .graph-canvas:active { cursor: grabbing; }
+  .graph-tooltip {
+    position: absolute; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 4px 10px; font-size: 0.8rem; pointer-events: none;
+    z-index: 10; display: none; white-space: nowrap;
+  }
+  .graph-controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .graph-stats { font-size: 0.8rem; color: var(--text-dim); margin-left: auto; }
+
+  /* Memory browser */
+  .memory-layout { display: flex; gap: 16px; min-height: 400px; }
+  .memory-sidebar { width: 240px; min-width: 180px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow-y: auto; max-height: 600px; }
+  .memory-content { flex: 1; min-width: 0; }
+  .memory-type-header { padding: 6px 12px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); }
+  .memory-entity-item { padding: 6px 12px 6px 16px; font-size: 0.85rem; cursor: pointer; border-bottom: 1px solid rgba(48,54,61,0.5); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .memory-entity-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+  .memory-entity-item.active { background: rgba(88,166,255,0.1); color: var(--accent); }
+
+  /* MCP panel */
+  .mcp-server-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .mcp-server-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-weight: 600; }
+  .mcp-tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+  .mcp-tool-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+  .mcp-tool-name { font-family: var(--mono); font-size: 0.82rem; color: var(--accent); font-weight: 500; }
+  .mcp-tool-desc { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+  .badge-connected { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge-disconnected { background: rgba(139,148,158,0.15); color: var(--text-dim); }
+
+  /* Config editor */
+  .config-editor-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  #config-editor-area {
+    width: 100%; min-height: 300px; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    font-family: var(--mono); font-size: 0.82rem; padding: 12px; resize: vertical;
+    display: none;
+  }
+  .env-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .env-selector-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #env-selector { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; font-size: 0.85rem; }
+
+  /* Session detail modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    width: 100%; max-width: 800px; max-height: 80vh;
+    display: flex; flex-direction: column;
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+  }
+  .modal-header h2 { font-size: 1rem; font-weight: 600; }
+  .modal-close { background: transparent; border: none; color: var(--text-dim); font-size: 1.4rem; cursor: pointer; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+  .modal-meta { display: flex; gap: 16px; padding: 12px 20px; background: var(--bg); border-bottom: 1px solid var(--border); flex-wrap: wrap; font-size: 0.82rem; color: var(--text-dim); }
+  .modal-meta span strong { color: var(--text); }
+  .modal-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+  .session-message { padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-size: 0.85rem; }
+  .session-message.user { background: rgba(88,166,255,0.08); border-left: 3px solid var(--accent); }
+  .session-message.assistant { background: rgba(63,185,80,0.08); border-left: 3px solid var(--green); }
+  .session-message.tool { background: rgba(188,140,255,0.08); border-left: 3px solid var(--purple); }
+  .session-message .msg-role { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; color: var(--text-dim); }
+  .session-message .msg-content { white-space: pre-wrap; word-break: break-word; }
+  .session-item { cursor: pointer; }
+  .session-item:hover { background: rgba(255,255,255,0.03); border-radius: 4px; }
+
   @media (max-width: 768px) {
     .event-entry { grid-template-columns: 1fr; gap: 2px; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
@@ -513,6 +586,9 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     .history-filters { flex-direction: column; }
     .wo-actions { flex-direction: column; }
     .cron-row { flex-wrap: wrap; }
+    .memory-layout { flex-direction: column; }
+    .memory-sidebar { width: 100%; max-height: 200px; }
+    .mcp-tool-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -533,10 +609,13 @@ export function getDashboardHtml(baseUrl: string = ''): string {
   <button data-panel="search">Search</button>
   <button data-panel="history">History</button>
   <button data-panel="vault">Vault</button>
+  <button data-panel="graph">Graph</button>
+  <button data-panel="memory">Memory</button>
   <button data-panel="doctor">Doctor</button>
   <button data-panel="trust">Trust &amp; Approvals</button>
   <button data-panel="cron">Cron</button>
   <button data-panel="config">Config</button>
+  <button data-panel="mcp">MCP</button>
 </nav>
 
 <main>
@@ -553,6 +632,10 @@ export function getDashboardHtml(baseUrl: string = ''): string {
       <div id="sessions-list">
         <div class="empty-state">Loading...</div>
       </div>
+    </div>
+    <div class="card">
+      <h2>Knowledge Graph Preview</h2>
+      <canvas id="mini-graph-canvas" style="width:100%; border-radius:var(--radius); background:var(--bg); border:1px solid var(--border); display:block;"></canvas>
     </div>
   </div>
 
@@ -648,6 +731,39 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     </div>
   </div>
 
+  <!-- Graph Panel -->
+  <div class="panel" id="panel-graph">
+    <div class="card">
+      <h2>Knowledge Graph</h2>
+      <div class="graph-controls">
+        <button class="btn btn-sm" id="graph-reset-btn">Reset View</button>
+        <span id="graph-stats" class="graph-stats">Loading...</span>
+      </div>
+      <div class="graph-container" id="graph-container" style="height:560px;">
+        <canvas id="graph-canvas" class="graph-canvas"></canvas>
+        <div class="graph-tooltip" id="graph-tooltip"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Memory Browser Panel -->
+  <div class="panel" id="panel-memory">
+    <div class="card">
+      <h2>Memory Browser</h2>
+      <div style="margin-bottom:12px;">
+        <input type="text" id="memory-search" placeholder="Filter entities..." style="max-width:400px;">
+      </div>
+      <div class="memory-layout">
+        <div class="memory-sidebar" id="memory-sidebar">
+          <div class="empty-state">Loading...</div>
+        </div>
+        <div class="memory-content" id="memory-content">
+          <div class="empty-state">Select an entity from the sidebar.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Doctor Panel -->
   <div class="panel" id="panel-doctor">
     <div class="card">
@@ -707,12 +823,52 @@ export function getDashboardHtml(baseUrl: string = ''): string {
     <div class="card">
       <h2>Configuration</h2>
       <p style="font-size:0.85rem; color:var(--text-dim); margin-bottom:12px;">Sensitive fields (apiKey, secret, token, password) are redacted.</p>
+      <div class="config-editor-toolbar">
+        <button class="btn" id="config-edit-btn">Edit Config</button>
+        <button class="btn btn-success" id="config-save-btn" style="display:none;">Save</button>
+        <button class="btn" id="config-cancel-btn" style="display:none;">Cancel</button>
+        <span id="config-save-status" style="font-size:0.82rem; color:var(--text-dim);"></span>
+      </div>
+      <textarea id="config-editor-area" spellcheck="false"></textarea>
       <div id="config-tree">
+        <div class="empty-state">Loading...</div>
+      </div>
+      <div class="env-section">
+        <h3 style="font-size:0.95rem; font-weight:600; margin-bottom:12px;">Environments</h3>
+        <div class="env-selector-row">
+          <select id="env-selector"><option value="">Loading...</option></select>
+          <button class="btn" id="env-use-btn">Use</button>
+          <button class="btn" id="env-reset-btn">Reset</button>
+          <span id="env-status" style="font-size:0.82rem; color:var(--text-dim);"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MCP Panel -->
+  <div class="panel" id="panel-mcp">
+    <div class="card">
+      <h2>MCP Servers &amp; Tools</h2>
+      <div id="mcp-content">
         <div class="empty-state">Loading...</div>
       </div>
     </div>
   </div>
 </main>
+
+<!-- Session Detail Modal -->
+<div class="modal-overlay" id="session-modal" style="display:none;" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Session Detail</h2>
+      <button class="modal-close" id="session-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-meta" id="session-modal-meta"></div>
+    <div class="modal-body" id="session-modal-body">
+      <div class="empty-state">Loading...</div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function() {
@@ -729,6 +885,9 @@ export function getDashboardHtml(baseUrl: string = ''): string {
       if (btn.dataset.panel === 'trust') loadTrustPanel();
       if (btn.dataset.panel === 'cron') loadCronPanel();
       if (btn.dataset.panel === 'config') loadConfig();
+      if (btn.dataset.panel === 'graph') loadGraph();
+      if (btn.dataset.panel === 'memory') loadMemoryPanel();
+      if (btn.dataset.panel === 'mcp') loadMcpPanel();
     });
   });
 
@@ -841,12 +1000,17 @@ export function getDashboardHtml(baseUrl: string = ''): string {
         return;
       }
       list.innerHTML = sessions.map(s =>
-        '<div class="session-item">' +
+        '<div class="session-item" data-session-id="' + esc(s.id ?? s.sessionId ?? '') + '">' +
         '<span class="session-id">' + esc((s.id ?? s.sessionId ?? '').substring(0, 12)) + '…</span>' +
         '<span class="session-meta">' + esc(s.persona ?? s.model ?? '—') + '</span>' +
         '<span class="session-meta" style="margin-left:auto;">' + esc(fmtDate(s.createdAt ?? s.startedAt ?? s.ts ?? 0)) + '</span>' +
         '</div>'
       ).join('');
+      list.querySelectorAll('.session-item[data-session-id]').forEach(function(item) {
+        item.addEventListener('click', function() {
+          openSessionModal(item.dataset.sessionId);
+        });
+      });
     } catch (err) {
       list.innerHTML = '<div class="empty-state">Failed to load sessions: ' + esc(err.message) + '</div>';
     }
@@ -855,6 +1019,7 @@ export function getDashboardHtml(baseUrl: string = ''): string {
   // Refresh stats every 10s
   loadStats();
   loadSessions();
+  loadMiniGraph();
   setInterval(loadStats, 10000);
 
   // ── SSE Events ──
@@ -1078,9 +1243,12 @@ export function getDashboardHtml(baseUrl: string = ''): string {
         html += '<div style="color:var(--text-dim); font-size:0.8rem; margin-bottom:4px;">📁 ' + esc(dir) + '/</div>';
         groups[dir].sort().forEach(path => {
           const name = path.split('/').pop();
-          html += '<div style="padding:4px 0 4px 16px;">' +
-            '<a href="#" style="color:var(--accent); text-decoration:none; font-family:var(--mono); font-size:0.85rem;" ' +
-            'data-path="' + esc(path) + '" class="vault-file-link">📄 ' + esc(name) + '</a></div>';
+          const nodeName = name.replace(/\.md$/, '');
+          html += '<div style="padding:4px 0 4px 16px; display:flex; align-items:center; gap:4px;">' +
+            '<a href="#" style="color:var(--accent); text-decoration:none; font-family:var(--mono); font-size:0.85rem; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" ' +
+            'data-path="' + esc(path) + '" data-name="' + esc(nodeName) + '" class="vault-file-link">📄 ' + esc(name) + '</a>' +
+            '<button class="btn btn-sm" style="padding:1px 7px; font-size:0.7rem; background:transparent; border:1px solid var(--border); color:var(--text-dim); white-space:nowrap;" ' +
+            'onclick="viewInGraph(\'' + esc(nodeName) + '\')" title="View in graph">⬡ Graph</button></div>';
         });
         html += '</div>';
       });
@@ -1366,18 +1534,128 @@ export function getDashboardHtml(baseUrl: string = ''): string {
 
   // ── Config ──
   let configLoaded = false;
+  let configData = null;
 
   async function loadConfig() {
     if (configLoaded) return;
     const el = document.getElementById('config-tree');
     try {
       const data = await api('/api/config');
+      configData = data;
       el.innerHTML = '<div class="config-tree">' + renderConfigTree(data, 0) + '</div>';
       configLoaded = true;
     } catch (err) {
       el.innerHTML = '<div class="empty-state">Failed: ' + esc(err.message) + '</div>';
     }
+    loadEnvs();
   }
+
+  // Config edit toolbar
+  const configEditBtn = document.getElementById('config-edit-btn');
+  const configSaveBtn = document.getElementById('config-save-btn');
+  const configCancelBtn = document.getElementById('config-cancel-btn');
+  const configEditorArea = document.getElementById('config-editor-area');
+  const configSaveStatus = document.getElementById('config-save-status');
+
+  configEditBtn.addEventListener('click', function() {
+    configEditorArea.value = JSON.stringify(configData || {}, null, 2);
+    configEditorArea.style.display = 'block';
+    configSaveBtn.style.display = '';
+    configCancelBtn.style.display = '';
+    configEditBtn.style.display = 'none';
+  });
+
+  configCancelBtn.addEventListener('click', function() {
+    configEditorArea.style.display = 'none';
+    configSaveBtn.style.display = 'none';
+    configCancelBtn.style.display = 'none';
+    configEditBtn.style.display = '';
+    configSaveStatus.textContent = '';
+  });
+
+  configSaveBtn.addEventListener('click', async function() {
+    let parsed;
+    try {
+      parsed = JSON.parse(configEditorArea.value);
+    } catch (e) {
+      configSaveStatus.textContent = 'Invalid JSON: ' + e.message;
+      configSaveStatus.style.color = 'var(--red)';
+      return;
+    }
+    configSaveStatus.textContent = 'Saving...';
+    configSaveStatus.style.color = 'var(--text-dim)';
+    try {
+      const result = await apiPost('/api/config', parsed);
+      configData = result.config;
+      const el = document.getElementById('config-tree');
+      el.innerHTML = '<div class="config-tree">' + renderConfigTree(result.config, 0) + '</div>';
+      configEditorArea.style.display = 'none';
+      configSaveBtn.style.display = 'none';
+      configCancelBtn.style.display = 'none';
+      configEditBtn.style.display = '';
+      configSaveStatus.textContent = 'Saved.';
+      configSaveStatus.style.color = 'var(--green)';
+      setTimeout(function() { configSaveStatus.textContent = ''; }, 3000);
+    } catch (err) {
+      configSaveStatus.textContent = 'Error: ' + err.message;
+      configSaveStatus.style.color = 'var(--red)';
+    }
+  });
+
+  // ── Environments ──
+  async function loadEnvs() {
+    const sel = document.getElementById('env-selector');
+    const statusEl = document.getElementById('env-status');
+    try {
+      const [envsData, currentData] = await Promise.all([
+        api('/api/envs'),
+        api('/api/envs/current'),
+      ]);
+      const envs = envsData.envs || [];
+      const active = currentData.active;
+      if (envs.length === 0) {
+        sel.innerHTML = '<option value="">No environments</option>';
+      } else {
+        sel.innerHTML = '<option value="">(none)</option>' +
+          envs.map(function(e) {
+            return '<option value="' + esc(e.name) + '"' + (e.name === active ? ' selected' : '') + '>' + esc(e.name) + (e.active ? ' ✓' : '') + '</option>';
+          }).join('');
+      }
+      statusEl.textContent = active ? 'Active: ' + active : 'No active environment';
+    } catch (err) {
+      sel.innerHTML = '<option value="">Error loading</option>';
+      statusEl.textContent = err.message;
+    }
+  }
+
+  document.getElementById('env-use-btn').addEventListener('click', async function() {
+    const sel = document.getElementById('env-selector');
+    const name = sel.value;
+    const statusEl = document.getElementById('env-status');
+    if (!name) { statusEl.textContent = 'Select an environment first.'; return; }
+    try {
+      await apiPost('/api/envs/use', { name });
+      statusEl.textContent = 'Switched to: ' + name;
+      statusEl.style.color = 'var(--green)';
+      loadEnvs();
+    } catch (err) {
+      statusEl.textContent = 'Error: ' + err.message;
+      statusEl.style.color = 'var(--red)';
+    }
+  });
+
+  document.getElementById('env-reset-btn').addEventListener('click', async function() {
+    const statusEl = document.getElementById('env-status');
+    try {
+      await apiPost('/api/envs/reset', {});
+      statusEl.textContent = 'Environment deactivated.';
+      statusEl.style.color = 'var(--text-dim)';
+      loadEnvs();
+    } catch (err) {
+      statusEl.textContent = 'Error: ' + err.message;
+      statusEl.style.color = 'var(--red)';
+    }
+  });
 
   function renderConfigTree(obj, depth) {
     if (obj === null) return '<span class="config-null">null</span>';
@@ -1401,6 +1679,589 @@ export function getDashboardHtml(baseUrl: string = ''): string {
       return '{' + lines + '}';
     }
     return esc(String(obj));
+  }
+
+  // ── Graph Panel ──
+  let graphLoaded = false;
+  let graphSimNodes = [];
+  let graphSimEdges = [];
+  let graphZoom = 1;
+  let graphOffX = 0, graphOffY = 0;
+  let graphDragging = false;
+  let graphDragStartX = 0, graphDragStartY = 0;
+  let graphAnimFrame = null;
+  let graphFocusNodeId = null;
+
+  const GRAPH_COLORS = {
+    entities: '#58a6ff', people: '#58a6ff', orgs: '#f0883e',
+    concepts: '#bc8cff', decisions: '#3fb950', daily: '#8b949e', projects: '#d29922',
+  };
+
+  function graphNodeColor(type) {
+    if (!type) return '#555566';
+    const t = (type || '').toLowerCase();
+    for (const k of Object.keys(GRAPH_COLORS)) {
+      if (t.includes(k)) return GRAPH_COLORS[k];
+    }
+    return '#555566';
+  }
+
+  function graphNodeRadius(bl, maxBL) {
+    return 4 + (maxBL > 0 ? 16 * Math.sqrt(Math.min(bl, maxBL) / maxBL) : 0);
+  }
+
+  async function loadGraph() {
+    if (graphLoaded) return;
+    const statsEl = document.getElementById('graph-stats');
+    statsEl.textContent = 'Loading...';
+    try {
+      const data = await api('/api/vault/graph');
+      const nc = (data.nodes || []).length;
+      const ec = (data.edges || []).length;
+      const dens = nc > 1 ? (2 * ec / (nc * (nc - 1))).toFixed(4) : '0.0000';
+      statsEl.textContent = nc + ' nodes \u00b7 ' + ec + ' edges \u00b7 density ' + dens;
+      startGraphSim(data, 'graph-canvas', 'graph-container');
+      graphLoaded = true;
+    } catch (err) {
+      statsEl.textContent = 'Error: ' + esc(err.message);
+    }
+  }
+
+  function startGraphSim(apiData, canvasId, containerId) {
+    const canvas = document.getElementById(canvasId);
+    const container = document.getElementById(containerId);
+    if (!canvas || !container) return;
+
+    const W = Math.max(container.clientWidth || 800, 400);
+    const H = 560;
+    canvas.width = W;
+    canvas.height = H;
+
+    const nodes = apiData.nodes || [];
+    const maxBL = Math.max.apply(null, nodes.map(function(n) { return n.backlinks || 0; }).concat([1]));
+
+    graphSimNodes = nodes.map(function(n) {
+      return {
+        id: n.id, type: n.type, backlinks: n.backlinks || 0,
+        x: W * 0.1 + Math.random() * W * 0.8,
+        y: H * 0.1 + Math.random() * H * 0.8,
+        vx: 0, vy: 0,
+        r: graphNodeRadius(n.backlinks || 0, maxBL),
+        color: graphNodeColor(n.type),
+      };
+    });
+
+    const idx = {};
+    graphSimNodes.forEach(function(n, i) { idx[n.id] = i; });
+    graphSimEdges = (apiData.edges || [])
+      .map(function(e) { return { s: idx[e.source], t: idx[e.target] }; })
+      .filter(function(e) { return e.s !== undefined && e.t !== undefined; });
+
+    graphZoom = 1; graphOffX = 0; graphOffY = 0;
+    if (graphAnimFrame) cancelAnimationFrame(graphAnimFrame);
+
+    const ctx = canvas.getContext('2d');
+    let step = 0;
+
+    function gTick() {
+      step++;
+      const alpha = Math.max(0.003, 0.7 / (1 + step * 0.025));
+      const N = graphSimNodes.length;
+
+      for (let ei = 0; ei < graphSimEdges.length; ei++) {
+        const e = graphSimEdges[ei];
+        const a = graphSimNodes[e.s], b = graphSimNodes[e.t];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.sqrt(dx*dx + dy*dy) || 1;
+        const f = (d - 80) * 0.04 * alpha;
+        const fx = dx/d*f, fy = dy/d*f;
+        a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+      }
+
+      for (let i = 0; i < N; i++) {
+        for (let j = i + 1; j < N; j++) {
+          const a = graphSimNodes[i], b = graphSimNodes[j];
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const d2 = Math.max(dx*dx + dy*dy, 1);
+          const d = Math.sqrt(d2);
+          const f = 700 / d2 * alpha;
+          const fx = dx/d*f, fy = dy/d*f;
+          a.vx -= fx; a.vy -= fy; b.vx += fx; b.vy += fy;
+        }
+      }
+
+      for (let i = 0; i < N; i++) {
+        const n = graphSimNodes[i];
+        n.vx += (W/2 - n.x) * 0.008 * alpha;
+        n.vy += (H/2 - n.y) * 0.008 * alpha;
+        n.vx *= 0.88; n.vy *= 0.88;
+        n.x += n.vx; n.y += n.vy;
+      }
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.save();
+      ctx.translate(W/2 + graphOffX, H/2 + graphOffY);
+      ctx.scale(graphZoom, graphZoom);
+      ctx.translate(-W/2, -H/2);
+
+      ctx.strokeStyle = 'rgba(48,54,61,0.8)';
+      ctx.lineWidth = 1 / graphZoom;
+      for (let ei = 0; ei < graphSimEdges.length; ei++) {
+        const e = graphSimEdges[ei];
+        const a = graphSimNodes[e.s], b = graphSimNodes[e.t];
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+
+      for (let i = 0; i < N; i++) {
+        const n = graphSimNodes[i];
+        const isFocus = graphFocusNodeId && n.id === graphFocusNodeId;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = isFocus ? '#ffffff' : n.color;
+        ctx.fill();
+        if (isFocus) {
+          ctx.strokeStyle = n.color;
+          ctx.lineWidth = 2.5 / graphZoom;
+          ctx.stroke();
+        }
+      }
+
+      ctx.restore();
+      graphAnimFrame = requestAnimationFrame(gTick);
+    }
+
+    gTick();
+    setupGraphInteraction(canvas, W, H);
+  }
+
+  function setupGraphInteraction(canvas, W, H) {
+    const tooltip = document.getElementById('graph-tooltip');
+
+    function worldPt(cx, cy) {
+      return {
+        x: (cx - W/2 - graphOffX) / graphZoom + W/2,
+        y: (cy - H/2 - graphOffY) / graphZoom + H/2,
+      };
+    }
+
+    function hitNode(cx, cy) {
+      const p = worldPt(cx, cy);
+      for (let i = graphSimNodes.length - 1; i >= 0; i--) {
+        const n = graphSimNodes[i];
+        const dx = n.x - p.x, dy = n.y - p.y;
+        if (dx*dx + dy*dy <= (n.r + 3) * (n.r + 3)) return n;
+      }
+      return null;
+    }
+
+    canvas.addEventListener('mousemove', function(e) {
+      const r = canvas.getBoundingClientRect();
+      const cx = e.clientX - r.left, cy = e.clientY - r.top;
+      if (graphDragging) {
+        graphOffX = cx - graphDragStartX;
+        graphOffY = cy - graphDragStartY;
+        return;
+      }
+      const n = hitNode(cx, cy);
+      if (n) {
+        canvas.style.cursor = 'pointer';
+        tooltip.textContent = n.id;
+        tooltip.style.display = 'block';
+        tooltip.style.left = (cx + 14) + 'px';
+        tooltip.style.top = (cy - 10) + 'px';
+      } else {
+        canvas.style.cursor = 'grab';
+        tooltip.style.display = 'none';
+      }
+    });
+
+    canvas.addEventListener('mousedown', function(e) {
+      const r = canvas.getBoundingClientRect();
+      const cx = e.clientX - r.left, cy = e.clientY - r.top;
+      const n = hitNode(cx, cy);
+      if (!n) {
+        graphDragging = true;
+        graphDragStartX = cx - graphOffX;
+        graphDragStartY = cy - graphOffY;
+        canvas.style.cursor = 'grabbing';
+      }
+    });
+
+    canvas.addEventListener('mouseup', function() { graphDragging = false; canvas.style.cursor = 'grab'; });
+    canvas.addEventListener('mouseleave', function() { graphDragging = false; tooltip.style.display = 'none'; });
+
+    canvas.addEventListener('click', function(e) {
+      const r = canvas.getBoundingClientRect();
+      const cx = e.clientX - r.left, cy = e.clientY - r.top;
+      const n = hitNode(cx, cy);
+      if (n) {
+        const vBtn = document.querySelector('[data-panel="vault"]');
+        if (vBtn) vBtn.click();
+        setTimeout(function() {
+          const link = document.querySelector('.vault-file-link[data-name="' + n.id + '"]');
+          if (link) link.click();
+        }, 200);
+      }
+    });
+
+    canvas.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.85 : 1.15;
+      graphZoom = Math.max(0.1, Math.min(8, graphZoom * delta));
+    }, { passive: false });
+
+    document.getElementById('graph-reset-btn').addEventListener('click', function() {
+      graphZoom = 1; graphOffX = 0; graphOffY = 0;
+    });
+  }
+
+  function viewInGraph(nodeName) {
+    graphFocusNodeId = nodeName;
+    const btn = document.querySelector('[data-panel="graph"]');
+    if (btn) btn.click();
+  }
+  window.viewInGraph = viewInGraph;
+
+  // ── Mini Graph (Overview) ──
+  async function loadMiniGraph() {
+    const canvas = document.getElementById('mini-graph-canvas');
+    if (!canvas) return;
+    try {
+      const data = await api('/api/vault/graph');
+      const allNodes = (data.nodes || []).slice().sort(function(a, b) { return (b.backlinks||0) - (a.backlinks||0); }).slice(0, 30);
+      const nodeIds = {};
+      allNodes.forEach(function(n) { nodeIds[n.id] = true; });
+      const edges = (data.edges || []).filter(function(e) { return nodeIds[e.source] && nodeIds[e.target]; });
+      startMiniGraph({ nodes: allNodes, edges: edges }, canvas);
+    } catch(e) { /* silently fail */ }
+  }
+
+  function startMiniGraph(data, canvas) {
+    const parent = canvas.parentElement;
+    const W = parent ? Math.max(parent.clientWidth - 40, 300) : 500;
+    const H = 160;
+    canvas.width = W;
+    canvas.height = H;
+
+    const maxBL = Math.max.apply(null, data.nodes.map(function(n) { return n.backlinks||0; }).concat([1]));
+    const sim = data.nodes.map(function(n) {
+      return {
+        id: n.id, x: 20 + Math.random() * (W-40), y: 20 + Math.random() * (H-40),
+        vx: 0, vy: 0, r: Math.max(2, 2 + 6 * Math.sqrt((n.backlinks||0)/maxBL)),
+        color: graphNodeColor(n.type),
+      };
+    });
+    const idx = {};
+    sim.forEach(function(n,i) { idx[n.id] = i; });
+    const simEdges = data.edges.map(function(e) { return { s: idx[e.source], t: idx[e.target] }; }).filter(function(e) { return e.s !== undefined && e.t !== undefined; });
+
+    const ctx = canvas.getContext('2d');
+    let step = 0;
+
+    function mTick() {
+      step++;
+      if (step > 250) { drawMini(ctx, sim, simEdges, W, H); return; }
+      const alpha = Math.max(0.01, 1 - step / 250);
+      const N = sim.length;
+
+      for (let ei = 0; ei < simEdges.length; ei++) {
+        const e = simEdges[ei];
+        const a = sim[e.s], b = sim[e.t];
+        const dx = b.x-a.x, dy = b.y-a.y;
+        const d = Math.sqrt(dx*dx+dy*dy)||1;
+        const f = (d-50)*0.05*alpha;
+        a.vx+=dx/d*f; a.vy+=dy/d*f; b.vx-=dx/d*f; b.vy-=dy/d*f;
+      }
+
+      for (let i = 0; i < N; i++) {
+        for (let j = i+1; j < N; j++) {
+          const a=sim[i], b=sim[j];
+          const dx=b.x-a.x, dy=b.y-a.y;
+          const d2=Math.max(dx*dx+dy*dy,1), d=Math.sqrt(d2);
+          const f=200/d2*alpha;
+          a.vx-=dx/d*f; a.vy-=dy/d*f; b.vx+=dx/d*f; b.vy+=dy/d*f;
+        }
+      }
+
+      for (let i = 0; i < N; i++) {
+        const n = sim[i];
+        n.vx+=(W/2-n.x)*0.01*alpha; n.vy+=(H/2-n.y)*0.01*alpha;
+        n.vx*=0.9; n.vy*=0.9;
+        n.x+=n.vx; n.y+=n.vy;
+        n.x=Math.max(n.r, Math.min(W-n.r, n.x));
+        n.y=Math.max(n.r, Math.min(H-n.r, n.y));
+      }
+
+      drawMini(ctx, sim, simEdges, W, H);
+      requestAnimationFrame(mTick);
+    }
+
+    mTick();
+  }
+
+  function drawMini(ctx, nodes, edges, W, H) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(48,54,61,0.6)';
+    ctx.lineWidth = 0.5;
+    for (let ei = 0; ei < edges.length; ei++) {
+      const e = edges[ei];
+      const a = nodes[e.s], b = nodes[e.t];
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+      ctx.fillStyle = n.color; ctx.fill();
+    }
+  }
+
+  // ── Memory Browser ──
+  let memoryPanelLoaded = false;
+  let memoryAllFiles = [];
+  let memoryGraphEdges = [];
+  let memoryCurrentPath = null;
+
+  async function loadMemoryPanel() {
+    if (memoryPanelLoaded) return;
+    memoryPanelLoaded = true;
+    const sidebar = document.getElementById('memory-sidebar');
+    sidebar.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const filesData = await api('/api/vault/files');
+      memoryAllFiles = filesData.files || [];
+      try {
+        const gd = await api('/api/vault/graph');
+        memoryGraphEdges = gd.edges || [];
+      } catch(e) { memoryGraphEdges = []; }
+      renderMemorySidebar(memoryAllFiles, '');
+    } catch (err) {
+      sidebar.innerHTML = '<div class="empty-state">Failed: ' + esc(err.message) + '</div>';
+    }
+  }
+
+  function renderMemorySidebar(files, filterText) {
+    const sidebar = document.getElementById('memory-sidebar');
+    const q = (filterText || '').toLowerCase();
+    const TYPE_ICONS = { entities:'🧑', people:'🧑', orgs:'🏢', concepts:'💡', decisions:'⚖️', daily:'📅', projects:'📁' };
+    const groups = {};
+
+    files.forEach(function(f) {
+      const path = f.path || f;
+      const parts = path.split('/');
+      const dir = parts.length > 1 ? parts[0] : 'root';
+      const name = parts[parts.length - 1].replace(/\.md$/, '');
+      if (!q || name.toLowerCase().includes(q) || path.toLowerCase().includes(q)) {
+        if (!groups[dir]) groups[dir] = [];
+        groups[dir].push({ path: path, name: name });
+      }
+    });
+
+    const dirs = Object.keys(groups).sort();
+    let html = '';
+    dirs.forEach(function(dir) {
+      const items = groups[dir];
+      if (!items || items.length === 0) return;
+      const icon = TYPE_ICONS[dir.toLowerCase()] || '📁';
+      html += '<div class="memory-type-header">' + icon + ' ' + esc(dir) + ' <span style="opacity:0.6">(' + items.length + ')</span></div>';
+      items.sort(function(a,b) { return a.name.localeCompare(b.name); }).forEach(function(item) {
+        const isActive = item.path === memoryCurrentPath;
+        html += '<div class="memory-entity-item' + (isActive ? ' active' : '') + '" data-path="' + esc(item.path) + '">' + esc(item.name) + '</div>';
+      });
+    });
+
+    if (!html) html = '<div class="empty-state">No entities found.</div>';
+    sidebar.innerHTML = html;
+
+    sidebar.querySelectorAll('.memory-entity-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        sidebar.querySelectorAll('.memory-entity-item').forEach(function(e) { e.classList.remove('active'); });
+        el.classList.add('active');
+        loadMemoryEntity(el.dataset.path);
+      });
+    });
+  }
+
+  async function loadMemoryEntity(path) {
+    memoryCurrentPath = path;
+    const content = document.getElementById('memory-content');
+    content.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const data = await api('/api/vault/file?path=' + encodeURIComponent(path));
+      const name = path.split('/').pop().replace(/\.md$/, '');
+      const nodeName = name.toLowerCase();
+
+      const backlinks = memoryGraphEdges.filter(function(e) { return (e.target||'').toLowerCase() === nodeName; }).map(function(e) { return e.source; });
+      const outLinks = memoryGraphEdges.filter(function(e) { return (e.source||'').toLowerCase() === nodeName; }).map(function(e) { return e.target; });
+
+      const fmData = data.frontmatter || {};
+      const fmKeys = Object.keys(fmData);
+      let fm = '';
+      if (fmKeys.length > 0) {
+        fm = '<div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:12px; font-size:0.82rem;">';
+        fmKeys.forEach(function(k) {
+          const v = fmData[k];
+          const vStr = Array.isArray(v) ? v.join(', ') : String(v !== null && v !== undefined ? v : '');
+          fm += '<span><strong style="color:var(--accent)">' + esc(k) + '</strong>: ' + esc(vStr) + '</span>';
+        });
+        fm += '</div>';
+      }
+
+      let linksHtml = '';
+      if (backlinks.length > 0 || outLinks.length > 0) {
+        linksHtml = '<div style="margin-top:16px;">';
+        if (backlinks.length > 0) {
+          linksHtml += '<div style="margin-bottom:10px;"><div style="color:var(--text-dim); font-size:0.75rem; text-transform:uppercase; margin-bottom:4px;">Backlinks (' + backlinks.length + ')</div><div style="display:flex; flex-wrap:wrap; gap:4px;">';
+          backlinks.forEach(function(bl) {
+            linksHtml += '<span style="background:rgba(88,166,255,0.1);color:var(--accent);padding:2px 8px;border-radius:10px;font-size:0.78rem;font-family:var(--mono);">' + esc(bl) + '</span>';
+          });
+          linksHtml += '</div></div>';
+        }
+        if (outLinks.length > 0) {
+          linksHtml += '<div><div style="color:var(--text-dim); font-size:0.75rem; text-transform:uppercase; margin-bottom:4px;">Links To (' + outLinks.length + ')</div><div style="display:flex; flex-wrap:wrap; gap:4px;">';
+          outLinks.forEach(function(ol) {
+            linksHtml += '<span style="background:rgba(63,185,80,0.1);color:var(--green);padding:2px 8px;border-radius:10px;font-size:0.78rem;font-family:var(--mono);">' + esc(ol) + '</span>';
+          });
+          linksHtml += '</div></div>';
+        }
+        linksHtml += '</div>';
+      }
+
+      content.innerHTML =
+        '<div class="card" style="margin-bottom:0;">' +
+        '<h2 style="text-transform:none; font-size:1.05rem; color:var(--text); margin-bottom:4px;">' + esc(name) + '</h2>' +
+        '<div style="font-size:0.75rem; font-family:var(--mono); color:var(--text-dim); margin-bottom:12px;">' + esc(path) + '</div>' +
+        fm + linksHtml +
+        (data.body ? '<hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">' +
+          '<pre style="white-space:pre-wrap;font-family:var(--mono);font-size:0.8rem;max-height:400px;overflow-y:auto;color:var(--text);">' + esc(data.body) + '</pre>' : '') +
+        '</div>';
+    } catch (err) {
+      content.innerHTML = '<div class="empty-state">Failed: ' + esc(err.message) + '</div>';
+    }
+  }
+
+  document.getElementById('memory-search').addEventListener('input', function(e) {
+    renderMemorySidebar(memoryAllFiles, e.target.value);
+  });
+
+  // ── MCP Panel ──
+  let mcpPanelLoaded = false;
+
+  async function loadMcpPanel() {
+    if (mcpPanelLoaded) return;
+    mcpPanelLoaded = true;
+    const el = document.getElementById('mcp-content');
+    el.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const serversData = await api('/api/mcp/servers');
+      const toolsData = await api('/api/mcp/tools');
+      const servers = serversData.servers || [];
+      const tools = toolsData.tools || [];
+
+      if (servers.length === 0 && tools.length === 0) {
+        el.innerHTML = '<div class="empty-state">No MCP servers or tools registered.</div>';
+        return;
+      }
+
+      const toolsByServer = {};
+      tools.forEach(function(t) {
+        const srv = t.server || t.serverName || '__other__';
+        if (!toolsByServer[srv]) toolsByServer[srv] = [];
+        toolsByServer[srv].push(t);
+      });
+
+      let html = '';
+
+      servers.forEach(function(srv) {
+        const name = srv.name || srv.id || 'Unknown';
+        const status = srv.status || (srv.connected ? 'connected' : 'disconnected');
+        const badgeCls = status === 'connected' ? 'badge-connected' : 'badge-disconnected';
+        const srvTools = toolsByServer[name] || [];
+
+        html += '<div class="mcp-server-card">';
+        html += '<div class="mcp-server-header">';
+        html += '<span>\uD83D\uDD0C ' + esc(name) + '</span>';
+        html += '<span class="badge ' + badgeCls + '">' + esc(status) + '</span>';
+        html += '<span style="margin-left:auto; font-size:0.8rem; color:var(--text-dim);">' + srvTools.length + ' tools</span>';
+        html += '</div>';
+
+        if (srvTools.length > 0) {
+          html += '<div class="mcp-tool-grid">';
+          srvTools.forEach(function(t) {
+            html += '<div class="mcp-tool-item">';
+            html += '<div class="mcp-tool-name">' + esc(t.name || t.toolName || '—') + '</div>';
+            if (t.description) html += '<div class="mcp-tool-desc">' + esc(t.description) + '</div>';
+            html += '</div>';
+          });
+          html += '</div>';
+        } else {
+          html += '<div style="font-size:0.85rem;color:var(--text-dim);">No tools loaded.</div>';
+        }
+        html += '</div>';
+      });
+
+      const listedNames = {};
+      servers.forEach(function(s) { listedNames[s.name || s.id || 'Unknown'] = true; });
+      const orphans = tools.filter(function(t) { return !listedNames[t.server || t.serverName || '__other__']; });
+
+      if (orphans.length > 0) {
+        html += '<div class="mcp-server-card"><div class="mcp-server-header"><span>\uD83D\uDD27 Other Tools</span></div><div class="mcp-tool-grid">';
+        orphans.forEach(function(t) {
+          html += '<div class="mcp-tool-item"><div class="mcp-tool-name">' + esc(t.name || t.toolName || '—') + '</div>';
+          if (t.description) html += '<div class="mcp-tool-desc">' + esc(t.description) + '</div>';
+          html += '</div>';
+        });
+        html += '</div></div>';
+      }
+
+      el.innerHTML = html || '<div class="empty-state">No MCP data available.</div>';
+    } catch (err) {
+      el.innerHTML = '<div class="empty-state">Failed: ' + esc(err.message) + '</div>';
+    }
+  }
+
+  // ── Session Detail Modal ──
+  const sessionModal = document.getElementById('session-modal');
+  const sessionModalClose = document.getElementById('session-modal-close');
+  const sessionModalBody = document.getElementById('session-modal-body');
+  const sessionModalMeta = document.getElementById('session-modal-meta');
+
+  sessionModalClose.addEventListener('click', function() {
+    sessionModal.style.display = 'none';
+  });
+  sessionModal.addEventListener('click', function(e) {
+    if (e.target === sessionModal) sessionModal.style.display = 'none';
+  });
+
+  async function openSessionModal(sessionId) {
+    if (!sessionId) return;
+    sessionModal.style.display = 'flex';
+    sessionModalMeta.innerHTML = '';
+    sessionModalBody.innerHTML = '<div class="empty-state">Loading...</div>';
+    try {
+      const data = await api('/api/sessions/' + encodeURIComponent(sessionId));
+      sessionModalMeta.innerHTML =
+        '<span><strong>ID:</strong> ' + esc(data.id ?? sessionId) + '</span>' +
+        '<span><strong>Channel:</strong> ' + esc(data.channel ?? '—') + '</span>' +
+        '<span><strong>Trust:</strong> ' + esc(data.trustTier ?? '—') + '</span>' +
+        '<span><strong>Status:</strong> ' + esc(data.status ?? '—') + '</span>' +
+        '<span><strong>Messages:</strong> ' + esc(data.messageCount ?? 0) + '</span>' +
+        (data.startedAt ? '<span><strong>Started:</strong> ' + esc(fmtDate(data.startedAt)) + '</span>' : '');
+      const messages = data.messages || [];
+      if (messages.length === 0) {
+        sessionModalBody.innerHTML = '<div class="empty-state">No messages in this session.</div>';
+        return;
+      }
+      sessionModalBody.innerHTML = messages.map(function(m) {
+        const roleClass = m.role === 'user' ? 'user' : m.role === 'assistant' ? 'assistant' : 'tool';
+        const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content, null, 2);
+        return '<div class="session-message ' + roleClass + '">' +
+          '<div class="msg-role">' + esc(m.role) + (m.name ? ' (' + esc(m.name) + ')' : '') + '</div>' +
+          '<div class="msg-content">' + esc(content) + '</div>' +
+          '</div>';
+      }).join('');
+    } catch (err) {
+      sessionModalBody.innerHTML = '<div class="empty-state">Failed to load session: ' + esc(err.message) + '</div>';
+    }
   }
 })();
 </script>

@@ -125,7 +125,7 @@ describe('Session 47: Open-Source Readiness', () => {
 
   it('package.json has required fields', () => {
     const pkg = JSON.parse(readFileSync(resolve(projectRoot, 'package.json'), 'utf-8'));
-    expect(pkg.name).toBe('ved');
+    expect(pkg.name).toBe('ved-ai');
     expect(pkg.version).toBeDefined();
     expect(pkg.license).toBe('MIT');
     expect(pkg.description).toBeDefined();

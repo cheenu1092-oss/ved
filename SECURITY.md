@@ -4,8 +4,8 @@
 
 | Version | Supported          |
 |---------|--------------------|
-| 0.6.x   | ✅ Current         |
-| < 0.6   | ❌ No backports    |
+| 0.7.x   | ✅ Current         |
+| < 0.7   | ❌ No backports    |
 
 ## Reporting a Vulnerability
 

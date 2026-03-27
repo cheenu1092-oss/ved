@@ -1,6 +1,6 @@
 {
-  "name": "ved",
-  "version": "0.6.0",
+  "name": "ved-ai",
+  "version": "0.7.0",
   "description": "The personal AI agent that remembers everything and proves it",
   "type": "module",
   "main": "dist/index.js",
@@ -9,13 +9,19 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
     }
   },
   "bin": {
-    "ved": "dist/cli.js"
+    "ved": "dist/cli.js",
+    "ved-ai": "dist/cli.js"
   },
   "files": [
     "dist/",
+    "scripts/postinstall.js",
     "LICENSE",
     "README.md",
     "CHANGELOG.md",
@@ -29,6 +35,7 @@
     "lint": "eslint src/",
     "clean": "rm -rf dist/",
     "prepublishOnly": "npm run clean && npm run build && npm run test:run",
+    "postinstall": "node scripts/postinstall.js || true",
     "migrate": "node --loader ts-node/esm src/db/migrate.ts",
     "docker:build": "docker compose build",
     "docker:test": "docker compose run --rm ved npm run test:run",

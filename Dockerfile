@@ -14,7 +14,8 @@ RUN npm install
 # Copy source and project files
 COPY tsconfig.json ./
 COPY src/ src/
-COPY README.md LICENSE CONTRIBUTING.md CHANGELOG.md ./
+COPY scripts/ scripts/
+COPY README.md LICENSE CONTRIBUTING.md CHANGELOG.md SECURITY.md ./
 
 # Build
 RUN npm run build

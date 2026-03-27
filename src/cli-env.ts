@@ -171,6 +171,13 @@ export function clearActiveEnv(): void {
 }
 
 /**
+ * Deactivate the current environment (pure function, alias for clearActiveEnv).
+ */
+export function deactivateEnv(): void {
+  clearActiveEnv();
+}
+
+/**
  * List all environments.
  */
 export function listEnvs(): EnvMeta[] {

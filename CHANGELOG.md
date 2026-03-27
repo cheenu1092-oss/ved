@@ -2,6 +2,62 @@
 
 All notable changes to Ved are documented here.
 
+## [0.7.0] — 2026-03-26
+
+### Highlights
+- **npm publish ready** — Ved is now `ved-ai` on npm with `npx ved-ai init` support
+- **3,345+ tests** (up from 3,251 in v0.6.0)
+- **~45,400 LoC** across all modules
+- P0-P3 "Primetime Readiness" complete: live LLM testing, TUI overhaul, config wizard, web dashboard
+- Post-install script with Ollama detection and helpful onboarding
+- Dual binary entry: `ved` and `ved-ai` both work
+
+### npm Publish (P4)
+- Package renamed to `ved-ai` (available on npm)
+- Dual `bin` entries: `ved` and `ved-ai` for CLI access
+- `./types` subpath export for TypeScript consumers
+- Post-install script: detects Ollama, prints quickstart guide, skips in CI
+- `npm pack` verified: ~500KB tarball, zero test/doc/session leakage
+- `prepublishOnly` runs full build + test suite
+- `postinstall` is fault-tolerant (`|| true` — never blocks install)
+
+### Gateway Web UI (P3) — Already Complete
+- 12-panel web dashboard served from `ved serve` (2,270 lines, zero deps)
+- Panels: Overview, Events (live SSE), Search (RAG), History (audit), Vault (file browser), Graph (force-directed canvas visualization), Memory (entity browser), Doctor (diagnostics), Trust & Approvals (work order management), Cron (job management), Config (YAML editor + env switcher), MCP (server/tool inspector)
+- Config editor with save/cancel, environment selector with use/reset
+- Session detail modal with conversation view
+- Mobile-responsive dark theme
+- Real-time updates via SSE with keepalive
+- 36 dashboard-v2 tests covering config write, env management, HTML elements
+
+### Config UX (P2)
+- Interactive `ved init` wizard with @clack/prompts-style UX (723 lines)
+- 4 LLM providers: Anthropic, OpenAI, Ollama, OpenRouter with model selection
+- API key validation (prefix checks + env var detection)
+- 3 trust modes: audit, gate-writes, gate-all
+- Optional Discord channel setup
+- `--yes` flag for non-interactive mode, `--force` for overwrite
+- `ved config edit [local]` opens in $EDITOR with post-save validation
+
+### TUI Overhaul (P1)
+- Session picker on `ved chat` startup (resume active/idle or start new)
+- Token streaming via `processMessageStream`
+- Fixed status bar with ANSI scroll region + SIGWINCH resize handling
+- Syntax highlighting for code blocks (box borders + keyword coloring)
+- Color-coded risk badges on work order approvals
+- `--simple` flag for fallback to original REPL
+- `formatAgo()` relative timestamps throughout
+
+### Live LLM Testing (P0)
+- Ved successfully talked to Ollama qwen3:1.7b — first real LLM conversation
+- Full 7-step pipeline works end-to-end: message → RAG → LLM → response
+- Multi-turn conversation with name recall verified
+- System prompt self-identification verified
+- Audit trail integrity verified after live conversation
+- 8-test live test script for ongoing validation
+
+---
+
 ## [0.6.0] — 2026-03-21
 
 ### Highlights

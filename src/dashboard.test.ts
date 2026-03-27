@@ -238,6 +238,76 @@ describe('getDashboardHtml', () => {
     expect(html).toContain('function renderConfigTree(obj');
     expect(html).toContain('[REDACTED]');
   });
+  // ── New panels (P3 Gateway) ──
+
+  it('contains graph nav button and panel', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('data-panel="graph"');
+    expect(html).toContain('id="panel-graph"');
+  });
+
+  it('graph panel has canvas element and container', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="graph-canvas"');
+    expect(html).toContain('id="graph-container"');
+  });
+
+  it('graph panel has reset button and stats', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="graph-reset-btn"');
+    expect(html).toContain('id="graph-stats"');
+  });
+
+  it('contains memory nav button and panel', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('data-panel="memory"');
+    expect(html).toContain('id="panel-memory"');
+  });
+
+  it('memory panel has sidebar, content, and search', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="memory-sidebar"');
+    expect(html).toContain('id="memory-content"');
+    expect(html).toContain('id="memory-search"');
+  });
+
+  it('contains mcp nav button and panel', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('data-panel="mcp"');
+    expect(html).toContain('id="panel-mcp"');
+  });
+
+  it('mcp panel has content area', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="mcp-content"');
+  });
+
+  it('overview panel has mini graph canvas', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('id="mini-graph-canvas"');
+  });
+
+  it('includes graph and mcp API endpoints', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('/api/vault/graph');
+    expect(html).toContain('/api/mcp/servers');
+    expect(html).toContain('/api/mcp/tools');
+  });
+
+  it('vault files have view-in-graph buttons', () => {
+    const html = getDashboardHtml();
+    expect(html).toContain('viewInGraph(');
+    expect(html).toContain('data-name="');
+  });
+
+  it('graph panel nav button is between vault and doctor', () => {
+    const html = getDashboardHtml();
+    const vaultIdx = html.indexOf('data-panel="vault"');
+    const graphIdx = html.indexOf('data-panel="graph"');
+    const doctorIdx = html.indexOf('data-panel="doctor"');
+    expect(graphIdx).toBeGreaterThan(vaultIdx);
+    expect(graphIdx).toBeLessThan(doctorIdx);
+  });
 });
 
 // ── HTTP Integration: Dashboard served at / and /dashboard ──

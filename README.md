@@ -194,31 +194,54 @@ All commands support `--help`/`-h`. Shell completions cover all subcommands and 
 
 ## Getting Started
 
+### Install from npm (recommended)
+
 ```bash
-# Prerequisites: Node.js 20+, Ollama with nomic-embed-text
+# Install globally (Node.js 20+ required)
+npm install -g ved-ai
 
-# Clone
-git clone https://github.com/cheenu1092-oss/ved.git
-cd ved
+# Or run directly with npx
+npx ved-ai init
 
-# Install
-npm install
+# Interactive setup wizard — choose your LLM provider, set API key, configure trust
+ved init
 
-# Pull embedding model
-ollama pull nomic-embed-text
-
-# Initialize vault + config
-ved init --vault ~/ved-vault
-
-# Start the agent
-ved start
+# Start chatting
+ved chat
 
 # Or run a one-shot query
 ved run "What do you know about Project Alpha?"
-
-# Or start the web dashboard
-ved serve --port 3000
 ```
+
+### Install from source
+
+```bash
+git clone https://github.com/cheenu1092-oss/ved.git
+cd ved
+npm install
+npm run build
+
+# Optional: pull local embedding model for RAG
+ollama pull nomic-embed-text
+
+# Initialize and start
+./dist/cli.js init
+./dist/cli.js chat
+```
+
+### Web Dashboard
+
+```bash
+# Start the HTTP API + web dashboard
+ved serve --port 3141
+
+# Open http://localhost:3141 — 12 panels covering stats, events,
+# search, vault, knowledge graph, trust, cron, config, MCP tools
+```
+
+The `ved init` wizard supports Anthropic, OpenAI, Ollama, and OpenRouter. For free local AI, install [Ollama](https://ollama.com) first.
+
+See [docs/getting-started.md](docs/getting-started.md) for the full walkthrough.
 
 ---
 
@@ -234,6 +257,6 @@ MIT
 
 ---
 
-**Current stats:** 46 CLI commands • 2,931 tests • ~42,600 LoC • 0 open vulnerabilities (21 found and fixed)
+**Current stats:** 46 CLI commands • 3,345+ tests • ~45,400 LoC • 0 open vulnerabilities (21 found and fixed)
 
 *Built by [cheenu1092-oss](https://github.com/cheenu1092-oss). Designed in the open.*
