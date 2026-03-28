@@ -11,7 +11,7 @@ import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { createLogger, initLogger } from './core/log.js';
-import { loadConfig, validateConfig } from './core/config.js';
+import { loadConfig, validateConfig, getConfigDir } from './core/config.js';
 import { migrate, currentVersion, verifyMigrations } from './db/migrate.js';
 import { EventLoop } from './core/event-loop.js';
 import { CronScheduler, type CronJob, type CronJobInput, type CronRunResult, type CronHistoryEntry } from './core/cron.js';
@@ -810,6 +810,82 @@ export class VedApp {
     const infos = checks.filter(c => c.status === 'info').length;
 
     return { checks, passed, warned, failed, infos };
+  }
+
+  /**
+   * Attempt to auto-repair issues found by `ved doctor --fix`.
+   * Returns lists of what was fixed and what still needs manual attention.
+   */
+  async doctorFix(): Promise<{ fixed: string[]; manual: string[] }> {
+    const fixed: string[] = [];
+    const manual: string[] = [];
+
+    // 1. Missing vault directories
+    const vaultPath = this.config.memory.vaultPath;
+    const expectedDirs = ['daily', 'entities', 'concepts', 'decisions'];
+
+    if (!existsSync(vaultPath)) {
+      try {
+        mkdirSync(vaultPath, { recursive: true });
+        fixed.push(`Created vault directory: ${vaultPath}`);
+      } catch (err) {
+        manual.push(`Cannot create vault directory ${vaultPath}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    for (const dir of expectedDirs) {
+      const dirPath = join(vaultPath, dir);
+      if (!existsSync(dirPath)) {
+        try {
+          mkdirSync(dirPath, { recursive: true });
+          fixed.push(`Created vault subdirectory: ${dir}/`);
+        } catch (err) {
+          manual.push(`Cannot create ${dir}/: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+    }
+
+    // 2. Missing git repo in vault (when git is enabled)
+    try {
+      const git = this.memory.vault.git;
+      if (!git.isRepo && this.config.memory.gitEnabled) {
+        try {
+          execSync('git init', { cwd: vaultPath, stdio: 'pipe' });
+          fixed.push(`Initialized git repository in vault: ${vaultPath}`);
+        } catch (err) {
+          manual.push(`Cannot initialize git repo: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+    } catch (_err) {
+      // vault.git may not be accessible if vault was just created — skip
+    }
+
+    // 3. Stale RAG index — trigger reindex
+    try {
+      const ragStats = this.rag.stats();
+      const vaultFiles = this.memory.vault.listFiles();
+      const indexedCount = ragStats.filesIndexed;
+      const totalFiles = vaultFiles.length;
+
+      if (totalFiles > 0 && indexedCount < totalFiles) {
+        try {
+          await this.reindexVault();
+          fixed.push(`Rebuilt RAG index (${totalFiles} file(s))`);
+        } catch (err) {
+          manual.push(`Cannot reindex vault: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+    } catch (_err) {
+      // skip RAG check if not available
+    }
+
+    // 4. Missing config file — cannot auto-fix, advise the user
+    const configPath = join(getConfigDir(), 'config.yaml');
+    if (!existsSync(configPath)) {
+      manual.push('Config file missing — run "ved init" to create it');
+    }
+
+    return { fixed, manual };
   }
 
   // ── Plugin (MCP Server Manager) ──

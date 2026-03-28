@@ -14,6 +14,7 @@ import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp, VedApp } from './app.js';
 import { getConfigDir, loadConfig, validateConfig } from './core/config.js';
+import { vedError } from './errors.js';
 import { createLogger } from './core/log.js';
 import type { MergedResult } from './rag/types.js';
 import type { VaultExport } from './export-types.js';
@@ -42,6 +43,7 @@ import { replayCommand } from './cli-replay.js';
 import { graphCommand } from './cli-graph.js';
 import { runTaskCommand, checkHelp as taskCheckHelp } from './cli-task.js';
 import { runInitWizard, parseInitArgs, getEditorCommand } from './cli-init-wizard.js';
+import { installCompletions, detectShell } from './completions-installer.js';
 
 const log = createLogger('cli');
 const VERSION = '0.7.0';
@@ -49,6 +51,26 @@ const VERSION = '0.7.0';
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const command = args[0] ?? 'start';
+
+  // First-run experience: no args and no config file → show friendly welcome
+  if (args.length === 0) {
+    const configPath = join(getConfigDir(), 'config.yaml');
+    if (!existsSync(configPath)) {
+      console.log('');
+      console.log('🕉️  Welcome to Ved — the AI agent that remembers everything.');
+      console.log('');
+      console.log('  Looks like this is your first time. Let us get you set up:');
+      console.log('');
+      console.log('    ved init        — Interactive setup wizard (recommended)');
+      console.log('    ved init --yes  — Quick setup with defaults');
+      console.log('    ved help        — See all commands');
+      console.log('    ved doctor      — Check system health');
+      console.log('');
+      console.log('  Get started: ved init');
+      console.log('');
+      return;
+    }
+  }
 
   switch (command) {
     case 'help':
@@ -89,7 +111,7 @@ async function main(): Promise<void> {
       return history(args.slice(1));
     case 'doctor':
       if (checkHelp('doctor', args.slice(1))) return;
-      return doctor();
+      return doctor(args.slice(1));
     case 'backup':
       if (checkHelp('backup', args.slice(1))) return;
       return backup(args.slice(1));
@@ -374,8 +396,7 @@ async function main(): Promise<void> {
           process.argv = [process.argv[0], process.argv[1], ...expandedArgs];
           return main();
         }
-        console.error(`Unknown alias: @${aliasName}`);
-        console.log('Run `ved alias list` to see available aliases.');
+        vedError('COMMAND_NOT_FOUND', `Unknown alias: @${aliasName}`, 'Run "ved alias list" to see available aliases');
         process.exit(1);
       }
 
@@ -387,8 +408,7 @@ async function main(): Promise<void> {
         return main();
       }
 
-      console.error(`Unknown command: ${command}`);
-      console.log(`Run 'ved help' to see all available commands.`);
+      vedError('COMMAND_NOT_FOUND', `Unknown command: "${command}"`);
       process.exit(1);
     }
   }
@@ -517,7 +537,7 @@ async function start(): Promise<void> {
     log.error('Ved failed to start', {
       error: err instanceof Error ? err.message : String(err),
     });
-    console.error(`\nFailed to start: ${err instanceof Error ? err.message : String(err)}`);
+    vedError('INIT_REQUIRED', `Failed to start: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
@@ -641,7 +661,7 @@ async function config(args: string[]): Promise<void> {
         console.log(`\n  ${errors.length} issue(s) found.\n`);
         process.exit(1);
       } catch (err) {
-        console.error(`Config load failed: ${err instanceof Error ? err.message : String(err)}`);
+        vedError('CONFIG_INVALID', `Config load failed: ${err instanceof Error ? err.message : String(err)}`);
         process.exit(1);
       }
       break;
@@ -1084,10 +1104,13 @@ async function history(args: string[]): Promise<void> {
 /**
  * Run self-diagnostics.
  *
- * Usage: ved doctor
+ * Usage:
+ *   ved doctor        — Run all checks
+ *   ved doctor --fix  — Run checks and auto-repair fixable issues
  */
-async function doctor(): Promise<void> {
-  console.log(`\nVed v${VERSION} — Doctor\n`);
+async function doctor(args: string[]): Promise<void> {
+  const fix = args.includes('--fix');
+  console.log(`\nVed v${VERSION} — Doctor${fix ? ' (--fix)' : ''}\n`);
 
   try {
     const app = createApp();
@@ -1100,12 +1123,20 @@ async function doctor(): Promise<void> {
         : check.status === 'warn' ? '⚠️'
         : check.status === 'fail' ? '❌'
         : 'ℹ️';
-      const fixHint = check.fixable ? ' (fixable)' : '';
+      const fixHint = (check.fixable && !fix) ? ' (fixable with --fix)' : '';
       console.log(`  ${icon} ${check.name}: ${check.message}${fixHint}`);
     }
 
     console.log('');
     console.log(`  Summary: ${result.passed} passed, ${result.warned} warnings, ${result.failed} failed, ${result.infos} info`);
+
+    const hasFixable = result.checks.some(c => c.fixable && c.status !== 'ok');
+
+    if (result.failed > 0 || result.warned > 0) {
+      if (hasFixable && !fix) {
+        console.log('\n  💡 Tip: Run "ved doctor --fix" to auto-repair fixable issues.\n');
+      }
+    }
 
     if (result.failed > 0) {
       console.log('\n  ❌ Some checks failed. Address the issues above.\n');
@@ -1113,6 +1144,37 @@ async function doctor(): Promise<void> {
       console.log('\n  ⚠️  Some warnings. Ved will work but may not be fully operational.\n');
     } else {
       console.log('\n  🎉 All checks passed! Ved is healthy.\n');
+    }
+
+    // Auto-repair if --fix was requested
+    if (fix) {
+      const fixableChecks = result.checks.filter(c => c.fixable && c.status !== 'ok');
+      if (fixableChecks.length === 0) {
+        console.log('  ✅ Nothing to fix — no fixable issues found.\n');
+      } else {
+        console.log('  🔧 Attempting auto-repair...\n');
+        const fixResult = await app.doctorFix();
+
+        if (fixResult.fixed.length > 0) {
+          console.log('  Fixed:');
+          for (const msg of fixResult.fixed) {
+            console.log(`    ✅ ${msg}`);
+          }
+          console.log('');
+        }
+
+        if (fixResult.manual.length > 0) {
+          console.log('  Still needs manual attention:');
+          for (const msg of fixResult.manual) {
+            console.log(`    ⚠️  ${msg}`);
+          }
+          console.log('');
+        }
+
+        if (fixResult.fixed.length > 0 && fixResult.manual.length === 0) {
+          console.log('  🎉 All fixable issues resolved.\n');
+        }
+      }
     }
 
     await app.stop();
@@ -1782,20 +1844,53 @@ async function watch(): Promise<void> {
  *   ved completions bash    — Print bash completions
  *   ved completions zsh     — Print zsh completions
  *   ved completions fish    — Print fish completions
+ *   ved completions install — Auto-install for current shell ($SHELL)
  */
 function completions(args: string[]): void {
-  const shell = args[0];
+  const sub = args[0];
+
+  if (sub === 'install') {
+    return completionsInstall();
+  }
+
+  const shell = sub;
 
   if (!shell || !['bash', 'zsh', 'fish'].includes(shell)) {
-    console.error('Usage: ved completions <bash|zsh|fish>');
-    console.log('\nInstall:');
+    console.error('Usage: ved completions <bash|zsh|fish|install>');
+    console.log('\nInstall manually:');
     console.log('  bash:  ved completions bash >> ~/.bashrc');
     console.log('  zsh:   ved completions zsh > ~/.zfunc/_ved');
     console.log('  fish:  ved completions fish > ~/.config/fish/completions/ved.fish');
+    console.log('\nOr install automatically:');
+    console.log('  ved completions install');
     process.exit(1);
   }
 
   console.log(VedApp.generateCompletions(shell as 'bash' | 'zsh' | 'fish'));
+}
+
+/**
+ * Auto-install completions for the current shell.
+ * Idempotent: skips if already installed.
+ */
+function completionsInstall(): void {
+  const shell = detectShell();
+
+  if (!shell) {
+    const shellBin = process.env.SHELL ?? '';
+    console.error(`Cannot detect supported shell from $SHELL="${shellBin}".`);
+    console.error('Supported shells: bash, zsh, fish');
+    console.error('Install manually: ved completions <bash|zsh|fish>');
+    process.exit(1);
+    return;
+  }
+
+  const script = VedApp.generateCompletions(shell);
+  const result = installCompletions(shell, script);
+
+  for (const msg of result.messages) {
+    console.log(msg);
+  }
 }
 
 /**
