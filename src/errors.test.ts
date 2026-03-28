@@ -2,8 +2,8 @@
  * Tests for src/errors.ts — actionable error message utility.
  */
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { VED_ERRORS, vedError, type VedErrorCode } from './errors.js';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { VED_ERRORS, vedError, dieWithHint, type VedErrorCode } from './errors.js';
 
 // ── VED_ERRORS registry ──────────────────────────────────────────────────────
 
@@ -139,5 +139,90 @@ describe('vedError()', () => {
     captureErrors();
     vedError('INIT_REQUIRED');
     expect(errors[1]).toContain('ved init');
+  });
+});
+
+// ── dieWithHint() ─────────────────────────────────────────────────────────────
+
+describe('dieWithHint()', () => {
+  const origError = console.error;
+  const origExit = process.exit;
+  let errors: string[] = [];
+  let exitCalled = false;
+  let exitCode: number | undefined;
+
+  beforeEach(() => {
+    errors = [];
+    exitCalled = false;
+    exitCode = undefined;
+    console.error = (...args: unknown[]) => errors.push(args.map(String).join(' '));
+    (process.exit as unknown as jest.Mock) = vi.fn((code?: number) => {
+      exitCalled = true;
+      exitCode = code;
+      throw new Error('process.exit'); // prevent further execution
+    }) as unknown as typeof process.exit;
+  });
+
+  afterEach(() => {
+    console.error = origError;
+    process.exit = origExit;
+  });
+
+  it('calls process.exit(1)', () => {
+    try { dieWithHint('broken', 'fix it'); } catch {}
+    expect(exitCalled).toBe(true);
+    expect(exitCode).toBe(1);
+  });
+
+  it('prints the message to stderr', () => {
+    try { dieWithHint('Something broke', 'Run ved init'); } catch {}
+    expect(errors[0]).toContain('Something broke');
+  });
+
+  it('prints the hint to stderr', () => {
+    try { dieWithHint('Something broke', 'Run ved init'); } catch {}
+    expect(errors[1]).toContain('Run ved init');
+  });
+
+  it('prints message with red ANSI escape code', () => {
+    try { dieWithHint('err', 'fix'); } catch {}
+    expect(errors[0]).toContain('\x1B[31m');
+    expect(errors[0]).toContain('\x1B[0m');
+  });
+
+  it('prints hint with dim ANSI escape code', () => {
+    try { dieWithHint('err', 'fix'); } catch {}
+    expect(errors[1]).toContain('\x1B[2m');
+  });
+
+  it('prints exactly 2 lines to stderr', () => {
+    try { dieWithHint('msg', 'hint'); } catch {}
+    expect(errors).toHaveLength(2);
+  });
+
+  it('includes ✗ prefix in message', () => {
+    try { dieWithHint('bad thing', 'do this'); } catch {}
+    expect(errors[0]).toContain('✗');
+    expect(errors[0]).toContain('bad thing');
+  });
+
+  it('includes → prefix in hint', () => {
+    try { dieWithHint('bad thing', 'do this'); } catch {}
+    expect(errors[1]).toContain('→');
+    expect(errors[1]).toContain('do this');
+  });
+
+  it('works with empty strings', () => {
+    try { dieWithHint('', ''); } catch {}
+    expect(exitCalled).toBe(true);
+    expect(errors).toHaveLength(2);
+  });
+
+  it('works with long strings', () => {
+    const msg = 'x'.repeat(500);
+    const hint = 'y'.repeat(500);
+    try { dieWithHint(msg, hint); } catch {}
+    expect(errors[0]).toContain(msg);
+    expect(errors[1]).toContain(hint);
   });
 });

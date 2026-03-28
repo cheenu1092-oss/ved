@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 101
-- **Current Phase:** CYCLE (v0.7.0 released — P0-P4 COMPLETE, ready for npm publish)
-- **Last Run:** 2026-03-27
+- **Session Number:** 102
+- **Current Phase:** CYCLE (P5 — Polish & DX in progress)
+- **Last Run:** 2026-03-28
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 102 — P5 Polish & DX (error messages, loading states, onboarding, doctor fixes)
+- **Next Session:** 103 — P5 Polish Phase 2 (upgrade remaining CLI error messages in sub-CLIs, add spinners to more operations, ved doctor --fix enhancements)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -132,6 +132,7 @@
 - **Session 100:** CYCLE — **P4: npm Publish (Final Readiness).** Verified npm package end-to-end: pack (566KB, 378 files), install flow, binary accessibility (ved + ved-ai), init wizard (--yes creates config + vault), help system, dry-run publish. Created comprehensive test script (test-npm-flow.sh) covering version/help/doctor/init/stats. Verified README quickstart accurate for npm users. **All tests pass. Ved ready for public npm release. P4 COMPLETE. P0-P4 ALL COMPLETE.**
 - **Session 98:** CYCLE — **P2 Config UX — Interactive init wizard + config edit.** `ved init` wizard (723 lines): 4 providers with model choices, API key validation (prefix checks + env detection), vault path setup, 3 trust modes (audit/gate-writes/gate-all), Discord channel optional setup, non-interactive fallback (--yes), --force overwrite. `ved config edit [local]`: opens in $EDITOR, auto-validates after save. Config generation: well-commented YAML with secrets separated into config.local.yaml, idempotent vault structure creation. Also committed daemon TUI tests from S97. Pushed to GitHub (24f179d). **76 new tests. 3251/3251 host + Docker parity. 0 type errors. P1+P2 complete.**
 - **Session 96:** CYCLE — **P0 Live Test: Ved talks to a real LLM.** Created comprehensive 8-test live test script. Ved successfully talked to Ollama qwen3:1.7b — simple chat, multi-turn conversation (name recall), system prompt self-identification, audit trail integrity all pass. RAG-enriched chat got a warning (small model ignored injected context — expected). Full 7-step pipeline works end-to-end without code changes. **7/8 tests pass. 3000/3000 unit tests. 0 type errors.**
+- **Session 102:** CYCLE — **P5 Polish Phase 1: spinner + error UX + auto-completions.** Built zero-dep spinner utility (TTY animation, non-TTY fallback, withSpinner async wrapper). Expanded error registry from 15→26 codes (SYNC_FAILED through ALREADY_EXISTS). Added `errHint()` and `errUsage()` helpers. Upgraded 46 raw `console.error` calls in cli.ts to structured errors with fix hints (103→57 remaining). Added spinners to reindex/backup/doctor. Auto-installs shell completions on `ved init`. **50 new tests. 3527/3527 pass (host + Docker parity). 0 type errors.**
 - **Session 101:** CYCLE — **v0.7.0 release.** Docker parity verified (3413/3413 pass). Updated CHANGELOG.md (corrected stats, date), README.md (updated stats). Tagged v0.7.0, pushed to GitHub (d202858), created GitHub release. **3413/3413 pass. 0 type errors. P0-P4 ALL COMPLETE.**
 - **Session 95:** CYCLE — **NPM packaging readiness.** Added `.npmignore` (excludes src/tests/docs/sessions/Docker/CI), `SECURITY.md` (vuln reporting + security model), `package.json` updates (exports map, files array, prepublishOnly script). Pack verified: 510KB tarball, 357 files, zero test/doc/session leakage. **3000/3000 host + 3019/3019 Docker. 0 type errors.** Closed cli-chat.ts test coverage gap (470 lines, 0→36 tests): parseChatArgs (14), TypingIndicator (8), ChatStats (3), printChatHelp (1), ChatOptions (3), edge cases (7). Wrote comprehensive `docs/getting-started.md` (6.9KB) covering install→config→first chat→memory→audit→backup→API→Docker. Pushed to GitHub (34ec837). **3000+ pass (host + Docker parity). 0 type errors.**
 - **Session 92:** CYCLE — **RED-TEAM: Graph + Task CLI attack surface.** 63 tests across 12 attack categories: DOT export path traversal (7), wikilink ReDoS (6), Graphviz injection (5), title/slug injection (7), frontmatter manipulation (6), search injection (5), archive traversal (5), ID matching ambiguity (5), symlinks/special files (4), date validation (5), large input DoS (4), concurrent ops (4). **0 vulnerabilities found.** 5 findings documented (all accepted risk or informational). All defenses held: slugify sanitization, vault containment (VULN-14), in-memory search, directory skipping, date validation. **2912/2912 pass (host + Docker parity). 0 type errors.**
@@ -213,7 +214,8 @@
 | 99 | ✅ CYCLE | P3 Gateway Web UI — 6 new panels + npm publish prep (55 tests) |
 | 100 | ✅ CYCLE | P4 npm Publish — package verification, install flow testing |
 | 101 | ✅ CYCLE | v0.7.0 release (CHANGELOG, README, tag, GitHub release) |
-| 102+ | CYCLE | P5 polish & DX |
+| 102 | ✅ CYCLE | P5 Polish Phase 1: spinner utility, error registry (15→26), CLI errors upgraded (103→57), auto-completions on init |
+| 103+ | CYCLE | P5 Polish Phase 2+ |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -301,4 +303,7 @@
 | npm-publish S99 | ✅ Complete | ~410 (scripts+pkg) | 19 |
 | http-env-config S99 | ✅ Complete | ~84 | 0 (covered in v2) |
 | v0.7.0 release S101 | ✅ Complete | ~20 | 0 |
-| **Total** | **ALL COMPLETE** | **~43,200** | **3413+** |
+| spinner S102 | ✅ Complete | ~116 | 23 |
+| errors-extended S102 | ✅ Complete | ~80 (new codes+helpers) | 14 |
+| cli-polish S102 | ✅ Complete | ~46 lines changed | 13 |
+| **Total** | **ALL COMPLETE** | **~43,400** | **3527+** |

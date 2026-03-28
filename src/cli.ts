@@ -14,7 +14,7 @@ import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { createApp, VedApp } from './app.js';
 import { getConfigDir, loadConfig, validateConfig } from './core/config.js';
-import { vedError } from './errors.js';
+import { vedError, errHint, errUsage } from './errors.js';
 import { createLogger } from './core/log.js';
 import type { MergedResult } from './rag/types.js';
 import type { VaultExport } from './export-types.js';
@@ -44,6 +44,7 @@ import { graphCommand } from './cli-graph.js';
 import { runTaskCommand, checkHelp as taskCheckHelp } from './cli-task.js';
 import { runInitWizard, parseInitArgs, getEditorCommand } from './cli-init-wizard.js';
 import { installCompletions, detectShell } from './completions-installer.js';
+import { spinner } from './spinner.js';
 
 const log = createLogger('cli');
 const VERSION = '0.7.0';
@@ -420,6 +421,23 @@ async function main(): Promise<void> {
 async function init(args: string[]): Promise<void> {
   const opts = parseInitArgs(args);
   await runInitWizard(opts);
+
+  // Auto-install shell completions after init
+  try {
+    const shell = detectShell();
+    if (shell) {
+      const script = VedApp.generateCompletions(shell);
+      const result = installCompletions(shell, script);
+      if (!result.skipped) {
+        console.log('');
+        for (const msg of result.messages) {
+          console.log(`  ${msg}`);
+        }
+      }
+    }
+  } catch {
+    // Non-critical — don't fail init over completions
+  }
 }
 
 /**
@@ -442,7 +460,7 @@ async function status(): Promise<void> {
 
     await app.stop();
   } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    vedError('NOT_INITIALIZED', `Health check failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
@@ -483,7 +501,7 @@ async function stats(): Promise<void> {
 
     await app.stop();
   } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    vedError('NOT_INITIALIZED', `Stats failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
@@ -498,11 +516,13 @@ async function reindex(): Promise<void> {
     const app = createApp();
     await app.init();
 
+    const spin = spinner('Indexing vault files...');
     const startTime = Date.now();
     const stats = await app.reindexVault();
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    spin.succeed(`Re-index complete in ${elapsed}s`);
 
-    console.log(`✅ Re-index complete in ${elapsed}s\n`);
+    console.log('');
     console.log(`  Files indexed:  ${stats.filesIndexed}`);
     console.log(`  Chunks stored:  ${stats.chunksStored}`);
     console.log(`  FTS entries:    ${stats.ftsEntries}`);
@@ -511,7 +531,7 @@ async function reindex(): Promise<void> {
 
     await app.stop();
   } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    vedError('RAG_STALE', `Re-index failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
@@ -558,7 +578,7 @@ async function search(args: string[]): Promise<void> {
     if ((args[i] === '-n' || args[i] === '--limit') && args[i + 1]) {
       topK = parseInt(args[i + 1], 10);
       if (isNaN(topK) || topK <= 0) {
-        console.error('Error: -n must be a positive integer');
+        errHint('-n must be a positive integer', 'Example: ved search "my query" -n 10');
         process.exit(1);
       }
       i++; // skip next
@@ -573,7 +593,7 @@ async function search(args: string[]): Promise<void> {
 
   const query = queryParts.join(' ').trim();
   if (!query) {
-    console.error('Usage: ved search <query> [-n <limit>] [--fts-only] [--verbose]');
+    errUsage('ved search <query> [-n <limit>] [--fts-only] [--verbose]');
     process.exit(1);
   }
 
@@ -682,7 +702,7 @@ async function config(args: string[]): Promise<void> {
         console.log(JSON.stringify(redacted, null, 2));
         console.log('');
       } catch (err) {
-        console.error(`Config load failed: ${err instanceof Error ? err.message : String(err)}`);
+        vedError('CONFIG_INVALID', `Config load failed: ${err instanceof Error ? err.message : String(err)}`);
         process.exit(1);
       }
       break;
@@ -698,7 +718,7 @@ async function config(args: string[]): Promise<void> {
       const configPath = join(configDir, target);
 
       if (!existsSync(configPath)) {
-        console.error(`Config file not found: ${configPath}`);
+        vedError('CONFIG_MISSING', `Config file not found: ${configPath}`);
         console.log(`Run \`ved init\` first to create it.`);
         process.exit(1);
       }
@@ -708,7 +728,7 @@ async function config(args: string[]): Promise<void> {
       try {
         execSync(`${editor} ${configPath}`, { stdio: 'inherit' });
       } catch {
-        console.error(`Failed to open editor: ${editor}`);
+        errHint(`Failed to open editor: ${editor}`, 'Set $EDITOR environment variable to your preferred editor');
         console.log(`Set $EDITOR or $VISUAL to your preferred editor.`);
         process.exit(1);
       }
@@ -732,7 +752,7 @@ async function config(args: string[]): Promise<void> {
     }
 
     default:
-      console.error(`Unknown config subcommand: ${sub}`);
+      errHint(`Unknown config subcommand: ${sub}`, 'Run "ved help" to see available commands');
       console.log('Usage: ved config [validate|show|path|edit [local]]');
       process.exit(1);
   }
@@ -770,7 +790,7 @@ async function exportVault(args: string[]): Promise<void> {
       folder = args[i + 1];
       i++;
     } else {
-      console.error(`Unknown export flag: ${args[i]}`);
+      errHint(`Unknown export flag: ${args[i]}`, 'Run "ved help" for usage');
       console.log('Usage: ved export [-o <file>] [--pretty] [--include-audit] [--include-stats] [--folder <name>]');
       process.exit(1);
     }
@@ -797,7 +817,7 @@ async function exportVault(args: string[]): Promise<void> {
 
     await app.stop();
   } catch (err) {
-    console.error(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
+    vedError('EXPORT_FAILED', `Export failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
@@ -827,14 +847,14 @@ async function importVault(args: string[]): Promise<void> {
     } else if (!args[i].startsWith('-')) {
       inputPath = args[i];
     } else {
-      console.error(`Unknown import flag: ${args[i]}`);
+      errHint(`Unknown import flag: ${args[i]}`, 'Run "ved help" for usage');
       console.log('Usage: ved import <file|-|--stdin> [--dry-run] [--merge|--overwrite]');
       process.exit(1);
     }
   }
 
   if (!inputPath) {
-    console.error('Usage: ved import <file|-|--stdin> [--dry-run] [--merge|--overwrite]');
+    errUsage('ved import <file|-|--stdin> [--dry-run] [--merge|--overwrite]');
     process.exit(1);
   }
 
@@ -849,7 +869,7 @@ async function importVault(args: string[]): Promise<void> {
       raw = Buffer.concat(chunks).toString('utf-8');
     } else {
       if (!existsSync(inputPath)) {
-        console.error(`File not found: ${inputPath}`);
+        errHint(`File not found: ${inputPath}`, 'Check the file path and try again');
         process.exit(1);
       }
       raw = readFileSync(inputPath, 'utf-8');
@@ -860,12 +880,12 @@ async function importVault(args: string[]): Promise<void> {
     try {
       data = JSON.parse(raw);
     } catch {
-      console.error('Invalid JSON input');
+      errHint('Invalid JSON input', 'Ensure the file is valid JSON. Run "ved export" to see the expected format');
       process.exit(1);
     }
 
     if (!data.vedVersion || !Array.isArray(data.files)) {
-      console.error('Invalid Ved export format (missing vedVersion or files array)');
+      errHint('Invalid Ved export format (missing vedVersion or files array)', 'Run "ved export" to create a properly formatted export file');
       process.exit(1);
     }
 
@@ -934,7 +954,7 @@ async function importVault(args: string[]): Promise<void> {
 
     await app.stop();
   } catch (err) {
-    console.error(`Import failed: ${err instanceof Error ? err.message : String(err)}`);
+    vedError('IMPORT_FAILED', `Import failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
@@ -965,7 +985,7 @@ async function history(args: string[]): Promise<void> {
     if ((args[i] === '-n' || args[i] === '--limit') && args[i + 1]) {
       limit = parseInt(args[i + 1], 10);
       if (isNaN(limit) || limit <= 0) {
-        console.error('Error: -n must be a positive integer');
+        errHint('-n must be a positive integer', 'Example: -n 10');
         process.exit(1);
       }
       i++;
@@ -985,7 +1005,7 @@ async function history(args: string[]): Promise<void> {
     } else if (args[i] === '--json') {
       json = true;
     } else {
-      console.error(`Unknown history flag: ${args[i]}`);
+      errHint(`Unknown history flag: ${args[i]}`, 'Run "ved help" for usage');
       console.log('Usage: ved history [-n <limit>] [--type <event_type>] [--from <date>] [--to <date>] [--verify] [--types] [--json]');
       process.exit(1);
     }
@@ -1032,11 +1052,11 @@ async function history(args: string[]): Promise<void> {
     const to = toDate ? (new Date(toDate).getTime() + 86400000 - 1) : undefined; // end of day
 
     if (fromDate && (from === undefined || isNaN(from))) {
-      console.error(`Invalid --from date: ${fromDate}`);
+      errHint(`Invalid --from date: ${fromDate}`, 'Use ISO format: YYYY-MM-DD');
       process.exit(1);
     }
     if (toDate && (to === undefined || isNaN(to))) {
-      console.error(`Invalid --to date: ${toDate}`);
+      errHint(`Invalid --to date: ${toDate}`, 'Use ISO format: YYYY-MM-DD');
       process.exit(1);
     }
 
@@ -1114,9 +1134,11 @@ async function doctor(args: string[]): Promise<void> {
 
   try {
     const app = createApp();
+    const spin = spinner('Running diagnostics...');
     await app.init();
 
     const result = await app.doctor();
+    spin.succeed('Diagnostics complete');
 
     for (const check of result.checks) {
       const icon = check.status === 'ok' ? '✅'
@@ -1184,7 +1206,7 @@ async function doctor(args: string[]): Promise<void> {
       process.exit(1);
     }
   } catch (err) {
-    console.error(`Doctor failed: ${err instanceof Error ? err.message : String(err)}`);
+    vedError('NOT_INITIALIZED', `Doctor failed: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
@@ -1215,12 +1237,12 @@ async function backup(args: string[]): Promise<void> {
         } else if ((args[i] === '-n' || args[i] === '--max') && args[i + 1]) {
           maxBackups = parseInt(args[i + 1], 10);
           if (isNaN(maxBackups) || maxBackups <= 0) {
-            console.error('Error: -n must be a positive integer');
+            errHint('-n must be a positive integer', 'Example: -n 10');
             process.exit(1);
           }
           i++;
         } else {
-          console.error(`Unknown backup create flag: ${args[i]}`);
+          errHint(`Unknown backup create flag: ${args[i]}`, 'Run "ved help" for usage');
           process.exit(1);
         }
       }
@@ -1230,14 +1252,15 @@ async function backup(args: string[]): Promise<void> {
         await app.init();
 
         console.log(`\nVed v${VERSION} — Backup\n`);
-        console.log('  Creating backup...');
 
+        const spin = spinner('Creating backup...');
         const startTime = Date.now();
         const result = app.createBackup({ backupDir, maxBackups });
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         const sizeMB = (result.sizeBytes / (1024 * 1024)).toFixed(2);
 
-        console.log(`\n  ✅ Backup created in ${elapsed}s\n`);
+        spin.succeed(`Backup created in ${elapsed}s`);
+        console.log('');
         console.log(`  File:        ${result.filename}`);
         console.log(`  Path:        ${result.path}`);
         console.log(`  Vault files: ${result.vaultFiles}`);
@@ -1246,7 +1269,7 @@ async function backup(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Backup failed: ${err instanceof Error ? err.message : String(err)}`);
+        vedError('BACKUP_FAILED', `${err instanceof Error ? err.message : String(err)}`);
         process.exit(1);
       }
       break;
@@ -1296,13 +1319,13 @@ async function backup(args: string[]): Promise<void> {
         } else if (!args[i].startsWith('-')) {
           backupPath = args[i];
         } else {
-          console.error(`Unknown restore flag: ${args[i]}`);
+          errHint(`Unknown restore flag: ${args[i]}`, 'Run "ved help" for usage');
           process.exit(1);
         }
       }
 
       if (!backupPath) {
-        console.error('Usage: ved backup restore <backup-file> [--dry-run]');
+        errUsage('ved backup restore <backup-file> [--dry-run]');
         process.exit(1);
       }
 
@@ -1331,14 +1354,14 @@ async function backup(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Restore failed: ${err instanceof Error ? err.message : String(err)}`);
+        vedError('BACKUP_FAILED', `Restore failed: ${err instanceof Error ? err.message : String(err)}`);
         process.exit(1);
       }
       break;
     }
 
     default:
-      console.error(`Unknown backup subcommand: ${sub}`);
+      errHint(`Unknown backup subcommand: ${sub}`, 'Run "ved help" to see available commands');
       console.log('Usage: ved backup [create|list|restore]');
       process.exit(1);
   }
@@ -1438,7 +1461,7 @@ async function cron(args: string[]): Promise<void> {
       }
 
       if (!['backup', 'reindex', 'doctor'].includes(jobType)) {
-        console.error(`Unknown job type: ${jobType}`);
+        errHint(`Unknown job type: ${jobType}`, 'Valid types: backup, reindex, doctor');
         console.error('Valid types: backup, reindex, doctor');
         process.exit(1);
       }
@@ -1584,14 +1607,14 @@ async function cron(args: string[]): Promise<void> {
         if ((args[i] === '-n' || args[i] === '--limit') && args[i + 1]) {
           limit = parseInt(args[i + 1], 10);
           if (isNaN(limit) || limit <= 0) {
-            console.error('Error: -n must be a positive integer');
+            errHint('-n must be a positive integer', 'Example: -n 10');
             process.exit(1);
           }
           i++;
         } else if (!args[i].startsWith('-')) {
           jobName = args[i];
         } else {
-          console.error(`Unknown history flag: ${args[i]}`);
+          errHint(`Unknown history flag: ${args[i]}`, 'Run "ved help" for usage');
           process.exit(1);
         }
       }
@@ -1638,7 +1661,7 @@ async function cron(args: string[]): Promise<void> {
     }
 
     default:
-      console.error(`Unknown cron subcommand: ${sub}`);
+      errHint(`Unknown cron subcommand: ${sub}`, 'Run "ved help" to see available commands');
       console.log('Usage: ved cron [list|add|remove|enable|disable|run|history]');
       process.exit(1);
   }
@@ -1726,10 +1749,8 @@ async function upgrade(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Upgrade failed: ${err instanceof Error ? err.message : String(err)}`);
-        console.error('\nIf the database is corrupted, restore from backup:');
-        console.error('  ved backup list');
-        console.error('  ved backup restore <backup-file>');
+        vedError('DB_CORRUPT', `Upgrade failed: ${err instanceof Error ? err.message : String(err)}`,
+          'Restore from backup: "ved backup list" then "ved backup restore <file>"');
         process.exit(1);
       }
       break;
@@ -1791,7 +1812,7 @@ async function upgrade(args: string[]): Promise<void> {
     }
 
     default:
-      console.error(`Unknown upgrade subcommand: ${sub}`);
+      errHint(`Unknown upgrade subcommand: ${sub}`, 'Run "ved help" to see available commands');
       console.log('Usage: ved upgrade [status|run|verify|history]');
       process.exit(1);
   }
@@ -1878,9 +1899,7 @@ function completionsInstall(): void {
 
   if (!shell) {
     const shellBin = process.env.SHELL ?? '';
-    console.error(`Cannot detect supported shell from $SHELL="${shellBin}".`);
-    console.error('Supported shells: bash, zsh, fish');
-    console.error('Install manually: ved completions <bash|zsh|fish>');
+    errHint(`Cannot detect supported shell from $SHELL="${shellBin}"`, 'Supported shells: bash, zsh, fish. Install manually: ved completions <bash|zsh|fish>');
     process.exit(1);
     return;
   }
@@ -2002,7 +2021,7 @@ async function plugin(args: string[]): Promise<void> {
     case 'test': {
       const serverName = args[1];
       if (!serverName) {
-        console.error('Usage: ved plugin test <server-name>');
+        errUsage('ved plugin test <server-name>');
         process.exit(1);
       }
 
@@ -2040,7 +2059,7 @@ async function plugin(args: string[]): Promise<void> {
     case 'add': {
       const name = args[1];
       if (!name || name.startsWith('-')) {
-        console.error('Usage: ved plugin add <name> --transport <stdio|http> [--command <cmd>] [--args <a> ...] [--url <url>] [--enabled]');
+        errUsage('ved plugin add <name> --transport <stdio|http> [--command <cmd>] [--url <url>]');
         process.exit(1);
       }
 
@@ -2078,21 +2097,21 @@ async function plugin(args: string[]): Promise<void> {
         } else if (args[i] === '--disabled') {
           enabled = false;
         } else {
-          console.error(`Unknown plugin add flag: ${args[i]}`);
+          errHint(`Unknown plugin add flag: ${args[i]}`, 'Run "ved help" for usage');
           process.exit(1);
         }
       }
 
       if (!transport) {
-        console.error('--transport is required (stdio or http)');
+        errHint('--transport is required', 'Use --transport stdio or --transport http');
         process.exit(1);
       }
       if (transport === 'stdio' && !command) {
-        console.error('--command is required for stdio transport');
+        errHint('--command is required for stdio transport', 'Example: --command npx --args @modelcontextprotocol/server-fs');
         process.exit(1);
       }
       if (transport === 'http' && !url) {
-        console.error('--url is required for http transport');
+        errHint('--url is required for http transport', 'Example: --url http://localhost:3000');
         process.exit(1);
       }
 
@@ -2126,7 +2145,7 @@ async function plugin(args: string[]): Promise<void> {
     case 'remove': {
       const name = args[1];
       if (!name) {
-        console.error('Usage: ved plugin remove <name>');
+        errUsage('ved plugin remove <name>');
         process.exit(1);
       }
 
@@ -2151,7 +2170,7 @@ async function plugin(args: string[]): Promise<void> {
     }
 
     default:
-      console.error(`Unknown plugin subcommand: ${sub}`);
+      errHint(`Unknown plugin subcommand: ${sub}`, 'Run "ved help" to see available commands');
       console.log('Usage: ved plugin [list|tools|test|add|remove]');
       process.exit(1);
   }
@@ -2281,7 +2300,7 @@ async function gc(args: string[]): Promise<void> {
     }
 
     default:
-      console.error(`Unknown gc subcommand: ${sub}`);
+      errHint(`Unknown gc subcommand: ${sub}`, 'Run "ved help" to see available commands');
       console.log('Usage: ved gc [run|status]');
       process.exit(1);
   }
@@ -2497,7 +2516,7 @@ Subcommands:
       }
 
       default:
-        console.error(`Unknown webhook subcommand: ${sub}`);
+        errHint(`Unknown webhook subcommand: ${sub}`, 'Run "ved help" to see available commands');
         console.log('Subcommands: list, add, remove, enable, disable, deliveries, stats, test');
         process.exit(1);
     }
@@ -2526,7 +2545,7 @@ async function serve(args: string[]): Promise<void> {
     if ((args[i] === '--port' || args[i] === '-p') && args[i + 1]) {
       port = parseInt(args[i + 1], 10);
       if (isNaN(port) || port <= 0 || port > 65535) {
-        console.error('Error: --port must be between 1 and 65535');
+        errHint('--port must be between 1 and 65535', 'Example: ved serve --port 8080');
         process.exit(1);
       }
       i++;
@@ -2540,7 +2559,7 @@ async function serve(args: string[]): Promise<void> {
       corsOrigin = args[i + 1];
       i++;
     } else {
-      console.error(`Unknown serve flag: ${args[i]}`);
+      errHint(`Unknown serve flag: ${args[i]}`, 'Run "ved help" for usage');
       console.log('Usage: ved serve [--port <N>] [--host <addr>] [--token <secret>] [--cors <origin>]');
       process.exit(1);
     }
@@ -2586,7 +2605,7 @@ async function serve(args: string[]): Promise<void> {
     // Keep process alive
     await new Promise<void>(() => {});
   } catch (err) {
-    console.error(`Failed to start: ${err instanceof Error ? err.message : String(err)}`);
+    vedError('INIT_REQUIRED', `Failed to start: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
@@ -2612,7 +2631,7 @@ async function mcpServe(args: string[]): Promise<void> {
       transport = 'http';
       port = parseInt(args[i + 1], 10);
       if (isNaN(port) || port <= 0 || port > 65535) {
-        console.error('Error: --port must be between 1 and 65535');
+        errHint('--port must be between 1 and 65535', 'Example: ved serve --port 8080');
         process.exit(1);
       }
       i++;
@@ -2621,7 +2640,7 @@ async function mcpServe(args: string[]): Promise<void> {
       host = args[i + 1];
       i++;
     } else {
-      console.error(`Unknown mcp-serve flag: ${args[i]}`);
+      errHint(`Unknown mcp-serve flag: ${args[i]}`, 'Run "ved help" for usage');
       console.log('Usage: ved mcp-serve [--http] [--port <N>] [--host <addr>]');
       process.exit(1);
     }
@@ -2683,7 +2702,7 @@ async function mcpServe(args: string[]): Promise<void> {
       await new Promise<void>(() => {});
     }
   } catch (err) {
-    console.error(`Failed to start: ${err instanceof Error ? err.message : String(err)}`);
+    vedError('INIT_REQUIRED', `Failed to start: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }

@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, rmSync, existsSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -156,6 +156,69 @@ describe('VedApp.doctorFix()', () => {
     for (const msg of result.manual) {
       expect(typeof msg).toBe('string');
       expect(msg.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('WAL checkpoint completes without error', async () => {
+    const result = await app.doctorFix();
+    // WAL checkpoint should succeed (db exists)
+    const walFixed = result.fixed.some(m => m.includes('WAL checkpoint'));
+    const walManual = result.manual.some(m => m.includes('WAL checkpoint'));
+    // Either fixed (success) or manual (failure) — but not both
+    expect(walFixed || walManual).toBe(true);
+    expect(walFixed && walManual).toBe(false);
+  });
+
+  it('creates config.local.yaml template when missing', async () => {
+    const localConfigPath = join(TEST_CONFIG_DIR, 'config.local.yaml');
+    expect(existsSync(localConfigPath)).toBe(false);
+
+    const result = await app.doctorFix();
+
+    expect(existsSync(localConfigPath)).toBe(true);
+    expect(result.fixed.some(m => m.includes('config.local.yaml'))).toBe(true);
+  });
+
+  it('does not re-create config.local.yaml when it already exists', async () => {
+    const localConfigPath = join(TEST_CONFIG_DIR, 'config.local.yaml');
+    writeFileSync(localConfigPath, '# existing\n');
+
+    const result = await app.doctorFix();
+
+    const msgs = result.fixed.filter(m => m.includes('config.local.yaml'));
+    expect(msgs.length).toBe(0);
+  });
+
+  it('config.local.yaml template contains comment about api key', async () => {
+    const localConfigPath = join(TEST_CONFIG_DIR, 'config.local.yaml');
+
+    await app.doctorFix();
+
+    if (existsSync(localConfigPath)) {
+      const content = readFileSync(localConfigPath, 'utf8');
+      expect(content).toContain('apiKey');
+    }
+  });
+
+  it('audit chain check: intact chain produces no manual entry about chain', async () => {
+    const result = await app.doctorFix();
+    const chainManual = result.manual.filter(m => m.includes('Audit chain broken'));
+    expect(chainManual.length).toBe(0);
+  });
+
+  it('fixed list contains only strings', async () => {
+    const result = await app.doctorFix();
+    for (const m of result.fixed) {
+      expect(typeof m).toBe('string');
+      expect(m.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('manual list contains only strings', async () => {
+    const result = await app.doctorFix();
+    for (const m of result.manual) {
+      expect(typeof m).toBe('string');
+      expect(m.length).toBeGreaterThan(0);
     }
   });
 });

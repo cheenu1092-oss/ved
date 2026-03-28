@@ -6,7 +6,7 @@
  */
 
 import Database from 'better-sqlite3';
-import { mkdirSync, existsSync, readdirSync, statSync, copyFileSync, rmSync } from 'node:fs';
+import { mkdirSync, existsSync, readdirSync, statSync, copyFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
@@ -29,6 +29,7 @@ import type { MCPServerConfig, MCPToolDefinition, ServerInfo } from './mcp/types
 import { EventBus } from './event-bus.js';
 import { WebhookManager } from './webhook.js';
 import type { Webhook, WebhookInput, WebhookDelivery, WebhookStats } from './webhook.js';
+import { installCompletions, detectShell } from './completions-installer.js';
 
 const log = createLogger('app');
 
@@ -883,6 +884,60 @@ export class VedApp {
     const configPath = join(getConfigDir(), 'config.yaml');
     if (!existsSync(configPath)) {
       manual.push('Config file missing — run "ved init" to create it');
+    }
+
+    // 5. WAL checkpoint — compact the write-ahead log
+    if (this.db) {
+      try {
+        this.db.pragma('wal_checkpoint(TRUNCATE)');
+        fixed.push('Database WAL checkpoint completed');
+      } catch (err) {
+        manual.push(`WAL checkpoint failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    // 6. Missing config.local.yaml — create template so users have a place to put secrets
+    const localConfigPath = join(getConfigDir(), 'config.local.yaml');
+    if (!existsSync(localConfigPath)) {
+      try {
+        writeFileSync(
+          localConfigPath,
+          '# Local config overrides — not committed to git\n# llm:\n#   apiKey: your-api-key\n',
+          'utf8',
+        );
+        fixed.push(`Created config.local.yaml template: ${localConfigPath}`);
+      } catch (err) {
+        manual.push(`Cannot create config.local.yaml: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
+    // 7. Shell completions — auto-install for detected shell
+    try {
+      const shell = detectShell();
+      if (shell) {
+        const script = VedApp.generateCompletions(shell);
+        const result = installCompletions(shell, script);
+        if (!result.skipped) {
+          for (const f of result.filesWritten) {
+            fixed.push(`Installed shell completions (${shell}) → ${f}`);
+          }
+        }
+      }
+    } catch (err) {
+      manual.push(`Cannot install shell completions: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    // 8. Audit chain integrity check — report broken chain (cannot auto-fix without data loss)
+    try {
+      const chainResult = this.verifyAuditChain();
+      if (!chainResult.intact && chainResult.total > 0) {
+        manual.push(
+          `Audit chain broken at entry ${chainResult.brokenAt} of ${chainResult.total}. ` +
+          'Restore from backup: "ved backup restore <file>"',
+        );
+      }
+    } catch (_err) {
+      // skip if audit log unavailable
     }
 
     return { fixed, manual };
