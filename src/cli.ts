@@ -601,6 +601,7 @@ async function search(args: string[]): Promise<void> {
     const app = createApp();
     await app.init();
 
+    const spin = spinner('Searching vault...');
     const startTime = Date.now();
     const context = await app.search(query, {
       vectorTopK: topK,
@@ -608,6 +609,7 @@ async function search(args: string[]): Promise<void> {
       sources: ftsOnly ? ['fts'] : undefined,
     });
     const elapsed = Date.now() - startTime;
+    spin.succeed(`Search complete (${elapsed}ms)`);
 
     console.log(`\nVed v${VERSION} — Search\n`);
     console.log(`  Query:   "${query}"`);
@@ -645,7 +647,7 @@ async function search(args: string[]): Promise<void> {
 
     await app.stop();
   } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    errHint(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 }
@@ -800,9 +802,11 @@ async function exportVault(args: string[]): Promise<void> {
     const app = createApp();
     await app.init();
 
+    const spin = spinner('Exporting vault...');
     const startTime = Date.now();
     const result = await app.exportVault({ folder, includeAudit, includeStats });
     const elapsed = Date.now() - startTime;
+    spin.succeed(`Exported ${result.files.length} files (${elapsed}ms)`);
 
     const json = pretty ? JSON.stringify(result, null, 2) : JSON.stringify(result);
 
@@ -934,9 +938,11 @@ async function importVault(args: string[]): Promise<void> {
     const app = createApp();
     await app.init();
 
+    const spin = spinner('Importing vault data...');
     const startTime = Date.now();
     const result = await app.importVault(data, mode);
     const elapsed = Date.now() - startTime;
+    spin.succeed(`Import complete (${elapsed}ms)`);
 
     console.log(`✅ Import complete in ${elapsed}ms\n`);
     console.log(`  Created:     ${result.created}`);
@@ -1116,7 +1122,7 @@ async function history(args: string[]): Promise<void> {
 
     await app.stop();
   } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    errHint(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 }
@@ -1174,8 +1180,10 @@ async function doctor(args: string[]): Promise<void> {
       if (fixableChecks.length === 0) {
         console.log('  ✅ Nothing to fix — no fixable issues found.\n');
       } else {
-        console.log('  🔧 Attempting auto-repair...\n');
+        const fixSpin = spinner('Attempting auto-repair...');
         const fixResult = await app.doctorFix();
+        fixSpin.succeed(`Auto-repair complete (${fixResult.fixed.length} fixed, ${fixResult.manual.length} manual)`);
+        console.log('');
 
         if (fixResult.fixed.length > 0) {
           console.log('  Fixed:');
@@ -1303,7 +1311,7 @@ async function backup(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1439,7 +1447,7 @@ async function cron(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1452,17 +1460,15 @@ async function cron(args: string[]): Promise<void> {
       const jobType = args[3];
 
       if (!name || !schedule || !jobType) {
-        console.error('Usage: ved cron add <name> "<schedule>" <type> [--max-backups <n>] [--backup-dir <dir>]');
-        console.error('\nTypes: backup, reindex, doctor');
-        console.error('\nExamples:');
-        console.error('  ved cron add nightly-backup "0 2 * * *" backup');
-        console.error('  ved cron add weekly-reindex "@weekly" reindex');
+        errUsage('ved cron add <name> "<schedule>" <type> [--max-backups <n>] [--backup-dir <dir>]');
+        errHint('Types: backup, reindex, doctor');
+        errHint('Example: ved cron add nightly-backup "0 2 * * *" backup');
         process.exit(1);
       }
 
       if (!['backup', 'reindex', 'doctor'].includes(jobType)) {
         errHint(`Unknown job type: ${jobType}`, 'Valid types: backup, reindex, doctor');
-        console.error('Valid types: backup, reindex, doctor');
+        
         process.exit(1);
       }
 
@@ -1476,7 +1482,7 @@ async function cron(args: string[]): Promise<void> {
           jobConfig.backupDir = args[i + 1];
           i++;
         } else {
-          console.error(`Unknown flag: ${args[i]}`);
+          errHint(`Unknown flag: ${args[i]}`, 'Run "ved cron --help" to see valid options');
           process.exit(1);
         }
       }
@@ -1498,7 +1504,7 @@ async function cron(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1507,7 +1513,7 @@ async function cron(args: string[]): Promise<void> {
     case 'remove': {
       const name = args[1];
       if (!name) {
-        console.error('Usage: ved cron remove <name>');
+        errUsage('ved cron remove <name>');
         process.exit(1);
       }
 
@@ -1519,13 +1525,13 @@ async function cron(args: string[]): Promise<void> {
         if (removed) {
           console.log(`\n  ✅ Removed cron job: ${name}\n`);
         } else {
-          console.error(`  ❌ Cron job not found: ${name}`);
+          errHint(`Cron job not found: ${name}`, 'Run "ved cron list" to see configured jobs');
           process.exit(1);
         }
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1535,7 +1541,7 @@ async function cron(args: string[]): Promise<void> {
     case 'disable': {
       const name = args[1];
       if (!name) {
-        console.error(`Usage: ved cron ${sub} <name>`);
+        errUsage(`ved cron ${sub} <name>`);
         process.exit(1);
       }
 
@@ -1554,13 +1560,13 @@ async function cron(args: string[]): Promise<void> {
           }
           console.log('');
         } else {
-          console.error(`  ❌ Cron job not found: ${name}`);
+          errHint(`Cron job not found: ${name}`, 'Run "ved cron list" to see configured jobs');
           process.exit(1);
         }
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1569,7 +1575,7 @@ async function cron(args: string[]): Promise<void> {
     case 'run': {
       const name = args[1];
       if (!name) {
-        console.error('Usage: ved cron run <name>');
+        errUsage('ved cron run <name>');
         process.exit(1);
       }
 
@@ -1593,7 +1599,7 @@ async function cron(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1654,7 +1660,7 @@ async function cron(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1700,7 +1706,7 @@ async function upgrade(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1734,15 +1740,16 @@ async function upgrade(args: string[]): Promise<void> {
         }
 
         console.log('');
-        console.log('  🔄 Applying migrations...');
+        const upgradeSpin = spinner('Applying migrations...');
 
         // Migrations were already applied during VedApp construction,
         // but call runMigrations() explicitly in case new files were added after construction
         const applied = app.runMigrations();
 
         const after = app.getUpgradeStatus();
+        upgradeSpin.succeed(`Upgrade complete — ${applied} migration(s) applied`);
 
-        console.log(`\n  ✅ Upgrade complete\n`);
+        console.log('');
         console.log(`  Applied:  ${applied} migration(s)`);
         console.log(`  Version:  v${String(after.currentVersion).padStart(3, '0')}`);
         console.log('');
@@ -1775,7 +1782,7 @@ async function upgrade(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1805,7 +1812,7 @@ async function upgrade(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -1853,7 +1860,7 @@ async function watch(): Promise<void> {
     // Run watcher (blocks until signal)
     await app.runWatch();
   } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    errHint(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 }
@@ -1877,7 +1884,7 @@ function completions(args: string[]): void {
   const shell = sub;
 
   if (!shell || !['bash', 'zsh', 'fish'].includes(shell)) {
-    console.error('Usage: ved completions <bash|zsh|fish|install>');
+    errUsage('ved completions <bash|zsh|fish|install>');
     console.log('\nInstall manually:');
     console.log('  bash:  ved completions bash >> ~/.bashrc');
     console.log('  zsh:   ved completions zsh > ~/.zfunc/_ved');
@@ -1967,7 +1974,7 @@ async function plugin(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -2012,7 +2019,7 @@ async function plugin(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -2050,7 +2057,7 @@ async function plugin(args: string[]): Promise<void> {
 
         if (!result.success) process.exit(1);
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -2073,7 +2080,7 @@ async function plugin(args: string[]): Promise<void> {
         if ((args[i] === '--transport' || args[i] === '-t') && args[i + 1]) {
           const t = args[i + 1];
           if (t !== 'stdio' && t !== 'http') {
-            console.error(`Invalid transport: ${t}. Must be stdio or http`);
+            errHint(`Invalid transport: ${t}`, 'Must be "stdio" or "http"');
             process.exit(1);
           }
           transport = t;
@@ -2136,7 +2143,7 @@ async function plugin(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -2157,13 +2164,13 @@ async function plugin(args: string[]): Promise<void> {
         if (removed) {
           console.log(`\n  ✅ Removed plugin: ${name}\n`);
         } else {
-          console.error(`  ❌ Plugin not found: ${name}`);
+          errHint(`Plugin not found: ${name}`, 'Run "ved plugin list" to see configured plugins');
           process.exit(1);
         }
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -2214,7 +2221,7 @@ async function gc(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(err instanceof Error ? err.message : String(err));
         process.exit(1);
       }
       break;
@@ -2234,19 +2241,19 @@ async function gc(args: string[]): Promise<void> {
         } else if (restArgs[i] === '--sessions-days' && restArgs[i + 1]) {
           sessionsDays = parseInt(restArgs[i + 1], 10);
           if (isNaN(sessionsDays) || sessionsDays <= 0) {
-            console.error('Error: --sessions-days must be a positive integer');
+            errHint('--sessions-days must be a positive integer');
             process.exit(1);
           }
           i++;
         } else if (restArgs[i] === '--audit-days' && restArgs[i + 1]) {
           auditDays = parseInt(restArgs[i + 1], 10);
           if (isNaN(auditDays) || auditDays <= 0) {
-            console.error('Error: --audit-days must be a positive integer');
+            errHint('--audit-days must be a positive integer');
             process.exit(1);
           }
           i++;
         } else {
-          console.error(`Unknown gc flag: ${restArgs[i]}`);
+          errHint(`Unknown gc flag: ${restArgs[i]}`, 'Run "ved gc --help" to see valid options');
           console.log('Usage: ved gc run [--dry-run] [--sessions-days <N>] [--audit-days <N>] [--force]');
           process.exit(1);
         }
@@ -2293,7 +2300,7 @@ async function gc(args: string[]): Promise<void> {
 
         await app.stop();
       } catch (err) {
-        console.error(`GC failed: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(`GC failed: ${err instanceof Error ? err.message : String(err)}`);
         process.exit(1);
       }
       break;
@@ -2368,7 +2375,7 @@ Subcommands:
         const name = args[1];
         const url = args[2];
         if (!name || !url) {
-          console.error('Usage: ved webhook add <name> <url> [--secret <s>] [--events <e1,e2>]');
+          errUsage('ved webhook add <name> <url> [--secret <s>] [--events <e1,e2>]');
           process.exit(1);
         }
 
@@ -2395,14 +2402,14 @@ Subcommands:
       case 'remove': {
         const target = args[1];
         if (!target) {
-          console.error('Usage: ved webhook remove <name|id>');
+          errUsage('ved webhook remove <name|id>');
           process.exit(1);
         }
         const removed = app.webhookRemove(target);
         if (removed) {
           console.log(`✓ Webhook removed: ${target}`);
         } else {
-          console.error(`Webhook not found: ${target}`);
+          errHint(`Webhook not found: ${target}`, 'Run "ved webhook list" to see configured webhooks');
           process.exit(1);
         }
         break;
@@ -2410,12 +2417,12 @@ Subcommands:
 
       case 'enable': {
         const target = args[1];
-        if (!target) { console.error('Usage: ved webhook enable <name|id>'); process.exit(1); }
+        if (!target) { errUsage('ved webhook enable <name|id>'); process.exit(1); }
         const result = app.webhookToggle(target, true);
         if (result) {
           console.log(`✓ Webhook enabled: ${result.name}`);
         } else {
-          console.error(`Webhook not found: ${target}`);
+          errHint(`Webhook not found: ${target}`, 'Run "ved webhook list" to see configured webhooks');
           process.exit(1);
         }
         break;
@@ -2423,12 +2430,12 @@ Subcommands:
 
       case 'disable': {
         const target = args[1];
-        if (!target) { console.error('Usage: ved webhook disable <name|id>'); process.exit(1); }
+        if (!target) { errUsage('ved webhook disable <name|id>'); process.exit(1); }
         const result = app.webhookToggle(target, false);
         if (result) {
           console.log(`✓ Webhook disabled: ${result.name}`);
         } else {
-          console.error(`Webhook not found: ${target}`);
+          errHint(`Webhook not found: ${target}`, 'Run "ved webhook list" to see configured webhooks');
           process.exit(1);
         }
         break;
@@ -2475,13 +2482,13 @@ Subcommands:
       case 'test': {
         const target = args[1];
         if (!target) {
-          console.error('Usage: ved webhook test <name|id>');
+          errUsage('ved webhook test <name|id>');
           process.exit(1);
         }
 
         const wh = app.webhookGet(target);
         if (!wh) {
-          console.error(`Webhook not found: ${target}`);
+          errHint(`Webhook not found: ${target}`, 'Run "ved webhook list" to see configured webhooks');
           process.exit(1);
           return; // unreachable but helps TS
         }
@@ -2708,6 +2715,6 @@ async function mcpServe(args: string[]): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error(err);
+  errHint(err instanceof Error ? err.message : String(err));
   process.exit(1);
 });

@@ -23,6 +23,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadConfig } from './core/config.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── Constants ───────────────────────────────────────────────────────
 
@@ -86,25 +87,25 @@ function getVaultPath(): string {
 
 function ensureGitRepo(vaultPath: string): void {
   if (!existsSync(join(vaultPath, '.git'))) {
-    console.error(`Error: Vault at ${vaultPath} is not a git repository.`);
-    console.error('Run: cd <vault> && git init');
+    errHint(`Vault at ${vaultPath} is not a git repository.`);
+    errHint('Run: cd <vault> && git init');
     process.exit(1);
   }
 }
 
 function validateSnapshotName(name: string): void {
   if (!name) {
-    console.error('Error: Snapshot name is required.');
+    errHint('Snapshot name is required.');
     process.exit(1);
   }
   // Prevent path traversal and special chars
   if (/[\/\\.\s:~^?*\[\]@{}]/.test(name) || name.includes('..')) {
-    console.error(`Error: Invalid snapshot name "${name}".`);
-    console.error('Names must be alphanumeric with hyphens/underscores only.');
+    errHint(`Invalid snapshot name "${name}".`);
+    errHint('Names must be alphanumeric with hyphens/underscores only.');
     process.exit(1);
   }
   if (name.length > 128) {
-    console.error('Error: Snapshot name must be 128 characters or less.');
+    errHint('Snapshot name must be 128 characters or less.');
     process.exit(1);
   }
 }
@@ -207,8 +208,8 @@ function createCmd(vaultPath: string, args: string[]): void {
   // Check if tag already exists
   const existing = git(vaultPath, ['tag', '-l', tag], false);
   if (existing) {
-    console.error(`Error: Snapshot "${name}" already exists.`);
-    console.error(`Delete it first: ved snapshot delete ${name}`);
+    errHint(`Snapshot "${name}" already exists.`);
+    errHint(`Delete it first: ved snapshot delete ${name}`);
     process.exit(1);
   }
 
@@ -239,14 +240,14 @@ function createCmd(vaultPath: string, args: string[]): void {
 function showCmd(vaultPath: string, args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved snapshot show <name>');
+    errUsage('ved snapshot show <name>');
     process.exit(1);
   }
 
   const tag = tagName(name);
   const existing = git(vaultPath, ['tag', '-l', tag], false);
   if (!existing) {
-    console.error(`Error: Snapshot "${name}" not found.`);
+    errHint(`Snapshot "${name}" not found.`);
     process.exit(1);
   }
 
@@ -306,15 +307,15 @@ function diffCmd(vaultPath: string, args: string[]): void {
   const name2 = positional[1]; // optional, defaults to HEAD
 
   if (!name1) {
-    console.error('Usage: ved snapshot diff <name> [<name2>]');
-    console.error('  Compare snapshot to HEAD, or two snapshots.');
+    errUsage('ved snapshot diff <name> [<name2>]');
+    errHint('Compare snapshot to HEAD, or two snapshots');
     process.exit(1);
   }
 
   const tag1 = tagName(name1);
   const existing1 = git(vaultPath, ['tag', '-l', tag1], false);
   if (!existing1) {
-    console.error(`Error: Snapshot "${name1}" not found.`);
+    errHint(`Snapshot "${name1}" not found.`);
     process.exit(1);
   }
 
@@ -324,7 +325,7 @@ function diffCmd(vaultPath: string, args: string[]): void {
     const tag2 = tagName(name2);
     const existing2 = git(vaultPath, ['tag', '-l', tag2], false);
     if (!existing2) {
-      console.error(`Error: Snapshot "${name2}" not found.`);
+      errHint(`Snapshot "${name2}" not found.`);
       process.exit(1);
     }
     ref2 = tag2;
@@ -375,15 +376,15 @@ function restoreCmd(vaultPath: string, args: string[]): void {
   const name = positional[0];
 
   if (!name) {
-    console.error('Usage: ved snapshot restore <name>');
-    console.error('  Restores vault to the snapshot state (creates safety snapshot first).');
+    errUsage('ved snapshot restore <name>');
+    errHint('Restores vault to the snapshot state (creates safety snapshot first)');
     process.exit(1);
   }
 
   const tag = tagName(name);
   const existing = git(vaultPath, ['tag', '-l', tag], false);
   if (!existing) {
-    console.error(`Error: Snapshot "${name}" not found.`);
+    errHint(`Snapshot "${name}" not found.`);
     process.exit(1);
   }
 
@@ -392,8 +393,7 @@ function restoreCmd(vaultPath: string, args: string[]): void {
   // Check for uncommitted changes
   const status = git(vaultPath, ['status', '--porcelain'], false);
   if (status && !force) {
-    console.error('Error: Uncommitted changes in vault. Commit or stash them first.');
-    console.error('  Or use --force to discard changes.');
+    errHint('Uncommitted changes in vault. Commit or stash them first.', 'Use --force to discard changes');
     process.exit(1);
   }
 
@@ -443,20 +443,20 @@ function deleteCmd(vaultPath: string, args: string[]): void {
   const name = positional[0];
 
   if (!name) {
-    console.error('Usage: ved snapshot delete <name>');
+    errUsage('ved snapshot delete <name>');
     process.exit(1);
   }
 
   const tag = tagName(name);
   const existing = git(vaultPath, ['tag', '-l', tag], false);
   if (!existing) {
-    console.error(`Error: Snapshot "${name}" not found.`);
+    errHint(`Snapshot "${name}" not found.`);
     process.exit(1);
   }
 
   // Prevent deleting safety snapshots without --force
   if (name.startsWith('pre-restore-') && flags['force'] !== true) {
-    console.error('Error: This is a safety snapshot. Use --force to delete it.');
+    errHint('This is a safety snapshot. Use --force to delete it.');
     process.exit(1);
   }
 
@@ -470,14 +470,14 @@ function exportCmd(vaultPath: string, args: string[]): void {
   const outputPath = positional[1];
 
   if (!name) {
-    console.error('Usage: ved snapshot export <name> [output-path]');
+    errUsage('ved snapshot export <name> [output-path]');
     process.exit(1);
   }
 
   const tag = tagName(name);
   const existing = git(vaultPath, ['tag', '-l', tag], false);
   if (!existing) {
-    console.error(`Error: Snapshot "${name}" not found.`);
+    errHint(`Snapshot "${name}" not found.`);
     process.exit(1);
   }
 
@@ -543,9 +543,7 @@ export function snapshotCmd(args: string[]): void {
       if (exists) {
         return showCmd(vaultPath, [sub]);
       }
-      console.error(`Unknown subcommand: ${sub}`);
-      console.error('');
-      console.error('Subcommands: list, create, show, diff, restore, delete, export');
+      errHint(`Unknown subcommand: ${sub}`, 'Run "ved help snapshot" for available subcommands');
       process.exit(1);
   }
 }

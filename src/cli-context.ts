@@ -21,6 +21,7 @@
 import type { VedApp } from './app.js';
 import type { VedConfig } from './types/index.js';
 import { existsSync, readFileSync } from 'node:fs';
+import { errHint, errUsage } from './errors.js';
 
 const VERSION = '0.1.0';
 
@@ -347,20 +348,20 @@ async function addFact(app: VedApp, _config: VedConfig, args: string[]): Promise
   const value = cleanArgs.slice(1).join(' ');
 
   if (!key || !value) {
-    console.error('Usage: ved context add <key> <value...> [--session <id>]');
-    console.error('\nExample: ved context add user_preference "prefers dark mode"');
+    errUsage('ved context add <key> <value...> [--session <id>]');
+    errHint('Example: ved context add user_preference "prefers dark mode"');
     process.exit(1);
   }
 
   // Validate key
   if (key.length > 100) {
-    console.error('Error: Key must be 100 characters or less.');
+    errHint('Key must be 100 characters or less.');
     process.exit(1);
   }
 
   const session = getActiveSession(app, sessionId);
   if (!session) {
-    console.error('Error: No active session found. Start a conversation first with `ved chat`.');
+    errHint('No active session found. Start a conversation first with `ved chat`.');
     process.exit(1);
   }
 
@@ -403,19 +404,19 @@ async function removeFact(app: VedApp, _config: VedConfig, args: string[]): Prom
 
   const key = cleanArgs[0];
   if (!key) {
-    console.error('Usage: ved context remove <key> [--session <id>]');
+    errUsage('ved context remove <key> [--session <id>]');
     process.exit(1);
   }
 
   const session = getActiveSession(app, sessionId);
   if (!session) {
-    console.error('Error: No active session found.');
+    errHint('No active session found.');
     process.exit(1);
   }
 
   const wm = parseWorkingMemory(session.working_memory);
   if (!(key in wm.facts)) {
-    console.error(`Error: Fact "${key}" not found in working memory.`);
+    errHint(`Fact "${key}" not found in working memory.`);
     process.exit(1);
   }
 
@@ -444,7 +445,7 @@ async function clearFacts(app: VedApp, _config: VedConfig, args: string[]): Prom
   const session = getActiveSession(app, sessionId);
 
   if (!session) {
-    console.error('Error: No active session found.');
+    errHint('No active session found.');
     process.exit(1);
   }
 
@@ -528,9 +529,9 @@ async function simulate(app: VedApp, config: VedConfig, args: string[]): Promise
   const query = args.filter(a => !a.startsWith('-')).join(' ');
 
   if (!query) {
-    console.error('Usage: ved context simulate <query...>');
-    console.error('\nSimulate what RAG would inject into the context for a given query.');
-    console.error('\nExample: ved context simulate "what projects am I working on?"');
+    errUsage('ved context simulate <query...>');
+    errHint('Simulate what RAG would inject for a given query');
+    errHint('Example: ved context simulate "what projects am I working on?"');
     process.exit(1);
   }
 
@@ -589,7 +590,7 @@ async function simulate(app: VedApp, config: VedConfig, args: string[]): Promise
     console.log(`  Remaining:          ~${(config.memory.workingMemoryMaxTokens - withRag).toLocaleString()} tokens for conversation\n`);
 
   } catch (err) {
-    console.error(`Error during simulation: ${err instanceof Error ? err.message : String(err)}`);
+    errHint(`Error during simulation: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }
@@ -679,19 +680,8 @@ export async function runContextCli(app: VedApp, config: VedConfig, args: string
       return listSessions(app, config, subArgs);
 
     default:
-      console.error(`Unknown subcommand: ${sub}`);
-      console.error('\nUsage: ved context <subcommand>');
-      console.error('\nSubcommands:');
-      console.error('  show [--session <id>]           Show full assembled context');
-      console.error('  tokens [--session <id>]         Token count breakdown');
-      console.error('  facts [--session <id>]          List working memory facts');
-      console.error('  add <key> <value>               Add a fact to working memory');
-      console.error('  remove <key>                    Remove a fact');
-      console.error('  clear                           Clear all facts');
-      console.error('  messages [--session <id>]        List conversation messages');
-      console.error('  simulate <query>                Preview RAG context injection');
-      console.error('  sessions                        List active/idle sessions');
-      console.error('\nAliases: ctx, window, prompt-debug');
+      errHint(`Unknown subcommand: ${sub}`, 'Run "ved help context" to see available subcommands');
+      errUsage('ved context <subcommand>');
       process.exit(1);
   }
 }

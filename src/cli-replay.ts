@@ -22,6 +22,7 @@
 
 import { writeFileSync } from 'node:fs';
 import type { AuditEventType } from './types/index.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── ANSI colors ──
 
@@ -383,7 +384,7 @@ export async function replayCommand(args: string[], db?: ReplayDb): Promise<void
         queryOne: (sql: string, ...params: unknown[]) => app.queryAuditOne(sql, ...params) as AuditRow | undefined,
       };
     } catch (err) {
-      console.error(`Failed to initialize: ${err instanceof Error ? err.message : err}`);
+      errHint(`Failed to initialize: ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;
       return;
     }
@@ -422,7 +423,7 @@ export async function replayCommand(args: string[], db?: ReplayDb): Promise<void
       if (sub && !sub.startsWith('-')) {
         return showCmd(database, [sub, ...args.slice(1)]);
       }
-      console.error(`Unknown replay subcommand: ${sub}`);
+      errHint(`Unknown replay subcommand: ${sub}`, 'Run "ved help" to see available commands');
       printUsage();
       process.exitCode = 1;
   }
@@ -493,7 +494,7 @@ function listCmd(db: ReplayDb, args: string[]): void {
 function showCmd(db: ReplayDb, args: string[]): void {
   const sessionId = args[0];
   if (!sessionId) {
-    console.error('Usage: ved replay show <sessionId>');
+    errUsage('ved replay show <sessionId>');
     process.exitCode = 1;
     return;
   }
@@ -512,7 +513,7 @@ function showCmd(db: ReplayDb, args: string[]): void {
   const events = getSessionEvents(db, sessionId, limit);
 
   if (events.length === 0) {
-    console.error(`No events found for session: ${sessionId}`);
+    errHint(`No events found for session: ${sessionId}`);
     process.exitCode = 1;
     return;
   }
@@ -559,7 +560,7 @@ function showCmd(db: ReplayDb, args: string[]): void {
 function traceCmd(db: ReplayDb, args: string[]): void {
   const eventId = args[0];
   if (!eventId) {
-    console.error('Usage: ved replay trace <eventId>');
+    errUsage('ved replay trace <eventId>');
     process.exitCode = 1;
     return;
   }
@@ -574,7 +575,7 @@ function traceCmd(db: ReplayDb, args: string[]): void {
   const chain = getEventChain(db, eventId, depth);
 
   if (chain.length === 0) {
-    console.error(`Event not found: ${eventId}`);
+    errHint(`Event not found: ${eventId}`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -603,7 +604,7 @@ function traceCmd(db: ReplayDb, args: string[]): void {
 function timelineCmd(db: ReplayDb, args: string[]): void {
   const sessionId = args[0];
   if (!sessionId) {
-    console.error('Usage: ved replay timeline <sessionId>');
+    errUsage('ved replay timeline <sessionId>');
     process.exitCode = 1;
     return;
   }
@@ -618,7 +619,7 @@ function timelineCmd(db: ReplayDb, args: string[]): void {
   const events = getSessionEvents(db, sessionId, limit);
 
   if (events.length === 0) {
-    console.error(`No events found for session: ${sessionId}`);
+    errHint(`No events found for session: ${sessionId}`);
     process.exitCode = 1;
     return;
   }
@@ -629,7 +630,7 @@ function timelineCmd(db: ReplayDb, args: string[]): void {
 function statsCmd(db: ReplayDb, args: string[]): void {
   const sessionId = args[0];
   if (!sessionId) {
-    console.error('Usage: ved replay stats <sessionId>');
+    errUsage('ved replay stats <sessionId>');
     process.exitCode = 1;
     return;
   }
@@ -642,7 +643,7 @@ function statsCmd(db: ReplayDb, args: string[]): void {
   const events = getSessionEvents(db, sessionId, 10000);
 
   if (events.length === 0) {
-    console.error(`No events found for session: ${sessionId}`);
+    errHint(`No events found for session: ${sessionId}`);
     process.exitCode = 1;
     return;
   }
@@ -764,7 +765,7 @@ function statsCmd(db: ReplayDb, args: string[]): void {
 function compareCmd(db: ReplayDb, args: string[]): void {
   const [s1, s2] = args;
   if (!s1 || !s2) {
-    console.error('Usage: ved replay compare <session1> <session2>');
+    errUsage('ved replay compare <session1> <session2>');
     process.exitCode = 1;
     return;
   }
@@ -773,13 +774,13 @@ function compareCmd(db: ReplayDb, args: string[]): void {
   const events2 = getSessionEvents(db, s2, 10000);
 
   if (events1.length === 0) {
-    console.error(`No events found for session: ${s1}`);
+    errHint(`No events found for session: ${s1}`);
     process.exitCode = 1;
     return;
   }
 
   if (events2.length === 0) {
-    console.error(`No events found for session: ${s2}`);
+    errHint(`No events found for session: ${s2}`);
     process.exitCode = 1;
     return;
   }
@@ -818,7 +819,7 @@ function compareCmd(db: ReplayDb, args: string[]): void {
 function exportCmd(db: ReplayDb, args: string[]): void {
   const sessionId = args[0];
   if (!sessionId) {
-    console.error('Usage: ved replay export <sessionId> [--format json|markdown] [--output <file>]');
+    errUsage('ved replay export <sessionId> [--format json|markdown] [--output <file>]');
     process.exitCode = 1;
     return;
   }
@@ -839,7 +840,7 @@ function exportCmd(db: ReplayDb, args: string[]): void {
   const events = getSessionEvents(db, sessionId, 10000);
 
   if (events.length === 0) {
-    console.error(`No events found for session: ${sessionId}`);
+    errHint(`No events found for session: ${sessionId}`);
     process.exitCode = 1;
     return;
   }
@@ -876,7 +877,7 @@ function searchCmd(db: ReplayDb, args: string[]): void {
 
   const query = queryParts.join(' ').trim();
   if (!query) {
-    console.error('Usage: ved replay search <query> [--limit <n>] [--json]');
+    errUsage('ved replay search <query> [--limit <n>] [--json]');
     process.exitCode = 1;
     return;
   }

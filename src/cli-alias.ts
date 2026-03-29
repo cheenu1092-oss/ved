@@ -24,6 +24,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import { getConfigDir } from './core/config.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -258,7 +259,7 @@ export async function vedAlias(args: string[]): Promise<void> {
       if (resolved) {
         return aliasRun([sub, ...args.slice(1)]);
       }
-      console.error(`Unknown alias subcommand: ${sub}`);
+      errHint(`Unknown alias subcommand: ${sub}`, 'Run "ved help" to see available commands');
       console.log('Usage: ved alias [list|add|remove|show|edit|run|export|import|help]');
       process.exit(1);
   }
@@ -308,17 +309,14 @@ function aliasAdd(args: string[]): void {
   }
 
   if (!name || commandParts.length === 0) {
-    console.error('Usage: ved alias add <name> <command...> [-d "description"]');
-    console.error('\nExamples:');
-    console.error('  ved alias add ss search --fts-only');
-    console.error('  ved alias add daily memory daily -d "View today\'s daily note"');
-    console.error('  ved alias add health doctor');
+    errUsage('ved alias add <name> <command...> [-d "description"]');
+    errHint('Examples: ved alias add ss search --fts-only');
     process.exit(1);
   }
 
   const nameError = validateAliasName(name);
   if (nameError) {
-    console.error(`Error: ${nameError}`);
+    errHint(`${nameError}`);
     process.exit(1);
   }
 
@@ -326,7 +324,7 @@ function aliasAdd(args: string[]): void {
 
   // Check for duplicates
   if (store.aliases.some(a => a.name === name)) {
-    console.error(`Error: Alias "${name}" already exists. Use \`ved alias edit\` to update it.`);
+    errHint(`Alias "${name}" already exists. Use \`ved alias edit\` to update it.`);
     process.exit(1);
   }
 
@@ -354,7 +352,7 @@ function aliasAdd(args: string[]): void {
 function aliasRemove(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved alias remove <name>');
+    errUsage('ved alias remove <name>');
     process.exit(1);
   }
 
@@ -362,7 +360,7 @@ function aliasRemove(args: string[]): void {
   const index = store.aliases.findIndex(a => a.name === name);
 
   if (index === -1) {
-    console.error(`Error: Alias "${name}" not found.`);
+    errHint(`Alias "${name}" not found.`);
     process.exit(1);
   }
 
@@ -375,7 +373,7 @@ function aliasRemove(args: string[]): void {
 function aliasShow(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved alias show <name>');
+    errUsage('ved alias show <name>');
     process.exit(1);
   }
 
@@ -383,7 +381,7 @@ function aliasShow(args: string[]): void {
   const alias = store.aliases.find(a => a.name === name);
 
   if (!alias) {
-    console.error(`Error: Alias "${name}" not found.`);
+    errHint(`Alias "${name}" not found.`);
     process.exit(1);
   }
 
@@ -415,7 +413,7 @@ function aliasEdit(args: string[]): void {
   }
 
   if (!name) {
-    console.error('Usage: ved alias edit <name> <new-command...> [-d "new description"]');
+    errUsage('ved alias edit <name> <new-command...> [-d "new description"]');
     process.exit(1);
   }
 
@@ -423,13 +421,13 @@ function aliasEdit(args: string[]): void {
   const alias = store.aliases.find(a => a.name === name);
 
   if (!alias) {
-    console.error(`Error: Alias "${name}" not found.`);
+    errHint(`Alias "${name}" not found.`);
     process.exit(1);
   }
 
   if (commandParts.length === 0 && description === undefined && !clearDescription) {
-    console.error('Error: Provide a new command and/or description.');
-    console.error('Usage: ved alias edit <name> <new-command...> [-d "description"]');
+    errHint('Provide a new command and/or description.');
+    errUsage('ved alias edit <name> <new-command...> [-d "description"]');
     process.exit(1);
   }
 
@@ -460,7 +458,7 @@ function aliasEdit(args: string[]): void {
 function aliasRun(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved alias run <name> [extra-args...]');
+    errUsage('ved alias run <name> [extra-args...]');
     process.exit(1);
   }
 
@@ -468,7 +466,7 @@ function aliasRun(args: string[]): void {
   const alias = store.aliases.find(a => a.name === name);
 
   if (!alias) {
-    console.error(`Error: Alias "${name}" not found.`);
+    errHint(`Alias "${name}" not found.`);
     process.exit(1);
   }
 
@@ -503,7 +501,7 @@ function aliasImport(args: string[]): void {
   const dryRun = args.includes('--dry-run') || args.includes('-n');
 
   if (!inputPath) {
-    console.error('Usage: ved alias import <file|-|--stdin> [--dry-run]');
+    errUsage('ved alias import <file|-|--stdin> [--dry-run]');
     process.exit(1);
   }
 
@@ -521,7 +519,7 @@ function aliasImport(args: string[]): void {
     raw = Buffer.concat(chunks).toString('utf-8');
   } else {
     if (!existsSync(inputPath)) {
-      console.error(`File not found: ${inputPath}`);
+      errHint(`File not found: ${inputPath}`, 'Check the name and try again');
       process.exit(1);
     }
     raw = readFileSync(inputPath, 'utf-8');

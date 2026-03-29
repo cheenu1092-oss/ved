@@ -26,6 +26,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, unlink
 import { join, basename } from 'node:path';
 import { execSync } from 'node:child_process';
 import { getConfigDir } from './core/config.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -423,11 +424,11 @@ function envList(): void {
 function envShow(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved env show <name>');
+    errUsage('ved env show <name>');
     return;
   }
   if (!envExists(name)) {
-    console.error(`Environment "${name}" does not exist`);
+    errHint(`Environment "${name}" does not exist`);
     return;
   }
   const content = readEnvConfig(name);
@@ -440,18 +441,18 @@ function envShow(args: string[]): void {
 function envCreate(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved env create <name> [--from <env>] [--template <t>] [--from-current]');
+    errUsage('ved env create <name> [--from <env>] [--template <t>] [--from-current]');
     return;
   }
 
   const validation = validateEnvName(name);
   if (!validation.valid) {
-    console.error(`Invalid name: ${validation.reason}`);
+    errHint(`Invalid name: ${validation.reason}`);
     return;
   }
 
   if (envExists(name)) {
-    console.error(`Environment "${name}" already exists. Use "ved env edit ${name}" to modify.`);
+    errHint(`Environment "${name}" already exists. Use "ved env edit ${name}" to modify.`);
     return;
   }
 
@@ -464,7 +465,7 @@ function envCreate(args: string[]): void {
     // Copy from existing environment
     const source = args[fromIdx + 1];
     if (!envExists(source)) {
-      console.error(`Source environment "${source}" does not exist`);
+      errHint(`Source environment "${source}" does not exist`);
       return;
     }
     content = readEnvConfig(source);
@@ -473,7 +474,7 @@ function envCreate(args: string[]): void {
     // Use built-in template
     const tpl = args[templateIdx + 1];
     if (!BUILT_IN_TEMPLATES[tpl]) {
-      console.error(`Unknown template: ${tpl}. Available: ${Object.keys(BUILT_IN_TEMPLATES).join(', ')}`);
+      errHint(`Unknown template: ${tpl}. Available: ${Object.keys(BUILT_IN_TEMPLATES).join(', ')}`, 'Run "ved help" to see available commands');
       return;
     }
     content = `# Ved environment: ${name}\n# Template: ${tpl}\n# Created: ${new Date().toISOString()}\n\n`;
@@ -520,14 +521,14 @@ function envCreate(args: string[]): void {
 function envUse(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved env use <name>');
+    errUsage('ved env use <name>');
     return;
   }
   if (!envExists(name)) {
-    console.error(`Environment "${name}" does not exist`);
+    errHint(`Environment "${name}" does not exist`);
     const envs = listEnvs();
     if (envs.length > 0) {
-      console.error(`Available: ${envs.map(e => e.name).join(', ')}`);
+      errHint(`Available: ${envs.map(e => e.name).join(', ')}`);
     }
     return;
   }
@@ -546,11 +547,11 @@ function envUse(args: string[]): void {
 function envEdit(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved env edit <name>');
+    errUsage('ved env edit <name>');
     return;
   }
   if (!envExists(name)) {
-    console.error(`Environment "${name}" does not exist`);
+    errHint(`Environment "${name}" does not exist`);
     return;
   }
   const editor = process.env.EDITOR || process.env.VISUAL || 'vi';
@@ -559,18 +560,18 @@ function envEdit(args: string[]): void {
     execSync(`${editor} "${p}"`, { stdio: 'inherit' });
     console.log(`Environment "${name}" updated.`);
   } catch {
-    console.error(`Failed to open editor: ${editor}`);
+    errHint(`Failed to open editor: ${editor}`);
   }
 }
 
 function envDelete(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved env delete <name>');
+    errUsage('ved env delete <name>');
     return;
   }
   if (!envExists(name)) {
-    console.error(`Environment "${name}" does not exist`);
+    errHint(`Environment "${name}" does not exist`);
     return;
   }
   const wasActive = getActiveEnv() === name;
@@ -585,7 +586,7 @@ function envDiff(args: string[]): void {
   const nameA = args[0];
   const nameB = args[1];
   if (!nameA || !nameB) {
-    console.error('Usage: ved env diff <envA> <envB>');
+    errUsage('ved env diff <envA> <envB>');
     return;
   }
 
@@ -595,7 +596,7 @@ function envDiff(args: string[]): void {
       return `# Default config (no environment overlay)\n`;
     }
     if (!envExists(name)) {
-      console.error(`Environment "${name}" does not exist`);
+      errHint(`Environment "${name}" does not exist`);
       process.exit(1);
     }
     return readEnvConfig(name);

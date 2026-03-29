@@ -44,6 +44,7 @@ import { ulid } from 'ulid';
 import { createApp, type VedApp } from './app.js';
 import { getConfigDir } from './core/config.js';
 import type { VedMessage } from './types/index.js';
+import { errHint, errUsage } from './errors.js';
 
 const VERSION = '0.1.0';
 
@@ -734,8 +735,8 @@ export function parsePipeArgs(args: string[]): {
       printPipeHelp();
       process.exit(0);
     } else if (arg.startsWith('-')) {
-      console.error(`Unknown flag: ${arg}`);
-      console.error('Run `ved pipe --help` for usage.');
+      errHint(`Unknown flag: ${arg}`, 'Run "ved help" to see available commands');
+      errHint('Run `ved pipe --help` for usage.');
       process.exit(1);
     } else {
       result.inlineQueries.push(arg);
@@ -823,13 +824,13 @@ export async function vedPipe(args: string[]): Promise<void> {
 
     case 'show': {
       if (!parsed.pipelineName) {
-        console.error('Usage: ved pipe show <name>');
+        errUsage('ved pipe show <name>');
         process.exit(1);
       }
 
       const pipeline = loadSavedPipeline(parsed.pipelineName);
       if (!pipeline) {
-        console.error(`Pipeline not found: ${parsed.pipelineName}`);
+        errHint(`Pipeline not found: ${parsed.pipelineName}`, 'Check the name and try again');
         process.exit(1);
       }
 
@@ -858,15 +859,15 @@ export async function vedPipe(args: string[]): Promise<void> {
 
     case 'save': {
       if (!parsed.pipelineName) {
-        console.error('Usage: ved pipe save <name> -f pipeline.yaml [-d "description"]');
+        errUsage('ved pipe save <name> -f pipeline.yaml [-d "description"]');
         process.exit(1);
       }
       if (!parsed.pipelineFile) {
-        console.error('Error: -f <file> is required for save.');
+        errHint('-f <file> is required for save.');
         process.exit(1);
       }
       if (!existsSync(parsed.pipelineFile)) {
-        console.error(`File not found: ${parsed.pipelineFile}`);
+        errHint(`File not found: ${parsed.pipelineFile}`, 'Check the name and try again');
         process.exit(1);
       }
 
@@ -879,8 +880,8 @@ export async function vedPipe(args: string[]): Promise<void> {
 
       const errors = validatePipeline(pipeline);
       if (errors.length > 0) {
-        console.error('Pipeline validation failed:');
-        for (const e of errors) console.error(`  ❌ ${e}`);
+        errHint('Pipeline validation failed:');
+        for (const e of errors) errHint(`  ${e}`);
         process.exit(1);
       }
 
@@ -893,14 +894,14 @@ export async function vedPipe(args: string[]): Promise<void> {
 
     case 'delete': {
       if (!parsed.pipelineName) {
-        console.error('Usage: ved pipe delete <name>');
+        errUsage('ved pipe delete <name>');
         process.exit(1);
       }
 
       if (deleteSavedPipeline(parsed.pipelineName)) {
         console.log(`\n  ✅ Pipeline deleted: ${parsed.pipelineName}\n`);
       } else {
-        console.error(`Pipeline not found: ${parsed.pipelineName}`);
+        errHint(`Pipeline not found: ${parsed.pipelineName}`, 'Check the name and try again');
         process.exit(1);
       }
       return;
@@ -914,7 +915,7 @@ export async function vedPipe(args: string[]): Promise<void> {
         // Load saved pipeline
         const saved = loadSavedPipeline(parsed.pipelineName);
         if (!saved) {
-          console.error(`Pipeline not found: ${parsed.pipelineName}`);
+          errHint(`Pipeline not found: ${parsed.pipelineName}`, 'Check the name and try again');
           process.exit(1);
           return; // unreachable
         }
@@ -922,7 +923,7 @@ export async function vedPipe(args: string[]): Promise<void> {
       } else if (parsed.pipelineFile) {
         // Load from file
         if (!existsSync(parsed.pipelineFile)) {
-          console.error(`File not found: ${parsed.pipelineFile}`);
+          errHint(`File not found: ${parsed.pipelineFile}`, 'Check the name and try again');
           process.exit(1);
           return;
         }
@@ -940,8 +941,8 @@ export async function vedPipe(args: string[]): Promise<void> {
       // Validate
       const errors = validatePipeline(pipeline);
       if (errors.length > 0) {
-        console.error('Pipeline validation failed:');
-        for (const e of errors) console.error(`  ❌ ${e}`);
+        errHint('Pipeline validation failed:');
+        for (const e of errors) errHint(`  ${e}`);
         process.exit(3);
       }
 
@@ -981,10 +982,10 @@ export async function vedPipe(args: string[]): Promise<void> {
         }
       } catch (err) {
         if (err instanceof Error && err.message === 'STEP_TIMEOUT') {
-          console.error('Error: Pipeline step timed out.');
+          errHint('Pipeline step timed out.');
           process.exit(2);
         }
-        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        errHint(`${err instanceof Error ? err.message : String(err)}`);
         process.exit(1);
       } finally {
         if (app) {

@@ -22,6 +22,7 @@
 
 import type { VedApp } from './app.js';
 import { checkHelp } from './cli-help.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -119,7 +120,7 @@ async function tagShow(app: VedApp, args: string[]): Promise<void> {
 
   const tagName = normalizeTag(args[0] || '');
   if (!tagName) {
-    console.error('  ✗ Usage: ved tag show <tag>');
+    errUsage('ved tag show <tag>');
     return;
   }
 
@@ -142,14 +143,14 @@ async function tagAdd(app: VedApp, args: string[]): Promise<void> {
   if (checkHelp('tag', args)) return;
 
   if (args.length < 2) {
-    console.error('  ✗ Usage: ved tag add <file> <tag> [<tag>...]');
+    errUsage('ved tag add <file> <tag> [<tag>...]');
     return;
   }
 
   const fileInput = args[0];
   const relPath = resolveFilePath(app, fileInput);
   if (!relPath) {
-    console.error(`  ✗ File not found: ${fileInput}`);
+    errHint(`File not found: ${fileInput}`);
     return;
   }
 
@@ -157,7 +158,7 @@ async function tagAdd(app: VedApp, args: string[]): Promise<void> {
   for (const tag of newTags) {
     const err = validateTagName(tag);
     if (err) {
-      console.error(`  ✗ Invalid tag "${tag}": ${err}`);
+      errHint(`Invalid tag "${tag}": ${err}`);
       return;
     }
   }
@@ -182,14 +183,14 @@ async function tagRemove(app: VedApp, args: string[]): Promise<void> {
   if (checkHelp('tag', args)) return;
 
   if (args.length < 2) {
-    console.error('  ✗ Usage: ved tag remove <file> <tag> [<tag>...]');
+    errUsage('ved tag remove <file> <tag> [<tag>...]');
     return;
   }
 
   const fileInput = args[0];
   const relPath = resolveFilePath(app, fileInput);
   if (!relPath) {
-    console.error(`  ✗ File not found: ${fileInput}`);
+    errHint(`File not found: ${fileInput}`);
     return;
   }
 
@@ -214,7 +215,7 @@ async function tagRename(app: VedApp, args: string[]): Promise<void> {
   if (checkHelp('tag', args)) return;
 
   if (args.length < 2) {
-    console.error('  ✗ Usage: ved tag rename <old-tag> <new-tag>');
+    errUsage('ved tag rename <old-tag> <new-tag>');
     return;
   }
 
@@ -223,12 +224,12 @@ async function tagRename(app: VedApp, args: string[]): Promise<void> {
 
   const oldErr = validateTagName(oldTag);
   if (oldErr) {
-    console.error(`  ✗ Invalid old tag "${oldTag}": ${oldErr}`);
+    errHint(`Invalid old tag "${oldTag}": ${oldErr}`);
     return;
   }
   const newErr = validateTagName(newTag);
   if (newErr) {
-    console.error(`  ✗ Invalid new tag "${newTag}": ${newErr}`);
+    errHint(`Invalid new tag "${newTag}": ${newErr}`);
     return;
   }
 
@@ -271,14 +272,14 @@ async function tagSet(app: VedApp, args: string[]): Promise<void> {
   if (checkHelp('tag', args)) return;
 
   if (args.length < 2) {
-    console.error('  ✗ Usage: ved tag set <file> <tag> [<tag>...]');
+    errUsage('ved tag set <file> <tag> [<tag>...]');
     return;
   }
 
   const fileInput = args[0];
   const relPath = resolveFilePath(app, fileInput);
   if (!relPath) {
-    console.error(`  ✗ File not found: ${fileInput}`);
+    errHint(`File not found: ${fileInput}`);
     return;
   }
 
@@ -286,7 +287,7 @@ async function tagSet(app: VedApp, args: string[]): Promise<void> {
   for (const tag of tags) {
     const err = validateTagName(tag);
     if (err) {
-      console.error(`  ✗ Invalid tag "${tag}": ${err}`);
+      errHint(`Invalid tag "${tag}": ${err}`);
       return;
     }
   }
@@ -305,14 +306,14 @@ async function tagClear(app: VedApp, args: string[]): Promise<void> {
   if (checkHelp('tag', args)) return;
 
   if (args.length < 1) {
-    console.error('  ✗ Usage: ved tag clear <file>');
+    errUsage('ved tag clear <file>');
     return;
   }
 
   const fileInput = args[0];
   const relPath = resolveFilePath(app, fileInput);
   if (!relPath) {
-    console.error(`  ✗ File not found: ${fileInput}`);
+    errHint(`File not found: ${fileInput}`);
     return;
   }
 
@@ -425,7 +426,7 @@ async function tagFind(app: VedApp, args: string[]): Promise<void> {
 
   const tagArgs = args.filter(a => !a.startsWith('--'));
   if (tagArgs.length === 0) {
-    console.error('  ✗ Usage: ved tag find <tag> [<tag>...]');
+    errUsage('ved tag find <tag> [<tag>...]');
     return;
   }
 
@@ -433,7 +434,7 @@ async function tagFind(app: VedApp, args: string[]): Promise<void> {
   for (const tag of tags) {
     const err = validateTagName(tag);
     if (err) {
-      console.error(`  ✗ Invalid tag "${tag}": ${err}`);
+      errHint(`Invalid tag "${tag}": ${err}`);
       return;
     }
   }
@@ -532,7 +533,7 @@ export async function tagCommand(app: VedApp, args: string[]): Promise<void> {
       if (sub && !sub.startsWith('-')) {
         return tagShow(app, [sub, ...rest]);
       }
-      console.error(`  ✗ Unknown subcommand: ${sub}`);
-      console.error('  Run "ved tag --help" for usage.');
+      errHint(`Unknown subcommand: ${sub}`);
+      errUsage('ved tag <subcommand> — run "ved tag --help" for usage');
   }
 }

@@ -21,6 +21,7 @@
 import type { VedApp } from './app.js';
 import type { TrustTier, RiskLevel, TrustDecision } from './types/index.js';
 import { TRUST_RISK_MATRIX } from './types/index.js';
+import { errHint, errUsage } from './errors.js';
 
 // === Helpers ===
 
@@ -148,7 +149,7 @@ function showMatrix(): void {
 function resolveTier(app: VedApp, args: string[]): void {
   const { positional } = parseArgs(args);
   if (positional.length < 2) {
-    console.error('Usage: ved trust resolve <channel> <userId>');
+    errUsage('ved trust resolve <channel> <userId>');
     process.exit(1);
   }
 
@@ -173,7 +174,7 @@ function resolveTier(app: VedApp, args: string[]): void {
 function assessRisk(app: VedApp, args: string[]): void {
   const { positional, flags } = parseArgs(args);
   if (positional.length < 1) {
-    console.error('Usage: ved trust assess <toolName> [--params <json>]');
+    errUsage('ved trust assess <toolName> [--params <json>]');
     process.exit(1);
   }
 
@@ -183,7 +184,7 @@ function assessRisk(app: VedApp, args: string[]): void {
     try {
       params = JSON.parse(flags['params']) as Record<string, unknown>;
     } catch {
-      console.error('Error: --params must be valid JSON');
+      errHint('--params must be valid JSON');
       process.exit(1);
     }
   }
@@ -215,14 +216,14 @@ function assessRisk(app: VedApp, args: string[]): void {
 function grantTrust(app: VedApp, args: string[]): void {
   const { positional, flags } = parseArgs(args);
   if (positional.length < 3 || !flags['as']) {
-    console.error('Usage: ved trust grant <channel> <userId> <tier> --as <ownerId> [--reason <text>]');
+    errUsage('ved trust grant <channel> <userId> <tier> --as <ownerId> [--reason <text>]');
     process.exit(1);
   }
 
   const [channel, userId, tierStr] = positional;
   const tier = parseInt(tierStr, 10) as TrustTier;
   if (![1, 2, 3, 4].includes(tier)) {
-    console.error('Error: tier must be 1, 2, 3, or 4');
+    errHint('tier must be 1, 2, 3, or 4');
     process.exit(1);
   }
 
@@ -239,7 +240,7 @@ function grantTrust(app: VedApp, args: string[]): void {
     if (reason) console.log(`  Reason:     ${reason}`);
     console.log();
   } catch (err) {
-    console.error(`Error: ${(err as Error).message}`);
+    errHint(`${(err as Error).message}`);
     process.exit(1);
   }
 }
@@ -247,7 +248,7 @@ function grantTrust(app: VedApp, args: string[]): void {
 function revokeTrust(app: VedApp, args: string[]): void {
   const { positional, flags } = parseArgs(args);
   if (positional.length < 2 || !flags['as']) {
-    console.error('Usage: ved trust revoke <channel> <userId> --as <ownerId> [--reason <text>]');
+    errUsage('ved trust revoke <channel> <userId> --as <ownerId> [--reason <text>]');
     process.exit(1);
   }
 
@@ -415,7 +416,7 @@ function showWorkOrderHistory(app: VedApp, args: string[]): void {
 function showWorkOrder(app: VedApp, args: string[]): void {
   const { positional } = parseArgs(args);
   if (positional.length < 1) {
-    console.error('Usage: ved trust show <workOrderId>');
+    errUsage('ved trust show <workOrderId>');
     process.exit(1);
   }
 
@@ -430,7 +431,7 @@ function showWorkOrder(app: VedApp, args: string[]): void {
     ) as WorkOrderRow[];
     const row = rows[0] as WorkOrderRow | undefined;
     if (!row) {
-      console.error(`Work order not found: ${id}`);
+      errHint(`Work order not found: ${id}`, 'Check the name and try again');
       process.exit(1);
     }
     showWorkOrderDetail(row);

@@ -14,6 +14,7 @@
 
 import type { VedApp } from './app.js';
 import type { VaultFile, VaultEntityType } from './types/index.js';
+import { errHint, errUsage } from './errors.js';
 
 // === Helpers ===
 
@@ -121,13 +122,13 @@ async function show(app: VedApp, args: string[]): Promise<void> {
   const target = positional[0];
 
   if (!target) {
-    console.error('Usage: ved memory show <path|filename>');
+    errUsage('ved memory show <path|filename>');
     process.exit(1);
   }
 
   const file = app.memory.readEntity(target);
   if (!file) {
-    console.error(`Entity not found: ${target}`);
+    errHint(`Entity not found: ${target}`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -155,14 +156,14 @@ async function graph(app: VedApp, args: string[]): Promise<void> {
   const maxDepth = flags.depth ? parseInt(flags.depth, 10) : 1;
 
   if (!target) {
-    console.error('Usage: ved memory graph <path|filename> [--depth N]');
+    errUsage('ved memory graph <path|filename> [--depth N]');
     process.exit(1);
   }
 
   // Resolve the target to a path
   const file = app.memory.readEntity(target);
   if (!file) {
-    console.error(`Entity not found: ${target}`);
+    errHint(`Entity not found: ${target}`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -298,13 +299,13 @@ async function forget(app: VedApp, args: string[]): Promise<void> {
   const reason = flags.reason || 'manual forget via CLI';
 
   if (!target) {
-    console.error('Usage: ved memory forget <path> [--reason <reason>]');
+    errUsage('ved memory forget <path> [--reason <reason>]');
     process.exit(1);
   }
 
   const file = app.memory.readEntity(target);
   if (!file) {
-    console.error(`Entity not found: ${target}`);
+    errHint(`Entity not found: ${target}`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -438,7 +439,7 @@ export async function memoryCommand(app: VedApp, args: string[]): Promise<void> 
     ved memory tags
 `);
       if (sub !== 'help') {
-        console.error(`Unknown subcommand: ${sub}`);
+        errHint(`Unknown subcommand: ${sub}`, 'Run "ved help" to see available commands');
         process.exit(1);
       }
   }

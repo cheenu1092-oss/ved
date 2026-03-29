@@ -22,6 +22,8 @@ import { homedir } from 'node:os';
 import { mkdirSync } from 'node:fs';
 import { getConfigDir } from './core/config.js';
 import { SyncManager, REMOTE_TYPES, type RemoteType, type SyncRemote } from './sync.js';
+import { errHint, errUsage } from './errors.js';
+import { spinner } from './spinner.js';
 
 // ── DB helpers ─────────────────────────────────────────────────────────
 
@@ -78,8 +80,8 @@ export async function syncCommand(args: string[]): Promise<void> {
       } finally {
         db.close();
       }
-      console.error(`Unknown sync subcommand: ${sub}`);
-      console.error('Run "ved sync --help" for usage.');
+      errHint(`Unknown sync subcommand: ${sub}`, 'Run "ved help" to see available commands');
+      errHint('Run "ved sync --help" for usage.');
       process.exitCode = 1;
     }
   }
@@ -138,18 +140,18 @@ function addRemote(args: string[]): void {
   url = positional[2] || '';
 
   if (!name || !type || !url) {
-    console.error('Usage: ved sync add <name> <type> <url> [--auth <data>]');
-    console.error(`Types: ${REMOTE_TYPES.join(', ')}`);
-    console.error('Examples:');
-    console.error('  ved sync add origin git https://github.com/user/vault.git');
-    console.error('  ved sync add backup local /backups/vault');
-    console.error('  ved sync add s3-backup s3 s3://my-bucket/vault');
+    errUsage('ved sync add <name> <type> <url> [--auth <data>]');
+    errHint(`Types: ${REMOTE_TYPES.join(', ')}`);
+    errHint('Examples:');
+    errHint('  ved sync add origin git https://github.com/user/vault.git');
+    errHint('  ved sync add backup local /backups/vault');
+    errHint('  ved sync add s3-backup s3 s3://my-bucket/vault');
     process.exitCode = 1;
     return;
   }
 
   if (!REMOTE_TYPES.includes(type as RemoteType)) {
-    console.error(`Invalid type: ${type}. Must be one of: ${REMOTE_TYPES.join(', ')}`);
+    errHint(`Invalid type: ${type}. Must be one of: ${REMOTE_TYPES.join(', ')}`);
     process.exitCode = 1;
     return;
   }
@@ -162,7 +164,7 @@ function addRemote(args: string[]): void {
     console.log(`  Type: ${remote.type}`);
     console.log(`  URL:  ${remote.url}`);
   } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    errHint(`${err instanceof Error ? err.message : String(err)}`);
     process.exitCode = 1;
   } finally {
     db.close();
@@ -172,7 +174,7 @@ function addRemote(args: string[]): void {
 function removeRemote(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved sync remove <name>');
+    errUsage('ved sync remove <name>');
     process.exitCode = 1;
     return;
   }
@@ -182,7 +184,7 @@ function removeRemote(args: string[]): void {
     const mgr = new SyncManager(db, vaultDir);
     const ok = mgr.removeRemote(name);
     if (!ok) {
-      console.error(`Remote "${name}" not found.`);
+      errHint(`Remote "${name}" not found.`, 'Check the name and try again');
       process.exitCode = 1;
       return;
     }
@@ -248,17 +250,17 @@ function pullSync(args: string[]): void {
 
 function runSync(mgr: SyncManager, direction: 'push' | 'pull', remoteName: string, force: boolean): void {
   const arrow = direction === 'push' ? '→' : '←';
-  process.stdout.write(`  ${arrow} ${direction} ${remoteName}... `);
+  const spin = spinner(`${arrow} ${direction} ${remoteName}...`);
   try {
     const hist = direction === 'push'
       ? mgr.push(remoteName, { force })
       : mgr.pull(remoteName, { force });
     const files = hist.filesChanged !== undefined ? ` (${hist.filesChanged} files)` : '';
-    console.log(`\x1b[32mdone\x1b[0m${files}`);
+    spin.succeed(`${direction} ${remoteName} done${files}`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.log(`\x1b[31mfailed\x1b[0m`);
-    console.error(`    ${msg}`);
+    spin.fail(`${direction} ${remoteName} failed`);
+    errHint(msg);
     process.exitCode = 1;
   }
 }
@@ -276,7 +278,7 @@ function showStatus(args: string[]): void {
 
     if (remotes.length === 0) {
       if (remoteName) {
-        console.error(`Remote "${remoteName}" not found.`);
+        errHint(`Remote "${remoteName}" not found.`, 'Check the name and try again');
         process.exitCode = 1;
       } else {
         console.log('No sync remotes configured.');

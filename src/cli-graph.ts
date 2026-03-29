@@ -24,6 +24,7 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join, relative, basename, dirname, extname } from 'node:path';
 import { loadConfig } from './core/config.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── ANSI ──
 
@@ -376,11 +377,11 @@ function shortestPath(graph: VaultGraph, startName: string, endName: string): vo
   const end = endName.toLowerCase().replace(/\.md$/, '');
 
   if (!graph.nodes.has(start)) {
-    console.error(`Entity not found: ${startName}`);
+    errHint(`Entity not found: ${startName}`, 'Check the name and try again');
     process.exit(1);
   }
   if (!graph.nodes.has(end)) {
-    console.error(`Entity not found: ${endName}`);
+    errHint(`Entity not found: ${endName}`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -463,7 +464,7 @@ function neighbors(graph: VaultGraph, entityName: string): void {
   const node = graph.nodes.get(name);
 
   if (!node) {
-    console.error(`Entity not found: ${entityName}`);
+    errHint(`Entity not found: ${entityName}`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -643,7 +644,7 @@ export async function graphCommand(args: string[]): Promise<void> {
   const vaultPath = config.memory?.vaultPath;
 
   if (!vaultPath) {
-    console.error('No vault path configured. Run `ved init` first.');
+    errHint('No vault path configured. Run `ved init` first.');
     process.exit(1);
   }
 
@@ -671,7 +672,7 @@ export async function graphCommand(args: string[]): Promise<void> {
       const a = positional[1];
       const b = positional[2];
       if (!a || !b) {
-        console.error('Usage: ved graph path <entity-a> <entity-b>');
+        errUsage('ved graph path <entity-a> <entity-b>');
         process.exit(1);
       }
       return shortestPath(graph, a, b);
@@ -681,7 +682,7 @@ export async function graphCommand(args: string[]): Promise<void> {
     case 'nb': {
       const entity = positional[1];
       if (!entity) {
-        console.error('Usage: ved graph neighbors <entity>');
+        errUsage('ved graph neighbors <entity>');
         process.exit(1);
       }
       return neighbors(graph, entity);
@@ -698,8 +699,8 @@ export async function graphCommand(args: string[]): Promise<void> {
     case 'folders':
       return summary(graph);
     default:
-      console.error(`Unknown subcommand: ${sub}`);
-      console.error('Run `ved graph --help` for usage.');
+      errHint(`Unknown subcommand: ${sub}`, 'Run "ved help" to see available commands');
+      errHint('Run `ved graph --help` for usage.');
       process.exit(1);
   }
 }

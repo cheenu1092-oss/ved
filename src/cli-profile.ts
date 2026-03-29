@@ -37,6 +37,7 @@ import { AuditLog } from './audit/store.js';
 import { VaultManager } from './memory/vault.js';
 import { TrustEngine } from './trust/engine.js';
 import type { TrustTier } from './types/index.js';
+import { errHint } from './errors.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -594,7 +595,7 @@ function parseProfileArgs(args: string[]): { suites: string[]; opts: ProfileOpti
         } else if (arg === 'all') {
           // explicit all — same as no suite args
         } else if (!arg.startsWith('-')) {
-          console.error(`Unknown suite: ${arg}. Available: ${SUITE_NAMES.join(', ')}`);
+          errHint(`Unknown suite: ${arg}. Available: ${SUITE_NAMES.join(', ')}`, 'Run "ved help" to see available commands');
           process.exit(1);
         }
     }
@@ -673,7 +674,7 @@ export async function profileCmd(args: string[]): Promise<void> {
         opsPerSec: 0,
       }];
       if (!opts.json) {
-        console.error(`\n  Error in ${suiteName}: ${msg}`);
+        errHint(`Error in ${suiteName}: ${msg}`);
       }
     }
   }

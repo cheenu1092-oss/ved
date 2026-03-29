@@ -31,6 +31,7 @@ import {
 } from 'node:fs';
 import { join, basename, relative, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { errHint, errUsage } from './errors.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -203,12 +204,12 @@ async function migrateMarkdown(app: VedApp, args: string[]): Promise<void> {
 
   const dirPath = args[0];
   if (!dirPath) {
-    console.error('  ✗ Usage: ved migrate markdown <directory>');
+    errUsage('ved migrate markdown <directory>');
     return;
   }
 
   if (!existsSync(dirPath) || !statSync(dirPath).isDirectory()) {
-    console.error(`  ✗ Directory not found: ${dirPath}`);
+    errHint(`Directory not found: ${dirPath}`);
     return;
   }
 
@@ -297,7 +298,7 @@ async function migrateMarkdown(app: VedApp, args: string[]): Promise<void> {
       result.files.push(vaultPath);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`    ✗ ${filePath}: ${msg}`);
+      errHint(`${filePath}: ${msg}`);
       result.errored++;
       result.errors.push(`${filePath}: ${msg}`);
     }
@@ -336,12 +337,12 @@ async function migrateJson(app: VedApp, args: string[]): Promise<void> {
 
   const filePath = args[0];
   if (!filePath) {
-    console.error('  ✗ Usage: ved migrate json <file>');
+    errUsage('ved migrate json <file>');
     return;
   }
 
   if (!existsSync(filePath)) {
-    console.error(`  ✗ File not found: ${filePath}`);
+    errHint(`File not found: ${filePath}`);
     return;
   }
 
@@ -353,7 +354,7 @@ async function migrateJson(app: VedApp, args: string[]): Promise<void> {
   try {
     data = JSON.parse(readFileSync(filePath, 'utf-8'));
   } catch (err) {
-    console.error(`  ✗ Invalid JSON: ${err instanceof Error ? err.message : err}`);
+    errHint(`Invalid JSON: ${err instanceof Error ? err.message : err}`);
     return;
   }
 
@@ -517,13 +518,13 @@ async function migrateJson(app: VedApp, args: string[]): Promise<void> {
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`    ✗ item ${i}: ${msg}`);
+        errHint(`item ${i}: ${msg}`);
         result.errored++;
         result.errors.push(`item ${i}: ${msg}`);
       }
     }
   } else {
-    console.error('  ✗ Unsupported JSON format (expected array of conversations or objects)');
+    errHint('Unsupported JSON format (expected array of conversations or objects)');
     return;
   }
 
@@ -558,12 +559,12 @@ async function migrateObsidian(app: VedApp, args: string[]): Promise<void> {
 
   const vaultPath = args[0];
   if (!vaultPath) {
-    console.error('  ✗ Usage: ved migrate obsidian <vault-path>');
+    errUsage('ved migrate obsidian <vault-path>');
     return;
   }
 
   if (!existsSync(vaultPath) || !statSync(vaultPath).isDirectory()) {
-    console.error(`  ✗ Vault not found: ${vaultPath}`);
+    errHint(`Vault not found: ${vaultPath}`);
     return;
   }
 
@@ -603,7 +604,7 @@ async function migrateObsidian(app: VedApp, args: string[]): Promise<void> {
 
       // Path safety check
       if (!isPathSafe(vaultPath, relFromSource)) {
-        console.error(`    ✗ Path traversal detected: ${relFromSource}`);
+        errHint(`Path traversal detected: ${relFromSource}`);
         result.errored++;
         result.errors.push(`path traversal: ${relFromSource}`);
         continue;
@@ -654,7 +655,7 @@ async function migrateObsidian(app: VedApp, args: string[]): Promise<void> {
       result.files.push(vaultRelPath);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`    ✗ ${filePath}: ${msg}`);
+      errHint(`${filePath}: ${msg}`);
       result.errored++;
       result.errors.push(`${filePath}: ${msg}`);
     }
@@ -691,12 +692,12 @@ async function migrateCsv(app: VedApp, args: string[]): Promise<void> {
 
   const filePath = args[0];
   if (!filePath) {
-    console.error('  ✗ Usage: ved migrate csv <file>');
+    errUsage('ved migrate csv <file>');
     return;
   }
 
   if (!existsSync(filePath)) {
-    console.error(`  ✗ File not found: ${filePath}`);
+    errHint(`File not found: ${filePath}`);
     return;
   }
 
@@ -710,7 +711,7 @@ async function migrateCsv(app: VedApp, args: string[]): Promise<void> {
   const lines = content.split('\n').filter(l => l.trim());
 
   if (lines.length < 2) {
-    console.error('  ✗ CSV must have a header row and at least one data row');
+    errHint('CSV must have a header row and at least one data row');
     return;
   }
 
@@ -744,8 +745,7 @@ async function migrateCsv(app: VedApp, args: string[]): Promise<void> {
   const nameIdx = headers.indexOf(nameCol);
 
   if (nameIdx === -1) {
-    console.error(`  ✗ Name column "${nameCol}" not found. Available: ${headers.join(', ')}`);
-    console.error('    Use --name-col=<column> to specify.');
+    errHint(`Name column "${nameCol}" not found. Available: ${headers.join(', ')}`, 'Use --name-col=<column> to specify');
     return;
   }
 
@@ -845,12 +845,12 @@ async function migrateJsonl(app: VedApp, args: string[]): Promise<void> {
 
   const filePath = args[0];
   if (!filePath) {
-    console.error('  ✗ Usage: ved migrate jsonl <file>');
+    errUsage('ved migrate jsonl <file>');
     return;
   }
 
   if (!existsSync(filePath)) {
-    console.error(`  ✗ File not found: ${filePath}`);
+    errHint(`File not found: ${filePath}`);
     return;
   }
 
@@ -970,7 +970,7 @@ async function migrateUndo(app: VedApp, args: string[]): Promise<void> {
 
   const migrationId = args[0];
   if (!migrationId) {
-    console.error('  ✗ Usage: ved migrate undo <migration-id>');
+    errUsage('ved migrate undo <migration-id>');
     return;
   }
 
@@ -978,12 +978,12 @@ async function migrateUndo(app: VedApp, args: string[]): Promise<void> {
   const record = records.find(r => r.id.startsWith(migrationId));
 
   if (!record) {
-    console.error(`  ✗ Migration not found: ${migrationId}`);
+    errHint(`Migration not found: ${migrationId}`);
     return;
   }
 
   if (record.undoneAt) {
-    console.error(`  ✗ Migration already undone at ${record.undoneAt}`);
+    errHint(`Migration already undone at ${record.undoneAt}`);
     return;
   }
 
@@ -1064,18 +1064,18 @@ async function migrateValidate(_app: VedApp, args: string[]): Promise<void> {
   const path = args[1];
 
   if (!source) {
-    console.error('  ✗ Usage: ved migrate validate <source> [path]');
-    console.error('  Sources: markdown, json, obsidian, csv, jsonl');
+    errUsage('ved migrate validate <source> [path]');
+    errHint('Sources: markdown, json, obsidian, csv, jsonl');
     return;
   }
 
   if (!path) {
-    console.error(`  ✗ Path required for ${source} validation`);
+    errHint(`Path required for ${source} validation`);
     return;
   }
 
   if (!existsSync(path)) {
-    console.error(`  ✗ Not found: ${path}`);
+    errHint(`Not found: ${path}`);
     return;
   }
 
@@ -1085,7 +1085,7 @@ async function migrateValidate(_app: VedApp, args: string[]): Promise<void> {
     case 'markdown': {
       const stat = statSync(path);
       if (!stat.isDirectory()) {
-        console.error('  ✗ Expected a directory');
+        errHint('Expected a directory');
         return;
       }
       let count = 0;
@@ -1121,14 +1121,14 @@ async function migrateValidate(_app: VedApp, args: string[]): Promise<void> {
           console.log('    ✗ Expected array at top level');
         }
       } catch (err) {
-        console.error(`    ✗ Invalid JSON: ${err instanceof Error ? err.message : err}`);
+        errHint(`Invalid JSON: ${err instanceof Error ? err.message : err}`);
       }
       break;
     }
     case 'obsidian': {
       const stat = statSync(path);
       if (!stat.isDirectory()) {
-        console.error('  ✗ Expected a directory');
+        errHint('Expected a directory');
         return;
       }
       const hasObsidian = existsSync(join(path, '.obsidian'));
@@ -1168,7 +1168,7 @@ async function migrateValidate(_app: VedApp, args: string[]): Promise<void> {
       break;
     }
     default:
-      console.error(`  ✗ Unknown source: ${source}`);
+      errHint(`Unknown source: ${source}`);
   }
 
   console.log();
@@ -1211,7 +1211,7 @@ export async function migrateCommand(app: VedApp, args: string[]): Promise<void>
       checkHelp('migrate', ['--help']);
       return;
     default:
-      console.error(`  ✗ Unknown subcommand: ${sub}`);
-      console.error('  Run "ved migrate --help" for usage.');
+      errHint(`Unknown subcommand: ${sub}`);
+      errUsage('ved migrate <subcommand> — run "ved migrate --help" for usage');
   }
 }

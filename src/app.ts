@@ -6,7 +6,7 @@
  */
 
 import Database from 'better-sqlite3';
-import { mkdirSync, existsSync, readdirSync, statSync, copyFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, existsSync, readdirSync, statSync, copyFileSync, rmSync, writeFileSync, readFileSync, unlinkSync } from 'node:fs';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
@@ -938,6 +938,115 @@ export class VedApp {
       }
     } catch (_err) {
       // skip if audit log unavailable
+    }
+
+    // 9. Remove orphaned lock files
+    try {
+      const configDir = getConfigDir();
+      const lockFile = join(configDir, 'ved.lock');
+      if (existsSync(lockFile)) {
+        try {
+          const lockContent = readFileSync(lockFile, 'utf-8').trim();
+          const pid = parseInt(lockContent, 10);
+          let isRunning = false;
+          if (!isNaN(pid) && pid > 0) {
+            try {
+              process.kill(pid, 0); // signal 0 = check if alive
+              isRunning = true;
+            } catch { /* process not running */ }
+          }
+          if (!isRunning) {
+            unlinkSync(lockFile);
+            fixed.push('Removed orphaned lock file (no running ved process)');
+          }
+        } catch (err) {
+          manual.push(`Cannot check/remove lock file: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+    } catch (_err) {
+      // skip lock file check if config dir not accessible
+    }
+
+    // 10. Validate cron jobs — remove entries with invalid cron expressions
+    if (this.db) {
+      try {
+        const { parseCronExpression } = await import('./core/cron.js');
+        const rows = this.db.prepare('SELECT id, name, schedule FROM cron_jobs').all() as Array<{ id: string; name: string; schedule: string }>;
+        const invalidJobs: string[] = [];
+        for (const row of rows) {
+          try {
+            parseCronExpression(row.schedule);
+          } catch {
+            invalidJobs.push(row.name);
+            this.db.prepare('DELETE FROM cron_jobs WHERE id = ?').run(row.id);
+          }
+        }
+        if (invalidJobs.length > 0) {
+          fixed.push(`Removed ${invalidJobs.length} cron job(s) with invalid schedules: ${invalidJobs.join(', ')}`);
+        }
+      } catch (_err) {
+        // cron_jobs table may not exist yet — skip
+      }
+    }
+
+    // 11. Clean disabled webhooks with invalid URLs
+    if (this.db) {
+      try {
+        const webhooks = this.db.prepare('SELECT id, name, url, enabled FROM webhooks WHERE enabled = 0').all() as Array<{ id: string; name: string; url: string; enabled: number }>;
+        const invalidWebhooks: string[] = [];
+        for (const wh of webhooks) {
+          try {
+            const parsed = new URL(wh.url);
+            if (!['http:', 'https:'].includes(parsed.protocol)) {
+              invalidWebhooks.push(wh.name);
+              this.db.prepare('DELETE FROM webhooks WHERE id = ?').run(wh.id);
+            }
+          } catch {
+            invalidWebhooks.push(wh.name);
+            this.db.prepare('DELETE FROM webhooks WHERE id = ?').run(wh.id);
+          }
+        }
+        if (invalidWebhooks.length > 0) {
+          fixed.push(`Removed ${invalidWebhooks.length} disabled webhook(s) with invalid URLs: ${invalidWebhooks.join(', ')}`);
+        }
+      } catch (_err) {
+        // webhooks table may not exist yet — skip
+      }
+    }
+
+    // 12. Clean stale sessions (idle for >30 days)
+    if (this.db) {
+      try {
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const stale = this.db.prepare(
+          'SELECT id FROM sessions WHERE status = ? AND updated_at < ?',
+        ).all('idle', thirtyDaysAgo) as Array<{ id: string }>;
+        if (stale.length > 0) {
+          const stmt = this.db.prepare('UPDATE sessions SET status = ? WHERE id = ?');
+          for (const s of stale) {
+            stmt.run('closed', s.id);
+          }
+          fixed.push(`Closed ${stale.length} stale session(s) idle for >30 days`);
+        }
+      } catch (_err) {
+        // sessions table may not exist yet — skip
+      }
+    }
+
+    // 13. Compact webhook delivery history (keep last 1000)
+    if (this.db) {
+      try {
+        const countRow = this.db.prepare('SELECT COUNT(*) as cnt FROM webhook_deliveries').get() as { cnt: number } | undefined;
+        if (countRow && countRow.cnt > 1000) {
+          const excess = countRow.cnt - 1000;
+          this.db.prepare(
+            'DELETE FROM webhook_deliveries WHERE id IN (SELECT id FROM webhook_deliveries ORDER BY created_at ASC LIMIT ?)',
+          ).run(excess);
+          fixed.push(`Cleaned ${excess} old webhook delivery record(s) (kept last 1000)`);
+        }
+      } catch (_err) {
+        // webhook_deliveries table may not exist yet — skip
+      }
     }
 
     return { fixed, manual };

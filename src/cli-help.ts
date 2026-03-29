@@ -11,6 +11,8 @@
  * @module cli-help
  */
 
+import { errHint } from './errors.js';
+
 // ── Command Registry ───────────────────────────────────────────────────
 
 export interface CommandInfo {
@@ -723,7 +725,7 @@ export function helpCmd(args: string[]): void {
 
   const cmd = findCommand(topic);
   if (!cmd) {
-    console.error(`Unknown command: ${topic}`);
+    errHint(`Unknown command: ${topic}`, 'Run "ved help" to see available commands');
     console.log(`Run 'ved help' to see all available commands.`);
     process.exit(1);
   }

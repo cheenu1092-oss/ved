@@ -18,6 +18,7 @@ import type { VedApp } from './app.js';
 import type { VedEvent } from './event-bus.js';
 import type { Session } from './core/session.js';
 import type { WorkOrder } from './types/index.js';
+import { errHint } from './errors.js';
 
 // ── ANSI ──────────────────────────────────────────────────────────────────────
 
@@ -96,7 +97,7 @@ export function parseDaemonArgs(args: string[]): DaemonTuiOptions {
         break;
       default:
         if (args[i]?.startsWith('-')) {
-          console.error(`Unknown flag: ${args[i]}`);
+          errHint(`Unknown flag: ${args[i]}`, 'Run "ved help" to see available commands');
           printDaemonHelp();
           process.exit(1);
         }
@@ -813,7 +814,7 @@ export async function runDaemonTui(app: VedApp, args: string[]): Promise<void> {
     if (httpCleanup) await httpCleanup();
   } catch (err) {
     dashboard.destroy();
-    console.error(`\nDaemon error: ${err instanceof Error ? err.message : String(err)}`);
+    errHint(`Daemon error: ${err instanceof Error ? err.message : String(err)}`);
     try { await app.stop(); } catch { /* best effort */ }
     process.exit(1);
   }
@@ -834,7 +835,7 @@ async function plainStart(app: VedApp): Promise<void> {
   try {
     await app.start();
   } catch (err) {
-    console.error(`\nFailed to start: ${err instanceof Error ? err.message : String(err)}`);
+    errHint(`Failed to start: ${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   }
 }

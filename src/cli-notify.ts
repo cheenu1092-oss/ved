@@ -39,6 +39,7 @@ import { getConfigDir } from './core/config.js';
 import { AUDIT_EVENT_TYPES } from './types/index.js';
 import type { AuditEventType } from './types/index.js';
 import type { EventBus, VedEvent, Subscription } from './event-bus.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -609,7 +610,7 @@ export async function notifyCommand(args: string[]): Promise<void> {
       if (rules.find(r => r.name === sub)) {
         return showRule([sub]);
       }
-      console.error(`Unknown subcommand: ${sub}`);
+      errHint(`Unknown subcommand: ${sub}`, 'Run "ved help" to see available commands');
       console.log('Run `ved notify --help` for usage.');
       process.exit(1);
   }
@@ -694,26 +695,26 @@ function addRule(args: string[]): void {
   }
 
   if (!name) {
-    console.error('Usage: ved notify add <name> <events> <channel> [flags]');
+    errUsage('ved notify add <name> <events> <channel> [flags]');
     process.exit(1);
   }
 
   // Validate name
   const nameError = validateRuleName(name);
   if (nameError) {
-    console.error(`Invalid name: ${nameError}`);
+    errHint(`Invalid name: ${nameError}`);
     process.exit(1);
   }
 
   // Validate events
   if (events.length === 0) {
-    console.error('At least one event type is required.');
+    errHint('At least one event type is required.');
     console.log(`Available: ${AUDIT_EVENT_TYPES.join(', ')}`);
     process.exit(1);
   }
   for (const e of events) {
     if (!AUDIT_EVENT_TYPES.includes(e as AuditEventType)) {
-      console.error(`Unknown event type: ${e}`);
+      errHint(`Unknown event type: ${e}`, 'Run "ved help" to see available commands');
       console.log(`Available: ${AUDIT_EVENT_TYPES.join(', ')}`);
       process.exit(1);
     }
@@ -721,30 +722,30 @@ function addRule(args: string[]): void {
 
   // Validate channel
   if (!NOTIFY_CHANNELS.includes(channel)) {
-    console.error(`Unknown channel: ${channel}. Available: ${NOTIFY_CHANNELS.join(', ')}`);
+    errHint(`Unknown channel: ${channel}. Available: ${NOTIFY_CHANNELS.join(', ')}`, 'Run "ved help" to see available commands');
     process.exit(1);
   }
 
   // Channel-specific validation
   if (channel === 'command' && !command) {
-    console.error('Command channel requires --command flag.');
+    errHint('Command channel requires --command flag.');
     process.exit(1);
   }
 
   // Check duplicate
   const rules = loadRules();
   if (rules.find(r => r.name === name)) {
-    console.error(`Rule "${name}" already exists. Use 'ved notify edit' to modify.`);
+    errHint(`Rule "${name}" already exists. Use 'ved notify edit' to modify.`);
     process.exit(1);
   }
 
   // Validate quiet hours format
   if (quietStart && !/^\d{2}:\d{2}$/.test(quietStart)) {
-    console.error('Quiet start must be HH:MM format (e.g., 22:00)');
+    errHint('Quiet start must be HH:MM format (e.g., 22:00)');
     process.exit(1);
   }
   if (quietEnd && !/^\d{2}:\d{2}$/.test(quietEnd)) {
-    console.error('Quiet end must be HH:MM format (e.g., 07:00)');
+    errHint('Quiet end must be HH:MM format (e.g., 07:00)');
     process.exit(1);
   }
 
@@ -774,14 +775,14 @@ function addRule(args: string[]): void {
 function removeRule(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved notify remove <name>');
+    errUsage('ved notify remove <name>');
     process.exit(1);
   }
 
   const rules = loadRules();
   const idx = rules.findIndex(r => r.name === name);
   if (idx === -1) {
-    console.error(`Rule "${name}" not found.`);
+    errHint(`Rule "${name}" not found.`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -793,14 +794,14 @@ function removeRule(args: string[]): void {
 function showRule(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved notify show <name>');
+    errUsage('ved notify show <name>');
     process.exit(1);
   }
 
   const rules = loadRules();
   const rule = rules.find(r => r.name === name);
   if (!rule) {
-    console.error(`Rule "${name}" not found.`);
+    errHint(`Rule "${name}" not found.`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -837,14 +838,14 @@ function showRule(args: string[]): void {
 function editRule(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved notify edit <name> [flags]');
+    errUsage('ved notify edit <name> [flags]');
     process.exit(1);
   }
 
   const rules = loadRules();
   const rule = rules.find(r => r.name === name);
   if (!rule) {
-    console.error(`Rule "${name}" not found.`);
+    errHint(`Rule "${name}" not found.`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -909,14 +910,14 @@ function editRule(args: string[]): void {
 function toggleRule(args: string[], enable: boolean): void {
   const name = args[0];
   if (!name) {
-    console.error(`Usage: ved notify ${enable ? 'enable' : 'disable'} <name>`);
+    errUsage(`ved notify ${enable ? 'enable' : 'disable'} <name>`);
     process.exit(1);
   }
 
   const rules = loadRules();
   const rule = rules.find(r => r.name === name);
   if (!rule) {
-    console.error(`Rule "${name}" not found.`);
+    errHint(`Rule "${name}" not found.`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -934,14 +935,14 @@ function toggleRule(args: string[], enable: boolean): void {
 async function testRule(args: string[]): Promise<void> {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved notify test <name>');
+    errUsage('ved notify test <name>');
     process.exit(1);
   }
 
   const rules = loadRules();
   const rule = rules.find(r => r.name === name);
   if (!rule) {
-    console.error(`Rule "${name}" not found.`);
+    errHint(`Rule "${name}" not found.`, 'Check the name and try again');
     process.exit(1);
   }
 
@@ -987,7 +988,7 @@ async function testRule(args: string[]): Promise<void> {
     console.log('✅ Test delivery succeeded.');
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
-    console.error(`❌ Test delivery failed: ${errMsg}`);
+    errHint(`❌ Test delivery failed: ${errMsg}`);
   }
 }
 
@@ -1036,7 +1037,7 @@ function muteNotifications(args: string[]): void {
   if (duration) {
     const match = duration.match(/^(\d+)(m|h|d)$/);
     if (!match) {
-      console.error('Duration must be like: 30m, 1h, 2d (or omit for indefinite)');
+      errHint('Duration must be like: 30m, 1h, 2d (or omit for indefinite)');
       process.exit(1);
     }
     const num = parseInt(match[1], 10);

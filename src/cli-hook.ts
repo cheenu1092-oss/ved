@@ -29,6 +29,7 @@ import { getConfigDir } from './core/config.js';
 import { AUDIT_EVENT_TYPES } from './types/index.js';
 import type { AuditEventType } from './types/index.js';
 import type { EventBus, VedEvent, Subscription } from './event-bus.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -470,8 +471,8 @@ export async function hookCommand(args: string[]): Promise<void> {
       if (store.hooks.some(h => h.name === sub)) {
         return showHook([sub]);
       }
-      console.error(`Unknown hook subcommand: ${sub}`);
-      console.error('Run "ved hook --help" for usage.');
+      errHint(`Unknown hook subcommand: ${sub}`, 'Run "ved help" to see available commands');
+      errHint('Run "ved hook --help" for usage.');
       process.exitCode = 1;
   }
 }
@@ -519,8 +520,8 @@ function addHook(args: string[]): void {
   }
 
   if (positional.length < 3) {
-    console.error('Usage: ved hook add <name> <event[,event2,...]> <command...>');
-    console.error('Example: ved hook add notify-slack message_received "curl -X POST https://hooks.slack.com/..."');
+    errUsage('ved hook add <name> <event[,event2,...]> <command...>');
+    errHint('Example: ved hook add notify-slack message_received "curl -X POST https://hooks.slack.com/..."');
     process.exitCode = 1;
     return;
   }
@@ -531,7 +532,7 @@ function addHook(args: string[]): void {
   // Validate name
   const nameErr = validateHookName(name);
   if (nameErr) {
-    console.error(`Error: ${nameErr}`);
+    errHint(`${nameErr}`);
     process.exitCode = 1;
     return;
   }
@@ -540,13 +541,13 @@ function addHook(args: string[]): void {
   const eventList = eventStr.split(',').map(e => e.trim()).filter(Boolean);
   const { valid, invalid } = validateEvents(eventList);
   if (invalid.length > 0) {
-    console.error(`Unknown event types: ${invalid.join(', ')}`);
-    console.error('Run "ved hook types" to see available types.');
+    errHint(`Unknown event types: ${invalid.join(', ')}`, 'Run "ved help" to see available commands');
+    errHint('Run "ved hook types" to see available types.');
     process.exitCode = 1;
     return;
   }
   if (valid.length === 0) {
-    console.error('At least one valid event type is required.');
+    errHint('At least one valid event type is required.');
     process.exitCode = 1;
     return;
   }
@@ -554,7 +555,7 @@ function addHook(args: string[]): void {
   // Validate command
   const cmdErr = validateCommand(command);
   if (cmdErr) {
-    console.error(`Error: ${cmdErr}`);
+    errHint(`${cmdErr}`);
     process.exitCode = 1;
     return;
   }
@@ -562,7 +563,7 @@ function addHook(args: string[]): void {
   // Check for duplicate name
   const store = loadHooks();
   if (store.hooks.some(h => h.name === name)) {
-    console.error(`Hook "${name}" already exists. Use "ved hook edit" to modify.`);
+    errHint(`Hook "${name}" already exists. Use "ved hook edit" to modify.`);
     process.exitCode = 1;
     return;
   }
@@ -590,7 +591,7 @@ function addHook(args: string[]): void {
 function removeHook(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved hook remove <name>');
+    errUsage('ved hook remove <name>');
     process.exitCode = 1;
     return;
   }
@@ -598,7 +599,7 @@ function removeHook(args: string[]): void {
   const store = loadHooks();
   const idx = store.hooks.findIndex(h => h.name === name);
   if (idx === -1) {
-    console.error(`Hook "${name}" not found.`);
+    errHint(`Hook "${name}" not found.`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -611,7 +612,7 @@ function removeHook(args: string[]): void {
 function showHook(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved hook show <name>');
+    errUsage('ved hook show <name>');
     process.exitCode = 1;
     return;
   }
@@ -619,7 +620,7 @@ function showHook(args: string[]): void {
   const store = loadHooks();
   const hook = store.hooks.find(h => h.name === name);
   if (!hook) {
-    console.error(`Hook "${name}" not found.`);
+    errHint(`Hook "${name}" not found.`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -652,7 +653,7 @@ function showHook(args: string[]): void {
 function editHook(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved hook edit <name> [--events <e1,e2>] [--command <cmd>] [--desc <text>] [--timeout <ms>] [--concurrency <n>]');
+    errUsage('ved hook edit <name> [--events <e1,e2>] [--command <cmd>] [--desc <text>] [--timeout <ms>] [--concurrency <n>]');
     process.exitCode = 1;
     return;
   }
@@ -660,7 +661,7 @@ function editHook(args: string[]): void {
   const store = loadHooks();
   const hook = store.hooks.find(h => h.name === name);
   if (!hook) {
-    console.error(`Hook "${name}" not found.`);
+    errHint(`Hook "${name}" not found.`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -672,12 +673,12 @@ function editHook(args: string[]): void {
         const eventList = (args[++i] || '').split(',').map(e => e.trim()).filter(Boolean);
         const { valid, invalid } = validateEvents(eventList);
         if (invalid.length > 0) {
-          console.error(`Unknown event types: ${invalid.join(', ')}`);
+          errHint(`Unknown event types: ${invalid.join(', ')}`, 'Run "ved help" to see available commands');
           process.exitCode = 1;
           return;
         }
         if (valid.length === 0) {
-          console.error('At least one valid event type is required.');
+          errHint('At least one valid event type is required.');
           process.exitCode = 1;
           return;
         }
@@ -689,7 +690,7 @@ function editHook(args: string[]): void {
         const cmd = args.slice(i + 1).join(' ');
         const err = validateCommand(cmd);
         if (err) {
-          console.error(`Error: ${err}`);
+          errHint(`${err}`);
           process.exitCode = 1;
           return;
         }
@@ -714,7 +715,7 @@ function editHook(args: string[]): void {
   }
 
   if (!changed) {
-    console.error('No changes specified. Use flags: --events, --command, --desc, --timeout, --concurrency');
+    errHint('No changes specified. Use flags: --events, --command, --desc, --timeout, --concurrency');
     process.exitCode = 1;
     return;
   }
@@ -727,7 +728,7 @@ function editHook(args: string[]): void {
 function toggleHook(args: string[], enable: boolean): void {
   const name = args[0];
   if (!name) {
-    console.error(`Usage: ved hook ${enable ? 'enable' : 'disable'} <name>`);
+    errUsage(`ved hook ${enable ? 'enable' : 'disable'} <name>`);
     process.exitCode = 1;
     return;
   }
@@ -735,7 +736,7 @@ function toggleHook(args: string[], enable: boolean): void {
   const store = loadHooks();
   const hook = store.hooks.find(h => h.name === name);
   if (!hook) {
-    console.error(`Hook "${name}" not found.`);
+    errHint(`Hook "${name}" not found.`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -754,7 +755,7 @@ function toggleHook(args: string[], enable: boolean): void {
 async function testHook(args: string[]): Promise<void> {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved hook test <name>');
+    errUsage('ved hook test <name>');
     process.exitCode = 1;
     return;
   }
@@ -762,7 +763,7 @@ async function testHook(args: string[]): Promise<void> {
   const store = loadHooks();
   const hook = store.hooks.find(h => h.name === name);
   if (!hook) {
-    console.error(`Hook "${name}" not found.`);
+    errHint(`Hook "${name}" not found.`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }

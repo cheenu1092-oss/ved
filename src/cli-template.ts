@@ -24,6 +24,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';
 import { execSync } from 'node:child_process';
 import type { VedApp } from './app.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── ANSI colors ──
 
@@ -393,13 +394,13 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
     case 'show': {
       const name = positional[1];
       if (!name) {
-        console.error(`${C.red}Usage: ved template show <name>${C.reset}`);
+        errUsage('ved template show <name>');
         return;
       }
 
       const err = validateName(name);
       if (err) {
-        console.error(`${C.red}${err}${C.reset}`);
+        errHint(`${err}`);
         return;
       }
 
@@ -413,7 +414,7 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
         console.log(`${C.bold}Template: ${name}${C.reset} ${C.dim}(built-in)${C.reset}\n`);
         console.log(serializeTemplate(BUILT_IN_TEMPLATES[name]));
       } else {
-        console.error(`${C.red}Template not found: ${name}${C.reset}`);
+        errHint(`${C.red}Template not found: ${name}${C.reset}`, 'Check the name and try again');
         console.log(`${C.dim}Available built-ins: ${Object.keys(BUILT_IN_TEMPLATES).join(', ')}${C.reset}`);
       }
       return;
@@ -422,19 +423,19 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
     case 'create': {
       const name = positional[1];
       if (!name) {
-        console.error(`${C.red}Usage: ved template create <name> [--type <type>]${C.reset}`);
+        errUsage('ved template create <name> [--type <type>]');
         return;
       }
 
       const err = validateName(name);
       if (err) {
-        console.error(`${C.red}${err}${C.reset}`);
+        errHint(`${err}`);
         return;
       }
 
       const relPath = templatePath(name);
       if (vault.exists(relPath)) {
-        console.error(`${C.red}Template already exists: ${name}${C.reset}`);
+        errHint(`Template already exists: ${name}`);
         console.log(`${C.dim}Use 'ved template edit ${name}' to modify it${C.reset}`);
         return;
       }
@@ -487,19 +488,19 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
     case 'edit': {
       const name = positional[1];
       if (!name) {
-        console.error(`${C.red}Usage: ved template edit <name>${C.reset}`);
+        errUsage('ved template edit <name>');
         return;
       }
 
       const err = validateName(name);
       if (err) {
-        console.error(`${C.red}${err}${C.reset}`);
+        errHint(`${err}`);
         return;
       }
 
       const relPath = templatePath(name);
       if (!vault.exists(relPath)) {
-        console.error(`${C.red}Template not found: ${name}${C.reset}`);
+        errHint(`${C.red}Template not found: ${name}${C.reset}`, 'Check the name and try again');
         return;
       }
 
@@ -509,7 +510,7 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
         execSync(`${editor} "${absPath}"`, { stdio: 'inherit' });
         console.log(`${C.green}✓${C.reset} Template ${C.cyan}${name}${C.reset} updated`);
       } catch {
-        console.error(`${C.red}Editor failed${C.reset}`);
+        errHint(`Editor failed`);
       }
       return;
     }
@@ -517,19 +518,19 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
     case 'delete': {
       const name = positional[1];
       if (!name) {
-        console.error(`${C.red}Usage: ved template delete <name>${C.reset}`);
+        errUsage('ved template delete <name>');
         return;
       }
 
       const err = validateName(name);
       if (err) {
-        console.error(`${C.red}${err}${C.reset}`);
+        errHint(`${err}`);
         return;
       }
 
       const relPath = templatePath(name);
       if (!vault.exists(relPath)) {
-        console.error(`${C.red}Template not found: ${name}${C.reset}`);
+        errHint(`${C.red}Template not found: ${name}${C.reset}`, 'Check the name and try again');
         return;
       }
 
@@ -543,25 +544,25 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
       const filename = positional[2];
 
       if (!name) {
-        console.error(`${C.red}Usage: ved template use <template> <filename> [--var key=value ...]${C.reset}`);
+        errUsage('ved template use <template> <filename> [--var key=value ...]');
         return;
       }
 
       if (!filename) {
-        console.error(`${C.red}Missing filename. Usage: ved template use ${name} <filename> [--var key=value ...]${C.reset}`);
+        errHint(`Missing filename. Usage: ved template use ${name} <filename> [--var key=value ...]`);
         return;
       }
 
       const nameErr = validateName(name);
       if (nameErr) {
-        console.error(`${C.red}Invalid template name: ${nameErr}${C.reset}`);
+        errHint(`Invalid template name: ${nameErr}`);
         return;
       }
 
       // Validate filename — allow path separators for specifying folder
       const filenameClean = filename.replace(/\.md$/, '');
       if (filenameClean.includes('..')) {
-        console.error(`${C.red}Filename cannot contain ..${C.reset}`);
+        errHint(`Filename cannot contain ..`);
         return;
       }
 
@@ -574,7 +575,7 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
       } else if (BUILT_IN_TEMPLATES[name]) {
         content = serializeTemplate(BUILT_IN_TEMPLATES[name]);
       } else {
-        console.error(`${C.red}Template not found: ${name}${C.reset}`);
+        errHint(`${C.red}Template not found: ${name}${C.reset}`, 'Check the name and try again');
         return;
       }
 
@@ -605,8 +606,7 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
       // Check if target exists
       if (vault.exists(outPath)) {
         if (flags['force'] !== 'true') {
-          console.error(`${C.red}File already exists: ${outPath}${C.reset}`);
-          console.log(`${C.dim}Use --force to overwrite${C.reset}`);
+          errHint(`File already exists: ${outPath}`, 'Use --force to overwrite');
           return;
         }
       }
@@ -640,13 +640,13 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
     case 'vars': {
       const name = positional[1];
       if (!name) {
-        console.error(`${C.red}Usage: ved template vars <name>${C.reset}`);
+        errUsage('ved template vars <name>');
         return;
       }
 
       const err = validateName(name);
       if (err) {
-        console.error(`${C.red}${err}${C.reset}`);
+        errHint(`${err}`);
         return;
       }
 
@@ -658,7 +658,7 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
       } else if (BUILT_IN_TEMPLATES[name]) {
         content = serializeTemplate(BUILT_IN_TEMPLATES[name]);
       } else {
-        console.error(`${C.red}Template not found: ${name}${C.reset}`);
+        errHint(`${C.red}Template not found: ${name}${C.reset}`, 'Check the name and try again');
         return;
       }
 
@@ -681,7 +681,7 @@ export async function runTemplate(app: VedApp, args: string[]): Promise<void> {
     case 'help':
     default: {
       if (cmd !== 'help') {
-        console.error(`${C.red}Unknown subcommand: ${cmd}${C.reset}\n`);
+        errHint(`Unknown subcommand: ${cmd}`, 'Run "ved template --help" for usage');
       }
       console.log(`${C.bold}ved template${C.reset} — Vault template manager\n`);
       console.log('Subcommands:');

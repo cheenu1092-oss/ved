@@ -24,6 +24,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadConfig } from './core/config.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -83,12 +84,12 @@ function isGitRepo(vaultPath: string): boolean {
 
 function ensureRepo(vaultPath: string): void {
   if (!existsSync(vaultPath)) {
-    console.error(`Vault not found: ${vaultPath}`);
+    errHint(`Vault not found: ${vaultPath}`, 'Check the name and try again');
     console.log('Run `ved init` to create the vault.');
     process.exit(1);
   }
   if (!isGitRepo(vaultPath)) {
-    console.error(`Vault is not a git repository: ${vaultPath}`);
+    errHint(`Vault is not a git repository: ${vaultPath}`);
     console.log('Run `ved start` to initialize git tracking.');
     process.exit(1);
   }
@@ -149,7 +150,7 @@ function workingDiff(vaultPath: string, file?: string): void {
   try {
     diff = git(vaultPath, args);
   } catch (e: unknown) {
-    console.error('Failed to get diff:', (e as Error).message);
+    errHint(`Failed to get diff: ${(e as Error).message}`);
     return;
   }
 
@@ -212,7 +213,7 @@ function logCmd(vaultPath: string, args: string[]): void {
   try {
     raw = git(vaultPath, gitArgs);
   } catch (e: unknown) {
-    console.error('Failed to get log:', (e as Error).message);
+    errHint(`Failed to get log: ${(e as Error).message}`);
     return;
   }
 
@@ -243,7 +244,7 @@ function logCmd(vaultPath: string, args: string[]): void {
  */
 function showCommit(vaultPath: string, hash: string): void {
   if (!hash) {
-    console.error('Usage: ved diff show <commit-hash>');
+    errUsage('ved diff show <commit-hash>');
     process.exit(1);
   }
 
@@ -264,7 +265,7 @@ function showCommit(vaultPath: string, hash: string): void {
       console.log(`${C.dim}(empty commit)${C.reset}`);
     }
   } catch (e: unknown) {
-    console.error(`Failed to show commit ${hash}:`, (e as Error).message);
+    errHint(`Failed to show commit ${hash}: ${(e as Error).message}`);
     process.exit(1);
   }
 }
@@ -314,7 +315,7 @@ function stat(vaultPath: string, args: string[]): void {
 
     console.log(colorized);
   } catch (e: unknown) {
-    console.error('Failed to get stats:', (e as Error).message);
+    errHint(`Failed to get stats: ${(e as Error).message}`);
   }
 }
 
@@ -323,7 +324,7 @@ function stat(vaultPath: string, args: string[]): void {
  */
 function blame(vaultPath: string, file: string): void {
   if (!file) {
-    console.error('Usage: ved diff blame <file>');
+    errUsage('ved diff blame <file>');
     process.exit(1);
   }
 
@@ -343,7 +344,7 @@ function blame(vaultPath: string, file: string): void {
 
     console.log(colored);
   } catch (e: unknown) {
-    console.error(`Failed to blame ${file}:`, (e as Error).message);
+    errHint(`Failed to blame ${file}: ${(e as Error).message}`);
     process.exit(1);
   }
 }
@@ -353,7 +354,7 @@ function blame(vaultPath: string, file: string): void {
  */
 function between(vaultPath: string, hash1: string, hash2: string): void {
   if (!hash1 || !hash2) {
-    console.error('Usage: ved diff between <commit1> <commit2>');
+    errUsage('ved diff between <commit1> <commit2>');
     process.exit(1);
   }
 
@@ -367,7 +368,7 @@ function between(vaultPath: string, hash1: string, hash2: string): void {
     console.log(`${C.bold}Diff: ${C.yellow}${hash1.slice(0, 7)}${C.reset}${C.bold}..${C.yellow}${hash2.slice(0, 7)}${C.reset}\n`);
     console.log(colorDiff(diff));
   } catch (e: unknown) {
-    console.error(`Failed to diff ${hash1}..${hash2}:`, (e as Error).message);
+    errHint(`Failed to diff ${hash1}..${hash2}: ${(e as Error).message}`);
     process.exit(1);
   }
 }
@@ -416,7 +417,7 @@ function files(vaultPath: string, args: string[]): void {
         console.log(`  ${color}${label.padEnd(9)}${C.reset} ${file}`);
       }
     } catch (e: unknown) {
-      console.error('Failed to list files:', (e as Error).message);
+      errHint(`Failed to list files: ${(e as Error).message}`);
     }
   } else {
     // Currently modified files
@@ -444,7 +445,7 @@ function files(vaultPath: string, args: string[]): void {
         console.log(`  ${info.color}${info.label.padEnd(9)}${C.reset} ${file}`);
       }
     } catch (e: unknown) {
-      console.error('Failed to list files:', (e as Error).message);
+      errHint(`Failed to list files: ${(e as Error).message}`);
     }
   }
 }
@@ -529,7 +530,7 @@ function summary(vaultPath: string, args: string[]): void {
       }
     }
   } catch (e: unknown) {
-    console.error('Failed to generate summary:', (e as Error).message);
+    errHint(`Failed to generate summary: ${(e as Error).message}`);
   }
 }
 

@@ -33,6 +33,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { getConfigDir } from './core/config.js';
 import type { LogLevel, LogEntry } from './core/log.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -310,7 +311,7 @@ export function parseFlags(args: string[]): { filter: LogFilter; remaining: stri
     if (arg === '--level' && i + 1 < args.length) {
       const lvl = args[++i] as LogLevel;
       if (!LEVEL_PRIORITY[lvl] && lvl !== 'debug') {
-        console.error(`Invalid level: ${lvl}. Use: debug, info, warn, error`);
+        errHint(`Invalid level: ${lvl}. Use: debug, info, warn, error`);
         process.exitCode = 1;
         return { filter, remaining };
       }
@@ -320,7 +321,7 @@ export function parseFlags(args: string[]): { filter: LogFilter; remaining: stri
     } else if (arg === '--since' && i + 1 < args.length) {
       const d = parseTimeInput(args[++i]);
       if (!d) {
-        console.error(`Invalid --since value: ${args[i]}. Use ISO date or relative (e.g. 1h, 30m, 2d)`);
+        errHint(`Invalid --since value: ${args[i]}. Use ISO date or relative (e.g. 1h, 30m, 2d)`);
         process.exitCode = 1;
         return { filter, remaining };
       }
@@ -328,7 +329,7 @@ export function parseFlags(args: string[]): { filter: LogFilter; remaining: stri
     } else if (arg === '--until' && i + 1 < args.length) {
       const d = parseTimeInput(args[++i]);
       if (!d) {
-        console.error(`Invalid --until value: ${args[i]}. Use ISO date or relative (e.g. 1h, 30m, 2d)`);
+        errHint(`Invalid --until value: ${args[i]}. Use ISO date or relative (e.g. 1h, 30m, 2d)`);
         process.exitCode = 1;
         return { filter, remaining };
       }
@@ -336,7 +337,7 @@ export function parseFlags(args: string[]): { filter: LogFilter; remaining: stri
     } else if (arg === '--limit' || arg === '-n') {
       const n = parseInt(args[++i], 10);
       if (isNaN(n) || n < 0) {
-        console.error('--limit must be a non-negative integer');
+        errHint('--limit must be a non-negative integer');
         process.exitCode = 1;
         return { filter, remaining };
       }
@@ -392,8 +393,8 @@ async function cmdShow(logPath: string, filter: LogFilter): Promise<void> {
 
 async function cmdTail(logPath: string, filter: LogFilter): Promise<void> {
   if (!existsSync(logPath)) {
-    console.error(`Log file not found: ${logPath}`);
-    console.error('Start Ved with logFile configured, then try again.');
+    errHint(`Log file not found: ${logPath}`, 'Check the name and try again');
+    errHint('Start Ved with logFile configured, then try again.');
     process.exitCode = 1;
     return;
   }
@@ -465,7 +466,7 @@ async function cmdTail(logPath: string, filter: LogFilter): Promise<void> {
 
 async function cmdSearch(logPath: string, query: string, filter: LogFilter): Promise<void> {
   if (!query) {
-    console.error('Usage: ved log search <query> [--level <lvl>] [--module <mod>] [--since <t>] [--until <t>] [-n <limit>]');
+    errUsage('ved log search <query> [--level <lvl>] [--module <mod>] [--since <t>] [--until <t>] [-n <limit>]');
     process.exitCode = 1;
     return;
   }
@@ -628,8 +629,8 @@ export async function logCmd(args: string[]): Promise<void> {
       return cmdPath(logPath);
 
     default:
-      console.error(`Unknown subcommand: ${subcmd}`);
-      console.error('Usage: ved log [show|tail|search|stats|levels|modules|clear|path]');
+      errHint(`Unknown subcommand: ${subcmd}`, 'Run "ved help" to see available commands');
+      errUsage('ved log [show|tail|search|stats|levels|modules|clear|path]');
       process.exitCode = 1;
   }
 }

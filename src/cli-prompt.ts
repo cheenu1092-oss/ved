@@ -24,6 +24,7 @@ import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 import type { VedApp } from './app.js';
 import type { VedConfig } from './types/index.js';
+import { errHint, errUsage } from './errors.js';
 
 // ── Constants ──
 
@@ -194,7 +195,7 @@ function handleShow(config: VedConfig, args: string[]): void {
 function handleCreate(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error(`${C.red}Usage: ved prompt create <name>${C.reset}`);
+    errUsage('ved prompt create <name>');
     process.exitCode = 1;
     return;
   }
@@ -203,7 +204,7 @@ function handleCreate(args: string[]): void {
   const path = profilePath(name);
 
   if (existsSync(path)) {
-    console.error(`${C.red}Profile "${name}" already exists. Use "ved prompt edit ${name}" to modify.${C.reset}`);
+    errHint(`Profile "${name}" already exists. Use "ved prompt edit ${name}" to modify.`);
     process.exitCode = 1;
     return;
   }
@@ -227,14 +228,14 @@ function handleCreate(args: string[]): void {
 function handleEdit(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error(`${C.red}Usage: ved prompt edit <name>${C.reset}`);
+    errUsage('ved prompt edit <name>');
     process.exitCode = 1;
     return;
   }
 
   const path = profilePath(name);
   if (!existsSync(path)) {
-    console.error(`${C.red}Profile "${name}" not found. Create it first: ved prompt create ${name}${C.reset}`);
+    errHint(`${C.red}Profile "${name}" not found. Create it first: ved prompt create ${name}${C.reset}`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -244,7 +245,7 @@ function handleEdit(args: string[]): void {
     execSync(`${editor} ${path}`, { stdio: 'inherit' });
     console.log(`${C.green}Saved changes to "${name}"${C.reset}`);
   } catch (err) {
-    console.error(`${C.red}Editor exited with error${C.reset}`);
+    errHint(`Editor exited with error`);
     process.exitCode = 1;
   }
 }
@@ -252,14 +253,14 @@ function handleEdit(args: string[]): void {
 function handleUse(_config: VedConfig, args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error(`${C.red}Usage: ved prompt use <name>${C.reset}`);
+    errUsage('ved prompt use <name>');
     process.exitCode = 1;
     return;
   }
 
   const path = profilePath(name);
   if (!existsSync(path)) {
-    console.error(`${C.red}Profile "${name}" not found. Run "ved prompt list" to see available profiles.${C.reset}`);
+    errHint(`${C.red}Profile "${name}" not found. Run "ved prompt list" to see available profiles.${C.reset}`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -337,7 +338,7 @@ async function handleTest(_app: VedApp, config: VedConfig): Promise<void> {
 function handleDiff(args: string[]): void {
   const [nameA, nameB] = args;
   if (!nameA || !nameB) {
-    console.error(`${C.red}Usage: ved prompt diff <profile-a> <profile-b>${C.reset}`);
+    errUsage('ved prompt diff <profile-a> <profile-b>');
     process.exitCode = 1;
     return;
   }
@@ -563,7 +564,7 @@ export async function runPromptCli(app: VedApp | null, config: VedConfig, args: 
       break;
 
     default:
-      console.error(`Unknown subcommand: ${sub}`);
+      errHint(`Unknown subcommand: ${sub}`, 'Run "ved help" to see available commands');
       showHelp();
       process.exitCode = 1;
   }

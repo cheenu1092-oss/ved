@@ -19,6 +19,7 @@ import { stdin, stdout } from 'node:process';
 import { ulid } from 'ulid';
 import type { VedApp } from './app.js';
 import type { VedMessage } from './types/index.js';
+import { errHint } from './errors.js';
 
 // ── ANSI ──────────────────────────────────────────────────────────────────────
 
@@ -90,7 +91,7 @@ export function parseTuiArgs(args: string[]): TuiOptions {
         break;
       default:
         if (args[i]?.startsWith('-')) {
-          console.error(`Unknown flag: ${args[i]}`);
+          errHint(`Unknown flag: ${args[i]}`, 'Run "ved help" to see available commands');
           printTuiHelp();
           process.exit(1);
         }
@@ -779,7 +780,7 @@ export async function runChatTui(app: VedApp, args: string[]): Promise<void> {
   } catch (err) {
     spinner.stop();
     statusBar.destroy();
-    console.error(`\nChat error: ${err instanceof Error ? err.message : String(err)}`);
+    errHint(`Chat error: ${err instanceof Error ? err.message : String(err)}`);
     try { await app.stop(); } catch { /* best effort */ }
     process.exit(1);
   }

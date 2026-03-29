@@ -31,6 +31,7 @@ import { readFileSync, existsSync, statSync } from 'node:fs';
 import { ulid } from 'ulid';
 import { createApp, type VedApp } from './app.js';
 import type { VedMessage, VedResponse } from './types/index.js';
+import { errHint } from './errors.js';
 
 const VERSION = '0.1.0';
 
@@ -99,7 +100,7 @@ export function parseRunArgs(args: string[]): RunOptions {
     } else if ((arg === '--timeout' || arg === '-t') && args[i + 1]) {
       opts.timeout = parseInt(args[++i], 10);
       if (isNaN(opts.timeout) || opts.timeout <= 0) {
-        console.error('Error: --timeout must be a positive integer (seconds)');
+        errHint('--timeout must be a positive integer (seconds)');
         process.exit(1);
       }
     } else if (arg === '--system' && args[i + 1]) {
@@ -110,8 +111,8 @@ export function parseRunArgs(args: string[]): RunOptions {
       printRunHelp();
       process.exit(0);
     } else if (arg.startsWith('-')) {
-      console.error(`Unknown flag: ${arg}`);
-      console.error('Run `ved run --help` for usage.');
+      errHint(`Unknown flag: ${arg}`, 'Run "ved help" to see available commands');
+      errHint('Run `ved run --help` for usage.');
       process.exit(1);
     } else {
       // Positional argument = part of query
@@ -320,8 +321,8 @@ export async function vedRun(args: string[]): Promise<void> {
       printRunHelp();
       process.exit(3);
     }
-    console.error('Error: No query provided.');
-    console.error('Run `ved run --help` for usage.');
+    errHint('No query provided.');
+    errHint('Run `ved run --help` for usage.');
     process.exit(3);
   }
 
@@ -336,10 +337,10 @@ export async function vedRun(args: string[]): Promise<void> {
     console.log(output);
   } catch (err) {
     if (err instanceof Error && err.message === 'TIMEOUT') {
-      console.error(`Error: Query timed out after ${opts.timeout}s`);
+      errHint(`Query timed out after ${opts.timeout}s`);
       process.exit(2);
     }
-    console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    errHint(`${err instanceof Error ? err.message : String(err)}`);
     process.exit(1);
   } finally {
     if (app) {

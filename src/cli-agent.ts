@@ -33,6 +33,7 @@ import {
 import { join, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
+import { errHint, errUsage } from './errors.js';
 
 // ── Constants ──
 
@@ -444,7 +445,7 @@ export async function agentCommand(args: string[]): Promise<void> {
       if (agent && args[1]) {
         return runCmd([sub, ...args.slice(1)]);
       }
-      console.error(`Unknown agent subcommand: ${sub}`);
+      errHint(`Unknown agent subcommand: ${sub}`, 'Run "ved help" to see available commands');
       console.log('Usage: ved agent [list|show|create|edit|delete|run|history|clone|export|import]');
       process.exitCode = 1;
   }
@@ -480,14 +481,14 @@ function listCmd(): void {
 function showCmd(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved agent show <name>');
+    errUsage('ved agent show <name>');
     process.exitCode = 1;
     return;
   }
 
   const agent = loadAgent(name);
   if (!agent) {
-    console.error(`Agent not found: ${name}`);
+    errHint(`Agent not found: ${name}`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -545,7 +546,7 @@ function showCmd(args: string[]): void {
 function createCmd(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved agent create <name> [--template <template>] [--description <desc>]');
+    errUsage('ved agent create <name> [--template <template>] [--description <desc>]');
     console.log(`\nAvailable templates: ${Object.keys(TEMPLATES).join(', ')}`);
     process.exitCode = 1;
     return;
@@ -553,13 +554,13 @@ function createCmd(args: string[]): void {
 
   const nameError = validateAgentName(name);
   if (nameError) {
-    console.error(`Invalid agent name: ${nameError}`);
+    errHint(`Invalid agent name: ${nameError}`);
     process.exitCode = 1;
     return;
   }
 
   if (loadAgent(name)) {
-    console.error(`Agent '${name}' already exists. Use 'ved agent edit ${name}' to modify.`);
+    errHint(`Agent '${name}' already exists. Use 'ved agent edit ${name}' to modify.`);
     process.exitCode = 1;
     return;
   }
@@ -589,7 +590,7 @@ function createCmd(args: string[]): void {
   if (template) {
     const tpl = TEMPLATES[template];
     if (!tpl) {
-      console.error(`Unknown template: ${template}`);
+      errHint(`Unknown template: ${template}`, 'Run "ved help" to see available commands');
       console.log(`Available: ${Object.keys(TEMPLATES).join(', ')}`);
       process.exitCode = 1;
       return;
@@ -621,14 +622,14 @@ function createCmd(args: string[]): void {
 function editCmd(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved agent edit <name>');
+    errUsage('ved agent edit <name>');
     process.exitCode = 1;
     return;
   }
 
   const p = agentPath(name);
   if (!existsSync(p)) {
-    console.error(`Agent not found: ${name}`);
+    errHint(`Agent not found: ${name}`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -641,10 +642,10 @@ function editCmd(args: string[]): void {
     if (updated) {
       console.log(`\n  ${C.green}✓${C.reset} Updated agent: ${C.cyan}${name}${C.reset}\n`);
     } else {
-      console.error(`\n  ${C.yellow}⚠${C.reset} Warning: Agent file may have YAML errors.\n`);
+      errHint('Agent file may have YAML errors', 'Run "ved agent show <name>" to verify');
     }
   } catch {
-    console.error('Editor exited with error');
+    errHint('Editor exited with error');
     process.exitCode = 1;
   }
 }
@@ -652,13 +653,13 @@ function editCmd(args: string[]): void {
 function deleteCmd(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved agent delete <name>');
+    errUsage('ved agent delete <name>');
     process.exitCode = 1;
     return;
   }
 
   if (!deleteAgent(name)) {
-    console.error(`Agent not found: ${name}`);
+    errHint(`Agent not found: ${name}`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -669,14 +670,14 @@ function deleteCmd(args: string[]): void {
 async function runCmd(args: string[]): Promise<void> {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved agent run <name> <query>');
+    errUsage('ved agent run <name> <query>');
     process.exitCode = 1;
     return;
   }
 
   const agent = loadAgent(name);
   if (!agent) {
-    console.error(`Agent not found: ${name}`);
+    errHint(`Agent not found: ${name}`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -701,8 +702,8 @@ async function runCmd(args: string[]): Promise<void> {
 
   const query = queryParts.join(' ').trim();
   if (!query) {
-    console.error('No query provided');
-    console.error('Usage: ved agent run <name> "your question"');
+    errHint('No query provided');
+    errUsage('ved agent run <name> "your question"');
     process.exitCode = 1;
     return;
   }
@@ -792,7 +793,7 @@ async function runCmd(args: string[]): Promise<void> {
         status: 'error',
       }, null, 2));
     } else {
-      console.error(`  ${C.red}Error:${C.reset} ${errorMsg}`);
+      errHint(errorMsg);
     }
 
     // Record error to history
@@ -814,7 +815,7 @@ async function runCmd(args: string[]): Promise<void> {
 function historyCmd(args: string[]): void {
   const name = args[0];
   if (!name) {
-    console.error('Usage: ved agent history <name> [--limit <n>] [--json]');
+    errUsage('ved agent history <name> [--limit <n>] [--json]');
     process.exitCode = 1;
     return;
   }
@@ -861,27 +862,27 @@ function historyCmd(args: string[]): void {
 function cloneCmd(args: string[]): void {
   const [src, dst] = args;
   if (!src || !dst) {
-    console.error('Usage: ved agent clone <source> <destination>');
+    errUsage('ved agent clone <source> <destination>');
     process.exitCode = 1;
     return;
   }
 
   const nameError = validateAgentName(dst);
   if (nameError) {
-    console.error(`Invalid destination name: ${nameError}`);
+    errHint(`Invalid destination name: ${nameError}`);
     process.exitCode = 1;
     return;
   }
 
   const source = loadAgent(src);
   if (!source) {
-    console.error(`Source agent not found: ${src}`);
+    errHint(`Source agent not found: ${src}`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
 
   if (loadAgent(dst)) {
-    console.error(`Destination agent '${dst}' already exists`);
+    errHint(`Destination agent '${dst}' already exists`);
     process.exitCode = 1;
     return;
   }
@@ -905,7 +906,7 @@ function exportCmd(args: string[]): void {
     // Export single agent
     const agent = loadAgent(name);
     if (!agent) {
-      console.error(`Agent not found: ${name}`);
+      errHint(`Agent not found: ${name}`, 'Check the name and try again');
       process.exitCode = 1;
       return;
     }
@@ -914,7 +915,7 @@ function exportCmd(args: string[]): void {
     // Export all
     const agents = listAgents();
     if (agents.length === 0) {
-      console.error('No agents to export');
+      errHint('No agents to export');
       process.exitCode = 1;
       return;
     }
@@ -928,13 +929,13 @@ function importCmd(args: string[]): void {
   const merge = args.includes('--merge');
 
   if (!filePath) {
-    console.error('Usage: ved agent import <file.json> [--dry-run] [--merge]');
+    errUsage('ved agent import <file.json> [--dry-run] [--merge]');
     process.exitCode = 1;
     return;
   }
 
   if (!existsSync(filePath)) {
-    console.error(`File not found: ${filePath}`);
+    errHint(`File not found: ${filePath}`, 'Check the name and try again');
     process.exitCode = 1;
     return;
   }
@@ -943,13 +944,13 @@ function importCmd(args: string[]): void {
   try {
     data = JSON.parse(readFileSync(filePath, 'utf8'));
   } catch {
-    console.error('Invalid JSON file');
+    errHint('Invalid JSON file');
     process.exitCode = 1;
     return;
   }
 
   if (!data.agents || !Array.isArray(data.agents)) {
-    console.error('Invalid format: expected { agents: [...] }');
+    errHint('Invalid format: expected { agents: [...] }');
     process.exitCode = 1;
     return;
   }
@@ -959,14 +960,14 @@ function importCmd(args: string[]): void {
 
   for (const agent of data.agents) {
     if (!agent.name) {
-      console.error('  Skipped agent with no name');
+      errHint('Skipped agent with no name');
       skipped++;
       continue;
     }
 
     const nameError = validateAgentName(agent.name);
     if (nameError) {
-      console.error(`  Skipped '${agent.name}': ${nameError}`);
+      errHint(`Skipped '${agent.name}': ${nameError}`);
       skipped++;
       continue;
     }
