@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 102
+- **Session Number:** 103
 - **Current Phase:** CYCLE (P5 — Polish & DX in progress)
-- **Last Run:** 2026-03-28
+- **Last Run:** 2026-03-29
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 103 — P5 Polish Phase 2 (upgrade remaining CLI error messages in sub-CLIs, add spinners to more operations, ved doctor --fix enhancements)
+- **Next Session:** 104 — P5 Polish Phase 3 (LLM connectivity in doctor, migrate progress bars, shell completion quality pass)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -139,6 +139,8 @@
 - **Session 87:** CYCLE — **RED-TEAM: 83 tests across 18 attack categories.** Hook command blocking bypass (10), hook env var injection (4), hook YAML corruption (6), notify osascript injection (4), notify log path traversal (3), notify template injection (5), migrate path traversal (6), migrate CSV injection (3), sync shell injection (6), sync local adapter traversal (6), sync SQL injection (3), quiet hours edge cases (4), rule name validation (5), command channel safety (4), hook concurrency manipulation (3), mute state tampering (3), YAML rule store corruption (3), sync adapter type safety (5). **2 vulnerabilities found+fixed:** VULN-20 rm flag bypass — expanded BLOCKED_PATTERNS regex (LOW), VULN-21 null bytes in env vars crash executeHook — added sanitizeEnv() (MEDIUM). **4 findings documented (accepted risk).** All existing defenses held: YAML serialization, sq() quoting, parameterized SQL, DB CHECK constraints, content filter, osascript escaping, sanitizeFileName, isPathSafe. **2542/2542 pass (host + Docker parity). 0 type errors.**
 - **Session 79:** CYCLE — **RED-TEAM: 91 tests across 11 attack categories.** HTTP API request smuggling (10), webhook SSRF (8), SSE resource exhaustion (5), pipe shell injection (9), snapshot git injection (8), alias command injection (7), HTTP auth bypass (9), webhook payload manipulation (8), HTTP endpoint edge cases (8), EventBus edge cases (8), pipeline YAML parsing (11). **2 vulnerabilities found+fixed:** VULN-18 pipeline path traversal in load/delete (MEDIUM), VULN-19 webhook custom header override could spoof HMAC signature (MEDIUM). **3 findings documented (accepted risk).** All existing defenses held: protocol validation, shell stdin piping, alias name validation, HTTP auth, SSE cleanup, EventBus isolation, YAML safety, work order expiry checks. **2208/2208 pass (host + Docker parity). 0 type errors.** Updated CHANGELOG.md (comprehensive v0.3.0 notes), README.md (31-command CLI table, updated stats), package.json + cli.ts (0.2.0→0.3.0). Fixed webhook delivery test timing flake. Tagged v0.3.0, pushed to GitHub (428eba3), created GitHub release. **2117/2117 pass (host + Docker parity). 0 type errors.**
 
+- **Session 103:** CYCLE — **P5 Polish Phase 2: sub-CLI error UX + spinners + doctor enhancements.** Migrated ALL 22 sub-CLI files from raw `console.error` to `errHint()`/`errUsage()`. Zero `console.error` remaining (except 1 intentional verbose header in cli-pipe.ts). Added spinner to sync push/pull operations. Doctor --fix checks 11-13: disabled webhook cleanup, stale session closure (>30 days idle), webhook delivery compaction (keep 1000). Fixed 9 test path issues in cli-polish-2.test.ts. **54 new tests (22 + 32). 3562/3562 pass (host). 0 type errors. 32 files changed (+1728/-415). Pushed to GitHub (3b2094a).**
+
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
 |----------|-------|-------------|
@@ -215,7 +217,8 @@
 | 100 | ✅ CYCLE | P4 npm Publish — package verification, install flow testing |
 | 101 | ✅ CYCLE | v0.7.0 release (CHANGELOG, README, tag, GitHub release) |
 | 102 | ✅ CYCLE | P5 Polish Phase 1: spinner utility, error registry (15→26), CLI errors upgraded (103→57), auto-completions on init |
-| 103+ | CYCLE | P5 Polish Phase 2+ |
+| 103 | ✅ CYCLE | P5 Polish Phase 2: errHint/errUsage migration across ALL sub-CLIs, sync spinners, doctor --fix checks 11-13 |
+| 104+ | CYCLE | P5 Polish Phase 3+ |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
@@ -306,4 +309,8 @@
 | spinner S102 | ✅ Complete | ~116 | 23 |
 | errors-extended S102 | ✅ Complete | ~80 (new codes+helpers) | 14 |
 | cli-polish S102 | ✅ Complete | ~46 lines changed | 13 |
-| **Total** | **ALL COMPLETE** | **~43,400** | **3527+** |
+| cli-polish-2 S103 | ✅ Complete | ~22 sub-CLIs migrated | 22 |
+| cli-polish-s103 S103 | ✅ Complete | ~error/spinner tests | 32 |
+| sync-spinners S103 | ✅ Complete | ~10 lines | 0 (covered in polish-2) |
+| doctor-11-13 S103 | ✅ Complete | ~111 lines (app.ts) | 0 (covered in polish-2) |
+| **Total** | **ALL COMPLETE** | **~44,700** | **3562+** |
