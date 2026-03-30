@@ -48,7 +48,7 @@ import { installCompletions, detectShell } from './completions-installer.js';
 import { spinner } from './spinner.js';
 
 const log = createLogger('cli');
-const VERSION = '0.7.0';
+const VERSION = '0.8.0';
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);

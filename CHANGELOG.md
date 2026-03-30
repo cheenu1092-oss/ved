@@ -2,6 +2,56 @@
 
 All notable changes to Ved are documented here.
 
+## [0.8.0] — 2026-03-30
+
+### Highlights
+- **P5 Polish complete** — every error tells you HOW TO FIX IT
+- **3,600+ tests** (up from 3,413 in v0.7.0)
+- **~44,300 LoC** across all modules
+- Zero raw `console.error` calls remaining — all CLI errors use structured `errHint()`/`errUsage()` helpers
+- Fuzzy command matching, progress bars, and quality-of-life improvements across the board
+
+### Error UX Overhaul
+- New `errors.ts` module: 26 error codes (VED-001 through VED-026) with actionable fix hints
+- `errHint(message, hint)` — red ✗ with grey suggestion arrow
+- `errUsage(usage)` — dimmed usage example
+- `errFatal(message, hint)` — combined error + hint + process.exit
+- Migrated ALL 22 sub-CLI files from raw `console.error` to structured error output
+- Every error now tells the user what went wrong AND how to fix it
+
+### Spinner Utility
+- Zero-dependency TTY-aware spinner (`src/spinner.ts`)
+- Animated frames (`⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`) with success ✓ / failure ✗ states
+- `withSpinner(label, asyncFn)` wrapper for async operations
+- Non-TTY fallback (prints start/complete without animation)
+- Added spinners to: reindex, backup, sync push/pull, migrate imports
+
+### Fuzzy Command Matching
+- Typos like `ved serch` now suggest `ved search` (Levenshtein distance + prefix matching)
+- `suggestCommands()` exported for programmatic use
+- Threshold: distance ≤ 3 or matching prefix
+
+### Doctor Enhancements
+- **LLM live ping** (check 7): sends minimal prompt to verify LLM connectivity, shows latency
+- **Doctor --fix** checks 11-13:
+  - Check 11: disabled webhook cleanup
+  - Check 12: stale session closure (>30 days idle)
+  - Check 13: webhook delivery compaction (keep 1000)
+
+### CLI Quality-of-Life
+- `ved quickstart` — color-coded cheat sheet for new users
+- `ved version --verbose` — shows Node.js, platform, OS, shell, config path
+- Migrate progress bars: spinner with file count for all 5 import types (markdown, JSON, Obsidian, CSV, JSONL)
+- Auto-installs shell completions on `ved init` (bash/zsh/fish)
+- Error code registry expanded: SYNC_FAILED, HOOK_FAILED, NOTIFY_FAILED, PIPELINE_FAILED, TEMPLATE_ERROR, ALIAS_ERROR, CRON_ERROR, BACKUP_FAILED, SNAPSHOT_ERROR, ALREADY_EXISTS, PERMISSION_DENIED
+
+### Stats
+- 46 CLI commands
+- 3,605 tests (3,586 host / 3,605 Docker)
+- ~44,300 LoC (source only)
+- 21 vulnerabilities found and fixed (0 open)
+- 94 source files, 88 test files
+
 ## [0.7.0] — 2026-03-27
 
 ### Highlights
