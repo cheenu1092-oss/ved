@@ -32,6 +32,7 @@ import {
 import { join, basename, relative, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { errHint, errUsage } from './errors.js';
+import { spinner } from './spinner.js';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -242,6 +243,8 @@ async function migrateMarkdown(app: VedApp, args: string[]): Promise<void> {
   console.log(`\n  📂 Found ${mdFiles.length} markdown file${mdFiles.length === 1 ? '' : 's'} in ${dirPath}\n`);
 
   const result: MigrationResult = { imported: 0, skipped: 0, errored: 0, files: [], errors: [] };
+  const spin = mdFiles.length >= 10 ? spinner(`Importing 0/${mdFiles.length} files...`) : null;
+  let processed = 0;
 
   for (const filePath of mdFiles) {
     try {
@@ -302,7 +305,11 @@ async function migrateMarkdown(app: VedApp, args: string[]): Promise<void> {
       result.errored++;
       result.errors.push(`${filePath}: ${msg}`);
     }
+    processed++;
+    spin?.update(`Importing ${processed}/${mdFiles.length} files...`);
   }
+
+  spin?.succeed(`Imported ${result.imported}/${mdFiles.length} files`);
 
   // Log migration
   if (!dryRun && result.imported > 0) {
@@ -365,6 +372,8 @@ async function migrateJson(app: VedApp, args: string[]): Promise<void> {
     // ChatGPT export format: array of conversations
     // Or generic array of objects
     console.log(`\n  📦 Detected array with ${data.length} items\n`);
+
+    const spin = data.length >= 10 ? spinner(`Importing 0/${data.length} items...`) : null;
 
     for (let i = 0; i < data.length; i++) {
       const item = data[i] as Record<string, unknown>;
@@ -522,7 +531,10 @@ async function migrateJson(app: VedApp, args: string[]): Promise<void> {
         result.errored++;
         result.errors.push(`item ${i}: ${msg}`);
       }
+      spin?.update(`Importing ${i + 1}/${data.length} items...`);
     }
+
+    spin?.succeed(`Imported ${result.imported}/${data.length} items`);
   } else {
     errHint('Unsupported JSON format (expected array of conversations or objects)');
     return;
@@ -597,6 +609,8 @@ async function migrateObsidian(app: VedApp, args: string[]): Promise<void> {
   console.log(`\n  🗃️  Found ${mdFiles.length} files in Obsidian vault\n`);
 
   const result: MigrationResult = { imported: 0, skipped: 0, errored: 0, files: [], errors: [] };
+  const spin = mdFiles.length >= 10 ? spinner(`Importing 0/${mdFiles.length} files...`) : null;
+  let processed = 0;
 
   for (const filePath of mdFiles) {
     try {
@@ -659,7 +673,11 @@ async function migrateObsidian(app: VedApp, args: string[]): Promise<void> {
       result.errored++;
       result.errors.push(`${filePath}: ${msg}`);
     }
+    processed++;
+    spin?.update(`Importing ${processed}/${mdFiles.length} files...`);
   }
+
+  spin?.succeed(`Imported ${result.imported}/${mdFiles.length} files`);
 
   if (!dryRun && result.imported > 0) {
     const record: MigrationRecord = {
@@ -749,9 +767,11 @@ async function migrateCsv(app: VedApp, args: string[]): Promise<void> {
     return;
   }
 
-  console.log(`\n  📊 CSV: ${lines.length - 1} rows, ${headers.length} columns\n`);
+  const rowCount = lines.length - 1;
+  console.log(`\n  📊 CSV: ${rowCount} rows, ${headers.length} columns\n`);
 
   const result: MigrationResult = { imported: 0, skipped: 0, errored: 0, files: [], errors: [] };
+  const spin = rowCount >= 10 ? spinner(`Importing 0/${rowCount} rows...`) : null;
 
   for (let i = 1; i < lines.length; i++) {
     try {
@@ -812,7 +832,10 @@ async function migrateCsv(app: VedApp, args: string[]): Promise<void> {
       result.errored++;
       result.errors.push(`row ${i}: ${msg}`);
     }
+    spin?.update(`Importing ${i}/${rowCount} rows...`);
   }
+
+  spin?.succeed(`Imported ${result.imported}/${rowCount} rows`);
 
   if (!dryRun && result.imported > 0) {
     const record: MigrationRecord = {
@@ -884,6 +907,9 @@ async function migrateJsonl(app: VedApp, args: string[]): Promise<void> {
   }
 
   const result: MigrationResult = { imported: 0, skipped: 0, errored: 0, files: [], errors: [] };
+  const dateCount = byDate.size;
+  const spin = dateCount >= 5 ? spinner(`Importing 0/${dateCount} daily logs...`) : null;
+  let processed = 0;
 
   for (const [date, messages] of byDate) {
     try {
@@ -937,7 +963,11 @@ async function migrateJsonl(app: VedApp, args: string[]): Promise<void> {
       result.errored++;
       result.errors.push(`${date}: ${msg}`);
     }
+    processed++;
+    spin?.update(`Importing ${processed}/${dateCount} daily logs...`);
   }
+
+  spin?.succeed(`Imported ${result.imported}/${dateCount} daily logs`);
 
   if (!dryRun && result.imported > 0) {
     const record: MigrationRecord = {

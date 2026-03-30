@@ -764,17 +764,31 @@ export class VedApp {
       });
     }
 
-    // 7. LLM connectivity
+    // 7. LLM connectivity (live ping)
     try {
       const llmHealth = await this.llm.healthCheck();
-      if (llmHealth.healthy) {
-        checks.push({ name: 'LLM', status: 'ok', message: llmHealth.details ?? 'Connected' });
-      } else {
+      if (!llmHealth.healthy) {
         checks.push({
           name: 'LLM',
           status: 'warn',
-          message: llmHealth.details ?? 'LLM health check failed',
+          message: llmHealth.details ?? 'LLM not initialized',
         });
+      } else {
+        // Adapter is initialized — try a live ping
+        const ping = await this.llm.ping();
+        if (ping.reachable) {
+          checks.push({
+            name: 'LLM',
+            status: 'ok',
+            message: `${llmHealth.details} — reachable (${ping.latencyMs}ms)`,
+          });
+        } else {
+          checks.push({
+            name: 'LLM',
+            status: 'warn',
+            message: `${llmHealth.details} — unreachable: ${ping.error ?? 'unknown error'}`,
+          });
+        }
       }
     } catch (err) {
       checks.push({
@@ -1766,9 +1780,12 @@ export class VedApp {
    */
   static generateCompletions(shell: 'bash' | 'zsh' | 'fish'): string {
     const commands = [
-      'init', 'start', 'chat', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
+      'init', 'start', 'chat', 'c', 'talk', 'run', 'ask', 'query', 'q', 'pipe', 'pipeline', 'chain', 'serve', 'status', 'stats', 'search', 'memory', 'trust', 'user', 'prompt', 'context', 'reindex',
       'config', 'export', 'import', 'history', 'doctor', 'backup', 'cron',
-      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'sync', 'remote', 'remotes', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'migrate', 'tag', 'agent', 'agents', 'persona', 'personas', 'replay', 'replays', 'playback', 'help', 'version',
+      'completions', 'upgrade', 'watch', 'webhook', 'hook', 'notify', 'plugin', 'gc', 'sync', 'remote', 'remotes', 'template', 'alias', 'env', 'log', 'profile', 'diff', 'snapshot', 'migrate', 'tag',
+      'agent', 'agents', 'persona', 'personas', 'replay', 'replays', 'playback',
+      'graph', 'links', 'kg', 'task', 'tasks', 'todo', 'todos',
+      'mcp-serve', 'help', 'version',
     ];
     const diffSubs = ['log', 'show', 'stat', 'stats', 'blame', 'between', 'files', 'summary', 'evolution', 'overview', 'history', 'changed', 'annotate', 'commit', 'compare'];
     const diffFlags = ['--limit', '-n', '--since', '--days', '--file'];
@@ -1815,6 +1832,12 @@ export class VedApp {
 
     const replaySubs = ['list', 'ls', 'sessions', 'show', 'replay', 'play', 'trace', 'chain', 'timeline', 'waterfall', 'stats', 'summary', 'compare', 'cmp', 'diff', 'export', 'search', 'find', 'grep'];
     const replayFlags = ['--limit', '-n', '--verbose', '-v', '--json', '--depth', '-d', '--format', '-f', '--output', '-o', '--markdown', '--md'];
+
+    const graphSubs = ['hubs', 'hub', 'orphans', 'orphan', 'islands', 'island', 'clusters', 'cluster', 'path', 'shortest', 'neighbors', 'neighbor', 'nb', 'broken', 'dead', 'dot', 'graphviz', 'summary', 'folders'];
+    const graphFlags = ['--limit', '-n', '--min-links', '--format', '--depth', '-d', '--verbose', '-v'];
+
+    const taskSubs = ['list', 'ls', 'add', 'new', 'create', 'show', 'view', 'get', 'edit', 'update', 'set', 'done', 'complete', 'close', 'archive', 'board', 'kanban', 'stats', 'summary', 'projects', 'search', 'find'];
+    const taskFlags = ['--status', '--project', '--priority', '--tag', '--limit', '-n', '--verbose', '-v', '--json'];
 
     switch (shell) {
       case 'bash':
@@ -1943,6 +1966,14 @@ _ved_completions() {
       COMPREPLY=( $(compgen -W "${snapshotSubs.join(' ')}" -- "\${cur}") )
       return 0
       ;;
+    graph|links|kg)
+      COMPREPLY=( $(compgen -W "${graphSubs.join(' ')} ${graphFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
+    task|tasks|todo|todos)
+      COMPREPLY=( $(compgen -W "${taskSubs.join(' ')} ${taskFlags.join(' ')}" -- "\${cur}") )
+      return 0
+      ;;
     restore)
       COMPREPLY=( $(compgen -f -- "\${cur}") )
       return 0
@@ -2043,6 +2074,17 @@ _ved() {
     'snapshot:Lightweight vault point-in-time snapshots'
     'snap:Vault snapshots (alias for snapshot)'
     'checkpoint:Vault snapshots (alias for snapshot)'
+    'graph:Explore knowledge graph connections'
+    'links:Knowledge graph (alias for graph)'
+    'kg:Knowledge graph (alias for graph)'
+    'task:Manage tasks and todos'
+    'tasks:Manage tasks (alias for task)'
+    'todo:Manage tasks (alias for task)'
+    'todos:Manage tasks (alias for task)'
+    'chat:Interactive conversation'
+    'c:Interactive conversation (alias for chat)'
+    'talk:Interactive conversation (alias for chat)'
+    'mcp-serve:Start MCP server mode'
     'completions:Generate shell completions'
     'version:Show version'
   )
@@ -2131,6 +2173,12 @@ _ved() {
           ;;
         snapshot|snap|checkpoint)
           _values 'subcommand' 'list[List all snapshots]' 'create[Create a named snapshot]' 'show[Show snapshot details]' 'diff[Diff snapshot vs HEAD or another]' 'restore[Restore vault to a snapshot]' 'delete[Delete a snapshot]' 'export[Export snapshot as tar.gz]'
+          ;;
+        graph|links|kg)
+          _values 'subcommand' 'hubs[Top connected entities]' 'orphans[Entities with no links]' 'islands[Disconnected clusters]' 'path[Shortest path between two entities]' 'neighbors[Direct connections for entity]' 'broken[Broken wikilinks]' 'dot[Export as Graphviz DOT]' 'summary[Graph overview statistics]'
+          ;;
+        task|tasks|todo|todos)
+          _values 'subcommand' 'list[List tasks]' 'add[Create a task]' 'show[Show task details]' 'edit[Edit a task]' 'done[Mark task complete]' 'archive[Archive completed tasks]' 'board[Kanban board view]' 'stats[Task statistics]' 'projects[List projects]' 'search[Search tasks]'
           ;;
         run|ask|query|q)
           _arguments \\
@@ -2401,6 +2449,23 @@ complete -c ved -n '__fish_seen_subcommand_from import' -l overwrite -d 'Overwri
 complete -c ved -n '__fish_seen_subcommand_from backup; and __fish_seen_subcommand_from create' -s d -l dir -d 'Backup directory'
 complete -c ved -n '__fish_seen_subcommand_from backup; and __fish_seen_subcommand_from create' -s n -l max -d 'Max backups to keep'
 complete -c ved -n '__fish_seen_subcommand_from backup; and __fish_seen_subcommand_from restore' -F
+
+# graph subcommands
+${graphSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from graph links kg' -a '${s}'`).join('\n')}
+complete -c ved -n '__fish_seen_subcommand_from graph links kg' -s n -l limit -d 'Max results'
+complete -c ved -n '__fish_seen_subcommand_from graph links kg' -l min-links -d 'Minimum link count'
+complete -c ved -n '__fish_seen_subcommand_from graph links kg' -s d -l depth -d 'Traversal depth'
+complete -c ved -n '__fish_seen_subcommand_from graph links kg' -s v -l verbose -d 'Verbose output'
+
+# task subcommands
+${taskSubs.map(s => `complete -c ved -n '__fish_seen_subcommand_from task tasks todo todos' -a '${s}'`).join('\n')}
+complete -c ved -n '__fish_seen_subcommand_from task tasks todo todos' -l status -d 'Filter by status'
+complete -c ved -n '__fish_seen_subcommand_from task tasks todo todos' -l project -d 'Filter by project'
+complete -c ved -n '__fish_seen_subcommand_from task tasks todo todos' -l priority -d 'Filter by priority'
+complete -c ved -n '__fish_seen_subcommand_from task tasks todo todos' -l tag -d 'Filter by tag'
+complete -c ved -n '__fish_seen_subcommand_from task tasks todo todos' -s n -l limit -d 'Max results'
+complete -c ved -n '__fish_seen_subcommand_from task tasks todo todos' -s v -l verbose -d 'Verbose output'
+complete -c ved -n '__fish_seen_subcommand_from task tasks todo todos' -l json -d 'JSON output'
 `;
 
       default:

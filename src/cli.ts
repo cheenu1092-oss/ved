@@ -12,6 +12,7 @@
 
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { platform, arch, type as osType, release, homedir } from 'node:os';
 import { createApp, VedApp } from './app.js';
 import { getConfigDir, loadConfig, validateConfig } from './core/config.js';
 import { vedError, errHint, errUsage } from './errors.js';
@@ -30,7 +31,7 @@ import { vedAlias, resolveAlias } from './cli-alias.js';
 import { vedEnv } from './cli-env.js';
 import { logCmd } from './cli-log.js';
 import { profileCmd } from './cli-profile.js';
-import { helpCmd, checkHelp } from './cli-help.js';
+import { helpCmd, checkHelp, suggestCommands } from './cli-help.js';
 import { diffCmd } from './cli-diff.js';
 import { snapshotCmd } from './cli-snapshot.js';
 import { VedHttpServer } from './http.js';
@@ -64,8 +65,8 @@ async function main(): Promise<void> {
       console.log('');
       console.log('    ved init        — Interactive setup wizard (recommended)');
       console.log('    ved init --yes  — Quick setup with defaults');
+      console.log('    ved quickstart  — Quick-start cheat sheet');
       console.log('    ved help        — See all commands');
-      console.log('    ved doctor      — Check system health');
       console.log('');
       console.log('  Get started: ved init');
       console.log('');
@@ -78,12 +79,18 @@ async function main(): Promise<void> {
     case '-h':
     case '--help':
       return helpCmd(args.slice(1));
+    case 'quickstart':
+    case 'quick':
+      return quickstart();
     case 'init':
       if (checkHelp('init', args.slice(1))) return;
       return init(args.slice(1));
     case 'version':
     case '--version':
     case '-v':
+      if (args.includes('--verbose') || args.includes('-V')) {
+        return versionVerbose();
+      }
       console.log(`Ved v${VERSION}`);
       return;
     case 'status':
@@ -409,7 +416,17 @@ async function main(): Promise<void> {
         return main();
       }
 
-      vedError('COMMAND_NOT_FOUND', `Unknown command: "${command}"`);
+      // Try fuzzy matching for typos
+      const suggestions = suggestCommands(command);
+      if (suggestions.length > 0) {
+        vedError(
+          'COMMAND_NOT_FOUND',
+          `Unknown command: "${command}"`,
+          `Did you mean: ${suggestions.map(s => `"ved ${s}"`).join(', ')}?`,
+        );
+      } else {
+        vedError('COMMAND_NOT_FOUND', `Unknown command: "${command}"`);
+      }
       process.exit(1);
     }
   }
@@ -438,6 +455,62 @@ async function init(args: string[]): Promise<void> {
   } catch {
     // Non-critical — don't fail init over completions
   }
+}
+
+/**
+ * Show extended version info.
+ */
+function versionVerbose(): void {
+  const configDir = getConfigDir();
+  const configExists = existsSync(join(configDir, 'config.yaml'));
+  console.log(`\n  Ved v${VERSION}\n`);
+  console.log(`  Node:      ${process.version}`);
+  console.log(`  Platform:  ${platform()} ${arch()}`);
+  console.log(`  OS:        ${osType()} ${release()}`);
+  console.log(`  Shell:     ${process.env.SHELL ?? 'unknown'}`);
+  console.log(`  Config:    ${join(configDir, 'config.yaml')}${configExists ? '' : ' (not found)'}`);
+  console.log(`  Data dir:  ${configDir}`);
+  console.log(`  Home:      ${homedir()}`);
+  console.log('');
+}
+
+/**
+ * Print a quick-start cheat sheet for new users.
+ */
+function quickstart(): void {
+  const b = process.stdout.isTTY ? '\x1B[1m' : '';
+  const d = process.stdout.isTTY ? '\x1B[2m' : '';
+  const c = process.stdout.isTTY ? '\x1B[36m' : '';
+  const r = process.stdout.isTTY ? '\x1B[0m' : '';
+
+  console.log(`
+${b}🕉️  Ved Quick Start Guide${r}
+
+${b}1. Set up${r}
+   ${c}ved init${r}              ${d}Interactive wizard — pick provider, set API key${r}
+   ${c}ved doctor${r}            ${d}Verify everything is working${r}
+
+${b}2. Chat${r}
+   ${c}ved chat${r}              ${d}Start a conversation (streaming TUI)${r}
+   ${c}ved run "question"${r}    ${d}One-shot query, no REPL${r}
+
+${b}3. Memory${r}
+   ${c}ved memory list${r}       ${d}Browse your knowledge vault${r}
+   ${c}ved search "topic"${r}    ${d}Search across all vault files${r}
+   ${c}ved task add "..."${r}    ${d}Track a TODO${r}
+
+${b}4. Maintain${r}
+   ${c}ved backup create${r}     ${d}Snapshot your vault + database${r}
+   ${c}ved stats${r}             ${d}See system metrics${r}
+   ${c}ved doctor --fix${r}      ${d}Auto-repair common issues${r}
+
+${b}5. Explore${r}
+   ${c}ved help${r}              ${d}Full command list${r}
+   ${c}ved help <command>${r}    ${d}Detailed usage for any command${r}
+   ${c}ved version --verbose${r} ${d}System info${r}
+
+${d}Full docs: https://github.com/cheenu1092-oss/ved${r}
+`);
 }
 
 /**

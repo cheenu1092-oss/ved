@@ -79,9 +79,18 @@ export const COMMANDS: CommandInfo[] = [
     name: 'version',
     aliases: ['--version', '-v'],
     category: 'core',
-    summary: 'Show Ved version',
-    usage: 'ved version',
-    examples: ['ved version', 'ved -v'],
+    summary: 'Show Ved version (--verbose for system info)',
+    usage: 'ved version [--verbose]',
+    flags: ['--verbose', '-V'],
+    examples: ['ved version', 'ved -v', 'ved version --verbose'],
+  },
+  {
+    name: 'quickstart',
+    aliases: ['quick'],
+    category: 'core',
+    summary: 'Print a quick-start cheat sheet for new users',
+    usage: 'ved quickstart',
+    examples: ['ved quickstart'],
   },
   {
     name: 'status',
@@ -749,4 +758,78 @@ export function checkHelp(commandName: string, args: string[]): boolean {
     return true;
   }
   return false;
+}
+
+// ── Fuzzy Command Matching ──────────────────────────────────────────────
+
+/**
+ * Levenshtein distance between two strings.
+ */
+function levenshtein(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0) as number[]);
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+/**
+ * Suggest similar commands for a typo.
+ *
+ * Returns up to `maxResults` command names sorted by edit distance.
+ * Only includes commands within `maxDistance` edits (default 3).
+ */
+export function suggestCommands(
+  input: string,
+  maxResults = 3,
+  maxDistance = 3,
+): string[] {
+  const lower = input.toLowerCase();
+  const candidates: { name: string; dist: number }[] = [];
+
+  // Check all command names and aliases
+  for (const cmd of COMMANDS) {
+    const names = [cmd.name, ...cmd.aliases];
+    let bestDist = Infinity;
+    for (const name of names) {
+      const d = levenshtein(lower, name.toLowerCase());
+      if (d < bestDist) bestDist = d;
+    }
+    if (bestDist > 0 && bestDist <= maxDistance) {
+      candidates.push({ name: cmd.name, dist: bestDist });
+    }
+  }
+
+  // Also check for prefix matches (e.g. "re" → "reindex", "replay")
+  // Prefix matches get a very low distance to sort them first
+  for (const cmd of COMMANDS) {
+    if (cmd.name !== lower && cmd.name.startsWith(lower)) {
+      const existing = candidates.find(c => c.name === cmd.name);
+      if (existing) {
+        existing.dist = 0.5; // override Levenshtein with prefix priority
+      } else {
+        candidates.push({ name: cmd.name, dist: 0.5 });
+      }
+    }
+  }
+
+  candidates.sort((a, b) => a.dist - b.dist);
+  // Deduplicate
+  const seen = new Set<string>();
+  const results: string[] = [];
+  for (const c of candidates) {
+    if (!seen.has(c.name) && results.length < maxResults) {
+      seen.add(c.name);
+      results.push(c.name);
+    }
+  }
+  return results;
 }

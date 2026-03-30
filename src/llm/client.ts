@@ -84,6 +84,41 @@ export class LLMClient implements VedModule {
   }
 
   /**
+   * Live connectivity test — sends a minimal prompt and verifies the LLM responds.
+   * Used by `ved doctor` to verify the provider is actually reachable.
+   * Returns { reachable, latencyMs, error? }.
+   */
+  async ping(): Promise<{ reachable: boolean; latencyMs: number; error?: string }> {
+    if (!this.adapter || !this.providerConfig) {
+      return { reachable: false, latencyMs: 0, error: 'Not initialized' };
+    }
+
+    const startMs = Date.now();
+    try {
+      const request: LLMRequest = {
+        systemPrompt: 'Respond with only the word ok.',
+        messages: [{ role: 'user', content: 'Say "ok"', timestamp: Date.now() }],
+        maxTokens: 5,
+      };
+      const formatted = this.adapter.formatRequest(request);
+      const raw = await this.adapter.call(formatted, this.providerConfig);
+      const response = this.adapter.parseResponse(raw);
+      const latencyMs = Date.now() - startMs;
+
+      if (response && (response.decision?.response || response.finishReason === 'stop')) {
+        return { reachable: true, latencyMs };
+      }
+      return { reachable: false, latencyMs, error: 'Empty response from LLM' };
+    } catch (err) {
+      return {
+        reachable: false,
+        latencyMs: Date.now() - startMs,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  /**
    * Send a conversation to the LLM and get a structured decision.
    * Handles provider-specific formatting and response parsing.
    */
