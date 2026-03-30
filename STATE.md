@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 104
-- **Current Phase:** CYCLE (P5 — Polish & DX in progress)
-- **Last Run:** 2026-03-29
+- **Session Number:** 105
+- **Current Phase:** CYCLE (P0-P5 ALL COMPLETE — v0.8.0 released)
+- **Last Run:** 2026-03-30
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 105 — P5 Polish Phase 4 (v0.8.0 release prep, additional quality-of-life improvements)
+- **Next Session:** 106 — Post-P5: next priorities (more live testing, npm publish, docs, or next feature cycle)
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -140,7 +140,8 @@
 - **Session 79:** CYCLE — **RED-TEAM: 91 tests across 11 attack categories.** HTTP API request smuggling (10), webhook SSRF (8), SSE resource exhaustion (5), pipe shell injection (9), snapshot git injection (8), alias command injection (7), HTTP auth bypass (9), webhook payload manipulation (8), HTTP endpoint edge cases (8), EventBus edge cases (8), pipeline YAML parsing (11). **2 vulnerabilities found+fixed:** VULN-18 pipeline path traversal in load/delete (MEDIUM), VULN-19 webhook custom header override could spoof HMAC signature (MEDIUM). **3 findings documented (accepted risk).** All existing defenses held: protocol validation, shell stdin piping, alias name validation, HTTP auth, SSE cleanup, EventBus isolation, YAML safety, work order expiry checks. **2208/2208 pass (host + Docker parity). 0 type errors.** Updated CHANGELOG.md (comprehensive v0.3.0 notes), README.md (31-command CLI table, updated stats), package.json + cli.ts (0.2.0→0.3.0). Fixed webhook delivery test timing flake. Tagged v0.3.0, pushed to GitHub (428eba3), created GitHub release. **2117/2117 pass (host + Docker parity). 0 type errors.**
 
 - **Session 103:** CYCLE — **P5 Polish Phase 2: sub-CLI error UX + spinners + doctor enhancements.** Migrated ALL 22 sub-CLI files from raw `console.error` to `errHint()`/`errUsage()`. Zero `console.error` remaining (except 1 intentional verbose header in cli-pipe.ts). Added spinner to sync push/pull operations. Doctor --fix checks 11-13: disabled webhook cleanup, stale session closure (>30 days idle), webhook delivery compaction (keep 1000). Fixed 9 test path issues in cli-polish-2.test.ts. **54 new tests (22 + 32). 3562/3562 pass (host). 0 type errors. 32 files changed (+1728/-415). Pushed to GitHub (3b2094a).**
-- **Session 104:** CYCLE — **P5 Polish Phase 3: fuzzy commands, LLM ping, migrate progress, quickstart.** Fuzzy command suggestions: typos like `ved serch` now suggest `ved search` (Levenshtein + prefix matching, exported `suggestCommands()`). LLM live ping in doctor: check 7 now sends minimal prompt to verify connectivity, shows latency. Migrate progress bars: spinner with file count updates for all 5 import types. Enhanced `ved version --verbose`: shows Node, platform, OS, shell, config path. New `ved quickstart` command: color-coded cheat sheet for new users. **21 new tests. 3586/3586 pass (host + Docker parity). 0 type errors. 6 files changed (+424/-14). Pushed to GitHub (13b392f).**
+- **Session 104:** CYCLE — **P5 Polish Phase 3: fuzzy commands, LLM ping, migrate progress, quickstart.**
+- **Session 105:** CYCLE — **v0.8.0 release.** Docker parity verified (3605/3605 pass). Updated CHANGELOG.md + README.md stats. Tagged v0.8.0, pushed to GitHub (3b0c549), created GitHub release. **P0-P5 ALL COMPLETE.** 3586/3586 host + 3605/3605 Docker. 0 type errors. Fuzzy command suggestions: typos like `ved serch` now suggest `ved search` (Levenshtein + prefix matching, exported `suggestCommands()`). LLM live ping in doctor: check 7 now sends minimal prompt to verify connectivity, shows latency. Migrate progress bars: spinner with file count updates for all 5 import types. Enhanced `ved version --verbose`: shows Node, platform, OS, shell, config path. New `ved quickstart` command: color-coded cheat sheet for new users. **21 new tests. 3586/3586 pass (host + Docker parity). 0 type errors. 6 files changed (+424/-14). Pushed to GitHub (13b392f).**
 
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
@@ -220,7 +221,8 @@
 | 102 | ✅ CYCLE | P5 Polish Phase 1: spinner utility, error registry (15→26), CLI errors upgraded (103→57), auto-completions on init |
 | 103 | ✅ CYCLE | P5 Polish Phase 2: errHint/errUsage migration across ALL sub-CLIs, sync spinners, doctor --fix checks 11-13 |
 | 104 | ✅ CYCLE | P5 Polish Phase 3: fuzzy command matching, LLM ping in doctor, migrate progress bars, quickstart command |
-| 105+ | CYCLE | P5 Polish Phase 4+ |
+| 105 | ✅ CYCLE | v0.8.0 release — P0-P5 ALL COMPLETE |
+| 106+ | CYCLE | Post-P5: next priorities |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |
