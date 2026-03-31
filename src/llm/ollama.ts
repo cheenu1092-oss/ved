@@ -40,7 +40,7 @@ interface OllamaTool {
 interface OllamaRequest {
   model: string;
   messages: OllamaMessage[];
-  stream: false;
+  stream: boolean;
   options?: {
     temperature?: number;
     num_predict?: number;
@@ -187,6 +187,101 @@ export class OllamaAdapter implements LLMProviderAdapter {
     }
 
     return response.json();
+  }
+
+  async callStream(
+    formattedRequest: unknown,
+    config: ProviderConfig,
+    onToken: (token: string) => void,
+  ): Promise<unknown> {
+    const req = formattedRequest as OllamaRequest;
+    req.model = config.model;
+    req.stream = true; // Enable streaming
+    if (config.maxTokens && req.options) {
+      req.options.num_predict = config.maxTokens;
+    }
+    if (config.temperature !== undefined && req.options) {
+      req.options.temperature = config.temperature;
+    }
+
+    const baseUrl = config.baseUrl ?? 'http://localhost:11434';
+    const url = `${baseUrl}/api/chat`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req),
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw new VedError('LLM_REQUEST_FAILED', `Ollama streaming error ${response.status}: ${body}`);
+    }
+
+    if (!response.body) {
+      throw new VedError('LLM_REQUEST_FAILED', 'Ollama streaming response has no body');
+    }
+
+    // Ollama streams NDJSON (one JSON object per line)
+    let accumulatedText = '';
+    let lastChunk: OllamaResponse | null = null;
+    const toolCalls: OllamaToolCall[] = [];
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          let chunk: OllamaResponse;
+          try {
+            chunk = JSON.parse(line) as OllamaResponse;
+          } catch {
+            continue;
+          }
+
+          lastChunk = chunk;
+
+          // Stream text content
+          if (chunk.message?.content) {
+            accumulatedText += chunk.message.content;
+            onToken(chunk.message.content);
+          }
+
+          // Accumulate tool calls (usually in final chunk)
+          if (chunk.message?.tool_calls) {
+            toolCalls.push(...chunk.message.tool_calls);
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // Build synthetic non-stream response
+    const finalResponse: OllamaResponse = lastChunk ?? {
+      model: config.model,
+      message: { role: 'assistant', content: accumulatedText },
+      done: true,
+    };
+
+    // Ensure accumulated text is in the response
+    finalResponse.message.content = accumulatedText;
+    if (toolCalls.length > 0) {
+      finalResponse.message.tool_calls = toolCalls;
+    }
+
+    return finalResponse;
   }
 
   // ── Private ──

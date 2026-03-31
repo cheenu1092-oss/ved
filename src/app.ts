@@ -243,8 +243,8 @@ export class VedApp {
     // Stop vault watcher
     this.stopVaultWatcher();
 
-    // Stop event loop (completes current message)
-    this.eventLoop.requestShutdown();
+    // Stop event loop (completes current message + compression)
+    await this.eventLoop.gracefulShutdown();
 
     // Stop channels
     await this.channels.stopAll();
@@ -1384,8 +1384,13 @@ export class VedApp {
       }
 
       if (this.db) {
-        // Re-create audit with new DB
+        // Re-create all DB-backed managers with new DB handle
         this.eventLoop.audit.reload(this.db);
+        this.eventLoop.sessions.reload(this.db);
+        this.eventLoop.workOrders.reload(this.db);
+        this.eventLoop.anchors.reload(this.db);
+        this.eventLoop.trust.reload(this.db);
+        this.rag.setDatabase(this.db);
         this.eventLoop.audit.append({
           eventType: 'backup_restored',
           actor: 'ved',

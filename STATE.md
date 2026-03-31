@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 105
-- **Current Phase:** CYCLE (P0-P5 ALL COMPLETE — v0.8.0 released)
-- **Last Run:** 2026-03-30
+- **Session Number:** 106
+- **Current Phase:** CYCLE (Post-P5 — Deep live testing complete)
+- **Last Run:** 2026-03-31
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 106 — Post-P5: next priorities (more live testing, npm publish, docs, or next feature cycle)
+- **Next Session:** 107 — MCP live test (tool calling with real LLM + real MCP server), then npm publish
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -143,6 +143,8 @@
 - **Session 104:** CYCLE — **P5 Polish Phase 3: fuzzy commands, LLM ping, migrate progress, quickstart.**
 - **Session 105:** CYCLE — **v0.8.0 release.** Docker parity verified (3605/3605 pass). Updated CHANGELOG.md + README.md stats. Tagged v0.8.0, pushed to GitHub (3b0c549), created GitHub release. **P0-P5 ALL COMPLETE.** 3586/3586 host + 3605/3605 Docker. 0 type errors. Fuzzy command suggestions: typos like `ved serch` now suggest `ved search` (Levenshtein + prefix matching, exported `suggestCommands()`). LLM live ping in doctor: check 7 now sends minimal prompt to verify connectivity, shows latency. Migrate progress bars: spinner with file count updates for all 5 import types. Enhanced `ved version --verbose`: shows Node, platform, OS, shell, config path. New `ved quickstart` command: color-coded cheat sheet for new users. **21 new tests. 3586/3586 pass (host + Docker parity). 0 type errors. 6 files changed (+424/-14). Pushed to GitHub (13b392f).**
 
+- **Session 106:** CYCLE — **Deep live testing with OpenAI gpt-4o-mini.** First cloud LLM test. Created comprehensive 9-test live test (`test/live-test-deep.ts`): app init, basic chat, streaming (14 tokens), multi-turn memory recall, system prompt self-ID, RAG enrichment (vault entity lookup), T1→T2 compression (692-char daily note + T3 entity upserts), audit chain integrity (58 entries). Fixed Docker stale package.json (rebuild needed). Zero code changes required — everything worked out of the box. **9/9 pass. 3605/3605 unit tests. 0 type errors.**
+
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
 |----------|-------|-------------|
@@ -222,7 +224,8 @@
 | 103 | ✅ CYCLE | P5 Polish Phase 2: errHint/errUsage migration across ALL sub-CLIs, sync spinners, doctor --fix checks 11-13 |
 | 104 | ✅ CYCLE | P5 Polish Phase 3: fuzzy command matching, LLM ping in doctor, migrate progress bars, quickstart command |
 | 105 | ✅ CYCLE | v0.8.0 release — P0-P5 ALL COMPLETE |
-| 106+ | CYCLE | Post-P5: next priorities |
+| 106 | ✅ CYCLE | Deep live test: 9/9 pass with OpenAI gpt-4o-mini (streaming, RAG, compression, audit) |
+| 107+ | CYCLE | MCP live test, npm publish, docs |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |

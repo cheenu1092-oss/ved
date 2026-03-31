@@ -127,6 +127,44 @@ export class SessionManager {
   }
 
   /**
+   * Reload prepared statements against a new DB handle (e.g. after backup restore).
+   */
+  reload(db: Database.Database): void {
+    this.stmtGetActive = db.prepare(`
+      SELECT * FROM sessions
+      WHERE channel = @channel AND author_id = @authorId AND status IN ('active', 'idle')
+      ORDER BY last_active DESC
+      LIMIT 1
+    `);
+    this.stmtGetById = db.prepare(`SELECT * FROM sessions WHERE id = ?`);
+    this.stmtInsert = db.prepare(`
+      INSERT INTO sessions (id, channel, channel_id, author_id, trust_tier, started_at, last_active, working_memory, token_count, status)
+      VALUES (@id, @channel, @channelId, @authorId, @trustTier, @startedAt, @lastActive, @workingMemory, @tokenCount, 'active')
+    `);
+    this.stmtUpdateMemory = db.prepare(`
+      UPDATE sessions
+      SET working_memory = @workingMemory, token_count = @tokenCount, last_active = @lastActive
+      WHERE id = @id
+    `);
+    this.stmtMarkIdle = db.prepare(`UPDATE sessions SET status = 'idle' WHERE id = ? AND status = 'active'`);
+    this.stmtClose = db.prepare(`
+      UPDATE sessions
+      SET status = 'closed', closed_at = @closedAt, summary = @summary, working_memory = '{}'
+      WHERE id = @id AND status IN ('active', 'idle')
+    `);
+    this.stmtCloseStale = db.prepare(`
+      UPDATE sessions
+      SET status = 'closed', closed_at = @now, working_memory = '{}'
+      WHERE status IN ('active', 'idle') AND last_active < @cutoff
+    `);
+    this.stmtGetStale = db.prepare(`
+      SELECT * FROM sessions
+      WHERE status IN ('active', 'idle') AND last_active < @cutoff
+    `);
+    this.stmtListRecent = db.prepare(`SELECT * FROM sessions ORDER BY last_active DESC LIMIT ?`);
+  }
+
+  /**
    * Get or create a session for a channel+author pair.
    * Resumes existing active/idle session if found, otherwise creates new.
    */

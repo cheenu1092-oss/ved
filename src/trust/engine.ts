@@ -181,6 +181,25 @@ export class TrustEngine {
   }
 
   /**
+   * Reload prepared statements against a new DB handle (e.g. after backup restore).
+   */
+  reload(db: Database.Database): void {
+    this.stmtGetTrust = db.prepare(`
+      SELECT trust_tier FROM trust_ledger
+      WHERE channel = @channel AND user_id = @userId AND revoked_at IS NULL
+      ORDER BY granted_at DESC LIMIT 1
+    `);
+    this.stmtInsertTrust = db.prepare(`
+      INSERT INTO trust_ledger (id, channel, user_id, user_name, trust_tier, granted_by, granted_at, reason)
+      VALUES (@id, @channel, @userId, @userName, @trustTier, @grantedBy, @grantedAt, @reason)
+    `);
+    this.stmtRevokeTrust = db.prepare(`
+      UPDATE trust_ledger SET revoked_at = @revokedAt
+      WHERE channel = @channel AND user_id = @userId AND revoked_at IS NULL
+    `);
+  }
+
+  /**
    * Resolve the trust tier for a user on a channel.
    *
    * Checks in order:

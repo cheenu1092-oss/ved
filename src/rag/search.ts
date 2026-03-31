@@ -199,11 +199,17 @@ export function graphSearch(
  * We wrap each word in quotes to treat them as literals.
  */
 function escapeFts5(query: string): string {
-  // Split into words, wrap each in quotes, join with space (implicit AND)
-  const words = query.trim().split(/\s+/).filter(Boolean);
+  // Split into words, strip punctuation, wrap each in quotes, join with OR
+  // Strip leading/trailing punctuation so "Aurora?" → "Aurora"
+  const words = query
+    .trim()
+    .split(/\s+/)
+    .map(w => w.replace(/^[^\w]+|[^\w]+$/g, ''))  // strip outer punctuation
+    .filter(w => w.length > 0);
   if (words.length === 0) return '';
 
+  // Use OR to be more permissive — AND requires ALL words present in one chunk
   return words
     .map(w => `"${w.replace(/"/g, '""')}"`)
-    .join(' ');
+    .join(' OR ');
 }

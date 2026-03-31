@@ -53,6 +53,24 @@ export class AnchorManager {
   }
 
   /**
+   * Reload prepared statements against a new DB handle (e.g. after backup restore).
+   */
+  reload(db: Database.Database): void {
+    this.stmtInsert = db.prepare(`
+      INSERT INTO anchors (id, chain_head_id, chain_head_hash, chain_length, hmac, algorithm, timestamp)
+      VALUES (@id, @chainHeadId, @chainHeadHash, @chainLength, @hmac, @algorithm, @timestamp)
+    `);
+    this.stmtGetLatest = db.prepare(`
+      SELECT id, chain_head_id, chain_head_hash, chain_length, hmac, algorithm, timestamp
+      FROM anchors ORDER BY timestamp DESC LIMIT 1
+    `);
+    this.stmtGetAll = db.prepare(`
+      SELECT id, chain_head_id, chain_head_hash, chain_length, hmac, algorithm, timestamp
+      FROM anchors ORDER BY timestamp DESC LIMIT @limit
+    `);
+  }
+
+  /**
    * Create an HMAC anchor for the current chain head.
    * If secret is provided, computes HMAC-SHA256 over the chain head data.
    * If no secret, stores a placeholder hmac of 'no-secret'.

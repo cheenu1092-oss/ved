@@ -265,6 +265,22 @@ export class EventLoop {
   }
 
   /**
+   * Graceful shutdown: run compression + cleanup even if start() was never called.
+   * Used by VedApp.stop() to ensure T1→T2 compression fires in direct mode.
+   */
+  async gracefulShutdown(): Promise<void> {
+    this.shuttingDown = true;
+    // If the loop is running, requestShutdown already handles it via start()'s finally block.
+    // If NOT running (direct mode), we need to invoke shutdown() explicitly.
+    if (!this.running) {
+      await this.shutdown();
+    } else {
+      // Loop is running — just signal and let start()'s finally block handle it
+      this.requestShutdown();
+    }
+  }
+
+  /**
    * Graceful shutdown: close stale sessions, anchor audit chain, log shutdown.
    */
   private async shutdown(): Promise<void> {

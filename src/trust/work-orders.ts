@@ -124,6 +124,45 @@ export class WorkOrderManager {
   }
 
   /**
+   * Reload prepared statements against a new DB handle (e.g. after backup restore).
+   */
+  reload(db: Database.Database): void {
+    this.stmtInsert = db.prepare(`
+      INSERT INTO work_orders (
+        id, session_id, message_id, tool_name, tool_server, params,
+        risk_level, risk_reasons, trust_tier, status, created_at, expires_at
+      ) VALUES (
+        @id, @sessionId, @messageId, @toolName, @toolServer, @params,
+        @riskLevel, @riskReasons, @trustTier, 'pending', @createdAt, @expiresAt
+      )
+    `);
+    this.stmtGetById = db.prepare(`SELECT * FROM work_orders WHERE id = ?`);
+    this.stmtGetPending = db.prepare(`
+      SELECT * FROM work_orders WHERE status = 'pending' ORDER BY created_at ASC
+    `);
+    this.stmtGetPendingBySession = db.prepare(`
+      SELECT * FROM work_orders WHERE status = 'pending' AND session_id = ? ORDER BY created_at ASC
+    `);
+    this.stmtApprove = db.prepare(`
+      UPDATE work_orders
+      SET status = 'approved', resolved_at = @resolvedAt, resolved_by = @resolvedBy
+      WHERE id = @id AND status = 'pending'
+        AND resolved_at IS NULL AND expires_at > @resolvedAt
+    `);
+    this.stmtDeny = db.prepare(`
+      UPDATE work_orders
+      SET status = 'denied', resolved_at = @resolvedAt, resolved_by = @resolvedBy
+      WHERE id = @id AND status = 'pending'
+        AND resolved_at IS NULL AND expires_at > @resolvedAt
+    `);
+    this.stmtExpire = db.prepare(`
+      UPDATE work_orders
+      SET status = 'expired', resolved_at = @now, resolved_by = 'system:timeout'
+      WHERE status = 'pending' AND expires_at <= @now
+    `);
+  }
+
+  /**
    * Create a new work order for a tool call that needs human approval.
    *
    * @param sessionId Session that triggered this
