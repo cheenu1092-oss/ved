@@ -665,6 +665,14 @@ export class EventLoop {
           });
         }
 
+        // Build assistant message with tool_calls (required by OpenAI: tool results must follow an assistant message with tool_calls)
+        const assistantToolCallMsg = {
+          role: 'assistant' as const,
+          content: responseText || '',
+          toolCalls: toolCalls,
+          timestamp: Date.now(),
+        };
+
         // Feed tool results back to LLM — add as tool messages
         const toolMessages = toolResults.map(r => ({
           role: 'tool' as const,
@@ -676,15 +684,8 @@ export class EventLoop {
 
         const followUp = await this.llm.chat({
           systemPrompt,
-          messages: [...messages, ...toolMessages],
+          messages: [...messages, assistantToolCallMsg, ...toolMessages],
           tools: tools.length > 0 ? tools : undefined,
-          toolResults: toolResults.map(r => ({
-            callId: r.callId,
-            tool: r.tool,
-            success: r.success,
-            result: r.result,
-            error: r.error,
-          })),
         });
 
         responseText = followUp.decision.response ?? responseText;
@@ -929,6 +930,14 @@ export class EventLoop {
           });
         }
 
+        // Build assistant message with tool_calls (required by OpenAI: tool results must follow an assistant message with tool_calls)
+        const assistantToolCallMsgDirect = {
+          role: 'assistant' as const,
+          content: responseText || '',
+          toolCalls: toolCalls,
+          timestamp: Date.now(),
+        };
+
         // Feed tool results back to LLM
         const toolMessages = toolResults.map(r => ({
           role: 'tool' as const,
@@ -940,11 +949,8 @@ export class EventLoop {
 
         const followUp = await this.llm.chat({
           systemPrompt,
-          messages: [...messages, ...toolMessages],
+          messages: [...messages, assistantToolCallMsgDirect, ...toolMessages],
           tools: tools.length > 0 ? tools : undefined,
-          toolResults: toolResults.map(r => ({
-            callId: r.callId, tool: r.tool, success: r.success, result: r.result, error: r.error,
-          })),
         });
 
         responseText = followUp.decision.response ?? responseText;
@@ -1174,6 +1180,14 @@ export class EventLoop {
           });
         }
 
+        // Build assistant message with tool_calls (required by OpenAI: tool results must follow an assistant message with tool_calls)
+        const assistantToolCallMsgStream = {
+          role: 'assistant' as const,
+          content: responseText || '',
+          toolCalls: toolCalls,
+          timestamp: Date.now(),
+        };
+
         // Feed tool results back to LLM (tool follow-up calls are not streamed)
         const toolMessages = toolResults.map(r => ({
           role: 'tool' as const,
@@ -1185,11 +1199,8 @@ export class EventLoop {
 
         const followUp = await this.llm.chat({
           systemPrompt,
-          messages: [...messages, ...toolMessages],
+          messages: [...messages, assistantToolCallMsgStream, ...toolMessages],
           tools: tools.length > 0 ? tools : undefined,
-          toolResults: toolResults.map(r => ({
-            callId: r.callId, tool: r.tool, success: r.success, result: r.result, error: r.error,
-          })),
         });
 
         responseText = followUp.decision.response ?? responseText;

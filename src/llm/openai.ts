@@ -383,10 +383,26 @@ export class OpenAIAdapter implements LLMProviderAdapter {
         continue;
       }
 
-      result.push({
+      const converted: OpenAIMessage = {
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
-      });
+      };
+
+      // Include tool_calls on assistant messages (required by OpenAI for tool result context)
+      if (msg.role === 'assistant' && msg.toolCalls && msg.toolCalls.length > 0) {
+        converted.tool_calls = msg.toolCalls.map(tc => ({
+          id: tc.id,
+          type: 'function' as const,
+          function: {
+            name: tc.tool,
+            arguments: JSON.stringify(tc.params),
+          },
+        }));
+        // OpenAI: assistant messages with tool_calls may have null content
+        if (!converted.content) converted.content = '';
+      }
+
+      result.push(converted);
     }
 
     // Append tool results if provided separately

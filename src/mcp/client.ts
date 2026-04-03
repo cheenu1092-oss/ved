@@ -193,7 +193,7 @@ export class MCPClient implements VedModule {
 
     // Get original tool name (strip server prefix)
     const toolDef = this.toolIndex.get(call.tool);
-    const originalName = toolDef?.originalName ?? call.tool.split('.').slice(1).join('.');
+    const originalName = toolDef?.originalName ?? call.tool.split('__').slice(1).join('__');
 
     try {
       const result = await server.transport.send('tools/call', {
@@ -351,7 +351,10 @@ export class MCPClient implements VedModule {
   }
 
   private mapTool(raw: MCPRawTool, serverConfig: MCPServerConfig): MCPToolDefinition {
-    const fullName = `${serverConfig.name}.${raw.name}`;
+    // Use double-underscore separator instead of dot — OpenAI/Anthropic require ^[a-zA-Z0-9_-]+$
+    const sanitizedServer = serverConfig.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const sanitizedTool = raw.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fullName = `${sanitizedServer}__${sanitizedTool}`;
     const override = serverConfig.toolOverrides?.[raw.name];
 
     return {

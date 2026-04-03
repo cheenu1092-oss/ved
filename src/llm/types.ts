@@ -38,6 +38,7 @@ export interface ConversationMessage {
   content: string;
   name?: string;
   toolCallId?: string;
+  toolCalls?: ToolCall[];
   timestamp: number;
 }
 
