@@ -2,6 +2,40 @@
 
 All notable changes to Ved are documented here.
 
+## [0.9.0] — 2026-04-03
+
+### Highlights
+- **Ved talks to real LLMs** — verified end-to-end with Ollama and OpenAI gpt-4o-mini
+- **MCP tool calling works** — tested with stdio MCP server (calculator, weather, time)
+- **3 bugs fixed** during live testing — zero code changes needed for basic chat flow
+- **npm publish ready** — `ved-ai` name confirmed available, package verified
+- **3,605 tests** across 88 test files, 0 type errors
+
+### Live Testing Milestones
+- **Session 96:** First real LLM conversation (Ollama qwen3:1.7b). Simple chat, multi-turn memory recall, system prompt self-identification, and audit trail integrity all verified. 7/8 live tests pass.
+- **Session 106:** Deep cloud LLM test (OpenAI gpt-4o-mini). Streaming (14 tokens), multi-turn memory recall, RAG enrichment (vault entity lookup), T1→T2 compression (daily note + T3 entity upserts), audit chain integrity (58 entries). 9/9 pass. Zero code changes required.
+- **Session 107:** MCP tool calling test with real LLM + stdio MCP server. Calculator math, weather lookup, time query, multi-step reasoning, multi-city comparison, audit trail verification. 9/9 pass.
+
+### Bug Fixes (from live MCP testing)
+- **Tool name sanitization:** Dots in MCP tool names (e.g. `server.tool`) now converted to double-underscores for OpenAI compatibility
+- **OpenAI tool calling protocol:** Assistant messages now correctly include `tool_calls` array before tool result messages (required by OpenAI API)
+- **ConversationMessage type:** Added missing `toolCalls` field to type definition
+
+### npm Publish Readiness
+- Package name `ved-ai` confirmed available on npm registry
+- `npm pack` produces 592KB tarball (390 files, zero test/doc leakage)
+- Dual binary entry: `ved` and `ved-ai`
+- Post-install script: Ollama detection + welcome message
+- `npx ved-ai init` workflow verified end-to-end
+- Requires npm authentication to publish (see docs/npm-publish.md)
+
+### Stats
+- 46 CLI commands
+- 3,605 tests (88 test files)
+- ~44,700 LoC (94 source files)
+- 21 vulnerabilities found and fixed (0 open)
+- 107 development sessions
+
 ## [0.8.0] — 2026-03-30
 
 ### Highlights

@@ -41,11 +41,11 @@
 | 39+ | CYCLE | BUILD(2)/TEST(2)/RED-TEAM(2) |
 
 ## Current State
-- **Session Number:** 106
-- **Current Phase:** CYCLE (Post-P5 — Deep live testing complete)
-- **Last Run:** 2026-03-31
+- **Session Number:** 107
+- **Current Phase:** CYCLE (Post-P5 — MCP live testing complete)
+- **Last Run:** 2026-04-03
 - **Cron ID:** cb0cd4f6-834e-42ea-a816-aecddc51ca2d
-- **Next Session:** 107 — MCP live test (tool calling with real LLM + real MCP server), then npm publish
+- **Next Session:** 108 — npm publish + v0.9.0/v1.0.0 release
 
 ## Session Log
 (Sessions 1-20: see individual session files in sessions/)
@@ -145,6 +145,8 @@
 
 - **Session 106:** CYCLE — **Deep live testing with OpenAI gpt-4o-mini.** First cloud LLM test. Created comprehensive 9-test live test (`test/live-test-deep.ts`): app init, basic chat, streaming (14 tokens), multi-turn memory recall, system prompt self-ID, RAG enrichment (vault entity lookup), T1→T2 compression (692-char daily note + T3 entity upserts), audit chain integrity (58 entries). Fixed Docker stale package.json (rebuild needed). Zero code changes required — everything worked out of the box. **9/9 pass. 3605/3605 unit tests. 0 type errors.**
 
+- **Session 107:** CYCLE — **MCP live test: tool calling with real LLM + real MCP server.** Built stdio MCP test server (3 tools: calculator, get_weather, get_time). Comprehensive 9-test live test: MCP discovery, calculator math (347*23=7981), weather lookup, time query, multi-step reasoning (255 not prime), multi-city comparison (Tokyo>London), audit trail (tool_requested + tool_executed events), chain integrity (28 entries). **3 bugs found and fixed:** tool name sanitization (dot→double-underscore for OpenAI compatibility), OpenAI tool calling protocol (assistant must include tool_calls before tool results), ConversationMessage type missing toolCalls field. **9/9 pass. 3605/3605 unit tests. 0 type errors. Pushed to GitHub (088792e).**
+
 ## Phase Schedule (Updated)
 | Sessions | Phase | Description |
 |----------|-------|-------------|
@@ -225,7 +227,8 @@
 | 104 | ✅ CYCLE | P5 Polish Phase 3: fuzzy command matching, LLM ping in doctor, migrate progress bars, quickstart command |
 | 105 | ✅ CYCLE | v0.8.0 release — P0-P5 ALL COMPLETE |
 | 106 | ✅ CYCLE | Deep live test: 9/9 pass with OpenAI gpt-4o-mini (streaming, RAG, compression, audit) |
-| 107+ | CYCLE | MCP live test, npm publish, docs |
+| 107 | ✅ CYCLE | MCP live test: 9/9 pass with real LLM + stdio MCP server (3 bugs fixed) |
+| 108+ | CYCLE | npm publish, v0.9.0/v1.0.0 release, docs |
 
 ## Built Modules (Status)
 | Module | Status | LoC | Tests |

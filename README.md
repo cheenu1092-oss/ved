@@ -257,6 +257,6 @@ MIT
 
 ---
 
-**Current stats:** 46 CLI commands • 3,600+ tests • ~45,100 LoC • 0 open vulnerabilities (21 found and fixed)
+**Current stats:** 46 CLI commands • 3,605 tests • ~44,700 LoC • 0 open vulnerabilities (21 found and fixed) • Verified with Ollama + OpenAI + MCP
 
 *Built by [cheenu1092-oss](https://github.com/cheenu1092-oss). Designed in the open.*
