@@ -2,103 +2,171 @@
 
 **The personal AI agent that remembers everything and proves it.**
 
-Ved is a lightweight, standalone AI assistant with auditable memory. Every action is hash-chain logged. Every memory is a Markdown file you can read, edit, and visualize. Every tool call is an MCP server you can inspect.
+Ved is a standalone AI assistant with auditable memory. Every action is hash-chain logged. Every memory is a Markdown file you can read and edit. Every tool call goes through an MCP server you can inspect.
 
-No black boxes. No cloud lock-in. Just a single TypeScript binary, an Obsidian vault, and a SQLite database.
+No black boxes. No cloud lock-in. One TypeScript binary, an Obsidian vault, and a SQLite database.
+
+```
+npm install -g ved-ai
+ved init       # choose provider, set API key, create vault
+ved chat       # start talking
+```
 
 ---
 
-## Why Ved?
+## 5 Things Ved Does Differently
 
-Every AI assistant today has the same problem: **you can't see what it knows, verify what it did, or fix what it got wrong.**
+### 1. Your memory is a folder of Markdown files
+Ved's knowledge graph IS an Obsidian vault. Open it in Obsidian (or any editor) and you can see everything the agent knows — people, projects, decisions, concepts. Edit a file and Ved picks up the change. No opaque embedding stores, no proprietary formats.
 
-- ChatGPT's "memories" are an opaque list you can't search or connect.
-- Agent frameworks store knowledge in vector DBs you can't read.
-- Tool-calling systems run actions with no audit trail.
-- Memory systems forget context or hallucinate connections.
+### 2. Every action is hash-chain logged
+Every LLM call, tool execution, memory write, and trust decision is recorded in a SQLite hash chain. Modify any entry and every subsequent hash breaks. Optional HMAC anchoring provides external tamper evidence. Run `ved history --verify` to prove integrity at any time.
 
-Ved takes a different approach:
+### 3. Tool calls require human approval (when they should)
+A 4-tier trust engine evaluates every tool call against a risk matrix. Owner-level users auto-approve low-risk actions. Unknown users need approval for everything. Medium/high-risk actions always go through a work order queue — approve or deny from Discord, CLI, or the web dashboard.
 
-| Problem | Ved's Answer |
-|---------|-------------|
-| Memory is opaque | Your knowledge graph IS an Obsidian vault — Markdown files with wikilinks |
-| No audit trail | Every action is hash-chain logged in SQLite. Tamper-evident. |
-| Tools are black boxes | All tools are MCP servers with inspectable schemas |
-| Trust is binary | 4-tier trust system with human-in-the-loop approval queues |
-| Can't verify claims | Ved cites its sources — file paths, timestamps, confidence levels |
+### 4. Memory compresses, not disappears
+When a conversation gets long, Ved doesn't truncate — it summarizes. T1 working memory compresses into T2 daily notes (Markdown) with extracted facts, decisions, and entities promoted to T3 (the knowledge graph). The raw transcript is archived in T4. Nothing is lost; it just moves to a cheaper tier.
+
+### 5. 500+ red-team tests, 21 vulnerabilities found and fixed
+Ved was built security-first. Every new feature gets a red-team session: prompt injection, path traversal, trust escalation, race conditions, content filter evasion. 21 vulnerabilities were found and fixed before v1.0. Zero open security issues.
+
+---
+
+## How It Compares
+
+| Feature | Ved | ChatGPT Memories | Claude Projects | MemGPT/Letta | Cursor |
+|---------|-----|------------------|-----------------|--------------|--------|
+| Memory format | Markdown files (Obsidian vault) | Opaque list | Project docs | JSON in vector DB | Codebase context |
+| Memory is human-readable | ✅ Edit in any editor | ❌ API only | ⚠️ Upload only | ❌ | ⚠️ Code only |
+| Audit trail | Hash-chain + HMAC | ❌ | ❌ | ❌ | ❌ |
+| Trust tiers | 4-tier HITL | ❌ | ❌ | ❌ | ❌ |
+| Works offline | ✅ (Ollama) | ❌ | ❌ | ⚠️ (needs API) | ⚠️ (needs API) |
+| Tool calling | MCP servers | Plugins (closed) | ❌ | Functions | ❌ |
+| Self-hosted | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Verifiable actions | ✅ (chain verify) | ❌ | ❌ | ❌ | ❌ |
+
+---
+
+## What Can Ved Do?
+
+**Remember and retrieve**
+```bash
+# Search across all your knowledge
+ved search "what did we decide about the API design?"
+
+# Browse the knowledge graph
+ved memory graph "project-alpha" --depth 2
+
+# View today's notes
+ved memory daily
+```
+
+**Chat with context**
+```bash
+# Interactive conversation with memory
+ved chat
+
+# One-shot query (scripts, automation)
+ved run "Summarize what happened this week"
+
+# Chain queries and commands into pipelines
+ved pipe "list active projects" "!sort" "summarize priorities"
+```
+
+**Manage knowledge**
+```bash
+# Create entities from templates
+ved template use person --var name="Bob Friday" --var role="Chief AI Officer"
+
+# Import from other tools
+ved migrate obsidian ~/my-vault
+ved migrate json chatgpt-export.json
+
+# Export everything
+ved export --with-audit > backup.json
+```
+
+**Monitor and verify**
+```bash
+# Verify audit chain integrity
+ved history --verify
+
+# Run diagnostics
+ved doctor --fix
+
+# Watch vault changes in real-time
+ved watch
+
+# Web dashboard with live event stream
+ved serve --port 3141
+```
+
+**Automate**
+```bash
+# Schedule recurring jobs
+ved cron add "0 9 * * *" reindex     # re-index vault every morning
+ved cron add "0 0 * * 0" backup      # weekly backup
+
+# Lifecycle hooks
+ved hook add audit_entry "curl -X POST https://my-webhook/events"
+
+# Desktop notifications
+ved notify add tool_executed --channel desktop
+```
 
 ---
 
 ## Architecture
 
 ```
-User (Discord/CLI) → Ved Core → Trust Engine → MCP Tools → LLM
-                         │
-                         ├── T1: Working Memory (in-prompt, RAM)
-                         ├── T2: Episodic Memory (Obsidian daily notes)
-                         ├── T3: Semantic Memory (Obsidian knowledge graph)
-                         └── T4: Archival + Audit (SQLite + RAG embeddings)
+User (Discord / CLI / HTTP) → Ved Core → Trust Engine → MCP Tools → LLM
+                                  │
+                                  ├── T1: Working Memory (in-prompt, RAM)
+                                  ├── T2: Episodic Memory (Obsidian daily notes)
+                                  ├── T3: Semantic Memory (Obsidian knowledge graph)
+                                  └── T4: Archival + Audit (SQLite + RAG embeddings)
 ```
 
-**Core principles:**
-- Single-threaded event loop. No race conditions. No locks.
-- 7-step message pipeline: receive → enrich → decide → act → record → respond → maintain.
-- Every state mutation is audited before execution.
-- Crash recovery via work order replay.
+**Core design:**
+- Single-threaded event loop — no race conditions, no locks
+- 7-step message pipeline: receive → enrich → decide → act → record → respond → maintain
+- Every state mutation is audited before execution
+- Crash recovery via work order replay
 
 ---
 
-## Memory
-
-Ved has 4 memory tiers. Each serves a different purpose, and all are searchable.
+## Memory Tiers
 
 ### T1: Working Memory
-Current conversation context. Lives in RAM. Injected into every LLM prompt. Compressed to T2 at session boundaries.
+Current conversation. Lives in RAM. Injected into every LLM prompt. Compressed to T2 when it gets large or the session goes idle.
 
 ### T2: Episodic Memory
-Daily notes in `~/ved-vault/daily/YYYY-MM-DD.md`. Auto-generated session summaries. Human-readable. Searchable via RAG.
+Daily notes in `~/ved-vault/daily/YYYY-MM-DD.md`. Auto-generated session summaries with extracted facts, decisions, and TODOs. Human-readable.
 
 ### T3: Semantic Memory
-The knowledge graph. An Obsidian vault with:
-- `entities/` — people, organizations, places
-- `projects/` — active work being tracked
-- `concepts/` — ideas, technologies, mental models
-- `decisions/` — dated decision records with reasoning
-- `topics/` — broad knowledge areas
-
-Every file has YAML frontmatter (type, confidence, source, tags). Wikilinks (`[[bob-friday]]`) are graph edges. Obsidian visualizes the whole thing as an interactive graph.
-
-**You can open the vault in Obsidian and see Ved's entire mind.** Edit a file, and Ved picks up the change. It's a shared interface between human and agent.
+The knowledge graph. An Obsidian vault with `entities/`, `projects/`, `concepts/`, `decisions/`, `topics/`. Every file has YAML frontmatter. Wikilinks (`[[bob-friday]]`) are graph edges. Open the vault in Obsidian and see the agent's entire mind as an interactive graph.
 
 ### T4: Archival + Audit
-SQLite database with:
-- Hash-chained action log (every tool call, LLM response, memory edit)
-- Vector embeddings for RAG search (nomic-embed-text via Ollama)
-- FTS5 full-text search index
-- Trust ledger and work order history
-- External HMAC anchoring for tamper evidence
-
-**Nothing is truly forgotten.** Moving a fact out of working memory means writing it to the vault. Compressing a session means archiving the transcript. Every transition is audited.
+SQLite with hash-chained audit log, vector embeddings for RAG search, FTS5 full-text index, trust ledger, work order history, and HMAC anchoring.
 
 ---
 
-## RAG: How Ved Retrieves Knowledge
+## RAG Pipeline
 
 Three retrieval paths, fused into one ranking:
 
-1. **Vector search** — semantic similarity via nomic-embed-text embeddings in SQLite (sqlite-vec)
+1. **Vector search** — semantic similarity via nomic-embed-text embeddings (sqlite-vec)
 2. **FTS5 search** — keyword/exact match via SQLite full-text search
 3. **Graph walk** — follow wikilinks from top hits to pull in connected knowledge
 
-Results are combined using Reciprocal Rank Fusion (RRF) and trimmed to a token budget before injection into the LLM prompt.
-
-**Performance:** <600ms total retrieval for a 5000-chunk vault. The embedding call is the bottleneck; everything else is <15ms.
+Results are combined using Reciprocal Rank Fusion (RRF) and trimmed to a token budget. Retrieval takes <600ms on a 5,000-chunk vault.
 
 ---
 
-## Trust
+## Trust Engine
 
-Ved doesn't execute actions blindly. Every tool call is risk-assessed against a trust matrix:
+Every tool call is risk-assessed:
 
 |  | No-Risk | Low-Risk | Medium-Risk | High-Risk |
 |--|---------|----------|-------------|-----------|
@@ -107,147 +175,135 @@ Ved doesn't execute actions blindly. Every tool call is risk-assessed against a 
 | **Tier 2 (Known)** | Auto | Approve | Deny | Deny |
 | **Tier 1 (Unknown)** | Approve | Deny | Deny | Deny |
 
-Actions that need approval go into a queue. The human approves or rejects. The decision is logged.
+Actions requiring approval enter a work order queue. Approve or deny from Discord, CLI, or the web dashboard.
 
 ---
 
 ## Tools
 
-All tools are MCP (Model Context Protocol) servers. Ved discovers them at startup and routes LLM tool calls through the MCP client.
+All tools are MCP (Model Context Protocol) servers. Ved discovers them at startup and routes LLM tool calls through the MCP client. Any MCP-compatible tool works out of the box.
 
-This means:
-- Tools are separate processes with defined schemas
-- You can inspect, replace, or add tools without touching Ved's core
-- Any MCP-compatible tool works with Ved out of the box
+```yaml
+# config.yaml
+mcp:
+  servers:
+    - name: calculator
+      transport: stdio
+      command: node
+      args: [./my-tools/calc-server.js]
+      enabled: true
+```
 
 ---
 
 ## Audit Chain
 
-Every action Ved takes is recorded in a hash-chain:
+Every action is recorded in a hash chain:
 
 ```
 entry[n].hash = SHA-256(entry[n].data + entry[n-1].hash)
 ```
 
-If any entry is modified, every subsequent hash breaks. You can verify the chain at any time.
-
-For stronger guarantees, Ved periodically anchors chain state via external HMAC — a signed checkpoint that proves the chain existed at a specific time.
-
----
-
-## Design Constraints
-
-- **Single SQLite database.** No Postgres, no Redis, no vector DB service. One file.
-- **Local-first.** LLM via Ollama or any OpenAI-compatible API. Embeddings via Ollama. No cloud dependencies for core functionality.
-- **TypeScript + Node.js.** No framework. No ORM. Just `better-sqlite3`, `sqlite-vec`, and the standard library.
-
----
-
-## CLI Commands (46)
-
-| Command | Description |
-|---------|-------------|
-| `ved start` | Start the agent (event loop + channels) |
-| `ved init` | Scaffold vault structure + config template |
-| `ved chat` | Interactive REPL |
-| `ved run` | One-shot query (non-interactive) |
-| `ved search` | Query RAG pipeline (FTS + vector + graph fusion) |
-| `ved memory` | Vault browser: list, show, graph walk, timeline, daily notes |
-| `ved template` | Vault templates: create entities from 6 built-in types |
-| `ved context` | Context window inspector: tokens, facts, messages, simulate |
-| `ved prompt` | System prompt profiles: create, edit, use, test, diff |
-| `ved stats` | Vault, RAG, audit, and session metrics |
-| `ved config` | Validate, show (secrets redacted), print config path |
-| `ved history` | Audit log viewer with chain integrity verification |
-| `ved doctor` | 8-point self-diagnostics |
-| `ved backup` | Create, list, restore vault+DB snapshots |
-| `ved export` | Export vault to portable JSON |
-| `ved import` | Import vault from JSON (merge/overwrite/fail modes) |
-| `ved migrate` | Import from ChatGPT, Claude, Obsidian, CSV, JSONL, Markdown |
-| `ved sync` | Vault sync: git, S3, rsync, local remotes with conflict detection |
-| `ved reindex` | Force-rebuild entire RAG index |
-| `ved watch` | Standalone vault file watcher with live re-indexing |
-| `ved upgrade` | Database migration lifecycle |
-| `ved serve` | HTTP API server with web dashboard |
-| `ved cron` | Scheduled job engine (5-field cron expressions) |
-| `ved hook` | Lifecycle hooks: run shell commands on EventBus events |
-| `ved notify` | Notification rules: terminal, desktop, command, log delivery |
-| `ved pipe` | Multi-step pipelines (queries + shell commands) |
-| `ved alias` | Command shortcuts with @-syntax |
-| `ved env` | Environment manager (config overlays) |
-| `ved agent` | Agent persona profiles: create, edit, use, import/export, diff |
-| `ved replay` | Session replay: transcript, pipeline trace, timeline, compare |
-| `ved graph` | Knowledge graph: hubs, orphans, islands, paths, DOT export |
-| `ved task` | Task management: Kanban board, priorities, projects, search |
-| `ved trust` | Trust tier management + work order inspection |
-| `ved user` | User profiles, sessions, activity |
-| `ved log` | Structured log viewer/analyzer with tail mode |
-| `ved profile` | Performance benchmarking for 7 subsystems |
-| `ved diff` | Vault diff viewer & change tracker |
-| `ved snapshot` | Vault point-in-time snapshots |
-| `ved completions` | Shell completions (bash/zsh/fish) |
-
-All commands support `--help`/`-h`. Shell completions cover all subcommands and flags.
+Modify any entry and every subsequent hash breaks. Periodic HMAC anchoring provides external tamper evidence.
 
 ---
 
 ## Getting Started
 
-### Install from npm (recommended)
+### Quick Start (npm)
 
 ```bash
-# Install globally (Node.js 20+ required)
+# Requires Node.js 20+
 npm install -g ved-ai
 
-# Or run directly with npx
-npx ved-ai init
-
-# Interactive setup wizard — choose your LLM provider, set API key, configure trust
+# Interactive setup — choose LLM provider, enter API key, configure trust
 ved init
 
 # Start chatting
 ved chat
-
-# Or run a one-shot query
-ved run "What do you know about Project Alpha?"
 ```
 
-### Install from source
+### From Source
 
 ```bash
 git clone https://github.com/cheenu1092-oss/ved.git
-cd ved
-npm install
-npm run build
+cd ved && npm install && npm run build
 
-# Optional: pull local embedding model for RAG
+# Optional: local embeddings for RAG
 ollama pull nomic-embed-text
 
-# Initialize and start
-./dist/cli.js init
-./dist/cli.js chat
+ved init
+ved chat
 ```
 
 ### Web Dashboard
 
 ```bash
-# Start the HTTP API + web dashboard
 ved serve --port 3141
-
-# Open http://localhost:3141 — 12 panels covering stats, events,
-# search, vault, knowledge graph, trust, cron, config, MCP tools
+# Open http://localhost:3141
 ```
 
-The `ved init` wizard supports Anthropic, OpenAI, Ollama, and OpenRouter. For free local AI, install [Ollama](https://ollama.com) first.
+### Config IDE Support
+
+Add a `$schema` comment to your `config.yaml` for autocompletion:
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cheenu1092-oss/ved/main/config.schema.json
+
+llm:
+  provider: ollama
+  model: qwen3:1.7b
+# ...
+```
 
 See [docs/getting-started.md](docs/getting-started.md) for the full walkthrough.
 
 ---
 
+## CLI Commands (46)
+
+| Category | Commands |
+|----------|----------|
+| **Core** | `start`, `init`, `chat`, `run`, `serve` |
+| **Knowledge** | `memory`, `search`, `template`, `context`, `prompt`, `graph`, `task` |
+| **Data** | `export`, `import`, `migrate`, `sync`, `backup`, `snapshot` |
+| **Observability** | `stats`, `history`, `doctor`, `log`, `profile`, `replay`, `diff` |
+| **Automation** | `cron`, `hook`, `notify`, `pipe`, `alias` |
+| **Configuration** | `config`, `env`, `agent`, `upgrade`, `completions` |
+| **Diagnostics** | `doctor`, `reindex`, `watch`, `quickstart`, `help`, `version` |
+
+Every command supports `--help`. Shell completions install automatically.
+
+See [docs/api-reference.md](docs/api-reference.md) for full usage.
+
+---
+
+## Design Constraints
+
+- **Single SQLite database.** No Postgres, no Redis, no vector DB service.
+- **Local-first.** LLM via Ollama or any OpenAI-compatible API. Embeddings via Ollama.
+- **TypeScript + Node.js.** No framework, no ORM. `better-sqlite3`, `sqlite-vec`, standard library.
+- **~45K LoC.** Small enough for one person to understand.
+
+---
+
 ## Name
 
-**Ved** (वेद) — from the Sanskrit *Vedas*, meaning "knowledge." The oldest texts in any Indo-European language. A fitting name for an agent whose purpose is to know, remember, and prove.
+**Ved** (वेद) — from the Sanskrit *Vedas*, meaning "knowledge." The oldest texts in any Indo-European language.
+
+---
+
+## Stats
+
+| Metric | Value |
+|--------|-------|
+| CLI commands | 46 |
+| Tests | 3,600+ |
+| Lines of code | ~45,000 |
+| Vulnerabilities found | 21 (all fixed) |
+| Red-team tests | 500+ |
+| npm package size | 592 KB |
+| Open security issues | 0 |
 
 ---
 
@@ -256,7 +312,5 @@ See [docs/getting-started.md](docs/getting-started.md) for the full walkthrough.
 MIT
 
 ---
-
-**Current stats:** 46 CLI commands • 3,605 tests • ~44,700 LoC • 0 open vulnerabilities (21 found and fixed) • Verified with Ollama + OpenAI + MCP
 
 *Built by [cheenu1092-oss](https://github.com/cheenu1092-oss). Designed in the open.*

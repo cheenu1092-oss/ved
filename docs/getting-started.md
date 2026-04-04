@@ -50,6 +50,8 @@ This creates:
 Edit `~/.ved/config.yaml`:
 
 ```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/cheenu1092-oss/ved/main/config.schema.json
+
 # LLM provider
 llm:
   provider: openai          # openai | anthropic | ollama

@@ -1,0 +1,376 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/cheenu1092-oss/ved/config.schema.json",
+  "title": "Ved Configuration",
+  "description": "Configuration schema for Ved — the personal AI agent that remembers everything and proves it.",
+  "type": "object",
+  "required": ["llm", "memory", "trust"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "default": "Ved",
+      "description": "Display name for the agent."
+    },
+    "version": {
+      "type": "string",
+      "default": "1.0.0",
+      "description": "Config schema version."
+    },
+    "dbPath": {
+      "type": "string",
+      "default": "~/.ved/ved.db",
+      "description": "Path to the SQLite database file. Supports ~ expansion."
+    },
+    "logLevel": {
+      "type": "string",
+      "enum": ["debug", "info", "warn", "error"],
+      "default": "info",
+      "description": "Minimum log level. 'debug' is verbose, 'error' is silent except for errors."
+    },
+    "logFormat": {
+      "type": "string",
+      "enum": ["json", "pretty"],
+      "default": "pretty",
+      "description": "Log output format. 'json' for structured logging, 'pretty' for human-readable."
+    },
+    "logFile": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Path to log file. null means stdout only."
+    },
+    "llm": {
+      "type": "object",
+      "description": "LLM provider configuration.",
+      "required": ["provider", "model"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["anthropic", "openai", "openrouter", "ollama"],
+          "description": "LLM provider. Ollama is free and local. Anthropic/OpenAI/OpenRouter require API keys."
+        },
+        "model": {
+          "type": "string",
+          "description": "Model identifier. Examples: 'claude-sonnet-4-20250514', 'gpt-4o', 'qwen3:1.7b' (Ollama).",
+          "examples": ["claude-sonnet-4-20250514", "gpt-4o-mini", "qwen3:1.7b", "llama3.1:8b"]
+        },
+        "apiKey": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "API key for the provider. Not needed for Ollama. Can also be set via VED_API_KEY env var."
+        },
+        "baseUrl": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Custom API base URL. Defaults: Anthropic=api.anthropic.com, OpenAI=api.openai.com, Ollama=localhost:11434."
+        },
+        "maxTokensPerMessage": {
+          "type": "integer",
+          "minimum": 100,
+          "default": 4096,
+          "description": "Maximum tokens in a single LLM response."
+        },
+        "maxTokensPerSession": {
+          "type": "integer",
+          "minimum": 1000,
+          "default": 100000,
+          "description": "Maximum total tokens consumed per session before forced compression."
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0.7,
+          "description": "LLM temperature. 0 = deterministic, higher = more creative."
+        },
+        "systemPromptPath": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Path to a custom system prompt file. null uses Ved's built-in prompt."
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "description": "Memory and vault configuration.",
+      "required": ["vaultPath"],
+      "properties": {
+        "vaultPath": {
+          "type": "string",
+          "default": "~/ved-vault",
+          "description": "Path to the Obsidian vault directory. Created automatically by 'ved init'."
+        },
+        "workingMemoryMaxTokens": {
+          "type": "integer",
+          "minimum": 500,
+          "default": 8000,
+          "description": "Maximum tokens for T1 working memory (in-prompt conversation context)."
+        },
+        "ragContextMaxTokens": {
+          "type": "integer",
+          "minimum": 200,
+          "default": 2000,
+          "description": "Maximum tokens for RAG-injected context per message."
+        },
+        "compressionThreshold": {
+          "type": "integer",
+          "minimum": 500,
+          "default": 6000,
+          "description": "Token count at which T1→T2 compression triggers."
+        },
+        "sessionIdleMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 30,
+          "description": "Minutes of inactivity before a session is considered idle and T1→T2 compression fires."
+        },
+        "gitEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable git version control for the vault. Tracks all knowledge changes."
+        },
+        "gitAutoCommitIntervalMinutes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 5,
+          "description": "Minutes between automatic git commits of vault changes."
+        }
+      }
+    },
+    "trust": {
+      "type": "object",
+      "description": "Trust engine and human-in-the-loop configuration.",
+      "required": ["ownerIds"],
+      "properties": {
+        "ownerIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "User IDs with full owner access (Tier 4). At least one required."
+        },
+        "tribeIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "User IDs with trusted access (Tier 3). Can trigger low-risk tools automatically."
+        },
+        "knownIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "User IDs with basic access (Tier 2). Most tool calls require approval."
+        },
+        "defaultTier": {
+          "type": "integer",
+          "enum": [1, 2, 3, 4],
+          "default": 1,
+          "description": "Default trust tier for unknown users. 1=Unknown, 2=Known, 3=Tribe, 4=Owner."
+        },
+        "approvalTimeoutMs": {
+          "type": "integer",
+          "minimum": 5000,
+          "default": 300000,
+          "description": "Milliseconds before a pending work order expires. Default: 5 minutes."
+        },
+        "maxToolCallsPerMessage": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10,
+          "description": "Maximum tool calls allowed in a single message pipeline."
+        },
+        "maxAgenticLoops": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 5,
+          "description": "Maximum DECIDE→ACT iterations in the agentic loop before forced stop."
+        }
+      }
+    },
+    "audit": {
+      "type": "object",
+      "description": "Audit chain and tamper-evidence configuration.",
+      "properties": {
+        "anchorInterval": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 100,
+          "description": "Number of audit entries between HMAC anchor checkpoints."
+        },
+        "hmacSecret": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "HMAC secret for external anchoring. null disables HMAC anchoring."
+        }
+      }
+    },
+    "rag": {
+      "type": "object",
+      "description": "RAG (Retrieval-Augmented Generation) pipeline configuration.",
+      "properties": {
+        "vectorTopK": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10,
+          "description": "Number of top results from vector similarity search."
+        },
+        "ftsTopK": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10,
+          "description": "Number of top results from full-text search (FTS5)."
+        },
+        "graphMaxDepth": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 2,
+          "description": "Maximum wikilink hops for graph expansion. 0 disables graph walk."
+        },
+        "graphMaxNodes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 20,
+          "description": "Maximum nodes pulled in during graph walk expansion."
+        },
+        "maxContextTokens": {
+          "type": "integer",
+          "minimum": 100,
+          "default": 2000,
+          "description": "Maximum total tokens for fused RAG context injected into the prompt."
+        },
+        "rrfK": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 60,
+          "description": "Reciprocal Rank Fusion constant. Higher values reduce the advantage of top-ranked results."
+        },
+        "embedding": {
+          "type": "object",
+          "description": "Embedding model configuration for vector search.",
+          "properties": {
+            "model": {
+              "type": "string",
+              "default": "nomic-embed-text",
+              "description": "Ollama embedding model name."
+            },
+            "baseUrl": {
+              "type": "string",
+              "default": "http://localhost:11434",
+              "description": "Ollama API base URL for embeddings."
+            },
+            "batchSize": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 32,
+              "description": "Number of chunks to embed per batch."
+            },
+            "dimensions": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 768,
+              "description": "Embedding vector dimensions. Must match the model's output."
+            }
+          }
+        },
+        "chunking": {
+          "type": "object",
+          "description": "Document chunking configuration for RAG indexing.",
+          "properties": {
+            "maxTokens": {
+              "type": "integer",
+              "minimum": 32,
+              "default": 1024,
+              "description": "Maximum tokens per chunk."
+            },
+            "minTokens": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 64,
+              "description": "Minimum tokens per chunk. Smaller chunks are merged with neighbors."
+            },
+            "frontmatterPrefix": {
+              "type": "boolean",
+              "default": true,
+              "description": "Prepend YAML frontmatter metadata to each chunk for better retrieval."
+            }
+          }
+        }
+      }
+    },
+    "channels": {
+      "type": "array",
+      "description": "Communication channel configurations.",
+      "items": {
+        "type": "object",
+        "required": ["type", "enabled"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Channel type identifier (e.g., 'discord', 'cli')."
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether this channel is active."
+          },
+          "config": {
+            "type": "object",
+            "description": "Channel-specific configuration. Varies by channel type.",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "description": "MCP (Model Context Protocol) tool server configuration.",
+      "properties": {
+        "servers": {
+          "type": "array",
+          "description": "List of MCP tool servers Ved can connect to.",
+          "items": {
+            "type": "object",
+            "required": ["name", "transport", "enabled"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Unique name for this MCP server."
+              },
+              "transport": {
+                "type": "string",
+                "enum": ["stdio", "http"],
+                "description": "Transport protocol. 'stdio' for local processes, 'http' for remote servers."
+              },
+              "command": {
+                "type": "string",
+                "description": "Command to launch the MCP server (stdio transport only)."
+              },
+              "args": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Arguments for the server command (stdio transport only)."
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "Server URL (http transport only)."
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether this server is active."
+              },
+              "trustOverride": {
+                "type": ["integer", "null"],
+                "enum": [null, 1, 2, 3, 4],
+                "default": null,
+                "description": "Override trust tier for this server's tools. null uses the caller's tier."
+              }
+            },
+            "if": { "properties": { "transport": { "const": "stdio" } } },
+            "then": { "required": ["command"] }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
